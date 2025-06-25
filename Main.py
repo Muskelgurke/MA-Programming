@@ -1,5 +1,3 @@
-from ftplib import print_line
-
 import linearRegressionJax as lR_Jax
 import linearRegressionTorch as lR_Torch
 
@@ -8,4 +6,4 @@ if __name__ == '__main__':
     a_torch, b_torch = lR_Torch.startTrain()
 
     print(f'\nJAX\t\t y = {a_jax:.6f} * X + {b_jax:.6f}')
-    print_line(f'Torch\t y = {a_torch:.6f} * X + {b_torch:.6f}\n')
+    print(f'Torch\t y = {a_torch:.6f} * X + {b_torch:.6f}\n')
