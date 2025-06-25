@@ -17,32 +17,42 @@ data_y = config["y"]
 X = torch.tensor(data_x)
 Y = torch.tensor(data_y)
 
-a = torch.tensor(value_a, requires_grad=True,dtype=torch.float32)
-b = torch.tensor(value_b, requires_grad=True,dtype=torch.float32)
+def linearFkt(a,b,x):
+    return a * x + b
 
-def startTrain():
-    print("Starting training lReg without JAX...")
+def calculationMSE(a, b):
+    Y_pred = linearFkt(a, b, X)
+    return torch.mean((Y_pred - Y) ** 2)
 
+def startTrain(plot = False):
+    a = torch.tensor(value_a, requires_grad=True, dtype=torch.float32)
+    b = torch.tensor(value_b, requires_grad=True, dtype=torch.float32)
+    print(f'\nStarting training lReg with torch...\n'
+          f'Your Funktion: y = {a.item():.6f} * X + {b.item():.6f}\n'
+          f'Iterations: {iterations} \n '
+          f'learning rate: {learningRate} \n '
+          f'precision: {precision}')
 
     loss_list = []
     previous_digit = 0
     counter = 0
 
     for i in range(iterations):
-        Y_pred = forward(X)
-        loss = calculationMSE(Y_pred, Y)
+
+        loss = calculationMSE(a,b)
         loss_list.append(loss.item())
         loss.backward()
 
         # Update Parameters
         a.data = a.data - learningRate * a.grad.data
         b.data = b.data - learningRate * b.grad.data
-        digit = getDecimalDigit(a.item(), precision)
 
+        #print(f'Iteration: {i} \n Loss: {loss.item():.4f} \n a: {a.item():.6f}\n b: {b.item():.6f}')
         # Reset Gradient to 0 for next interation
         a.grad.data.zero_()
         b.grad.data.zero_()
-
+        digit = getDecimalDigit(a.item(), precision)
+        # print(f'Your New Funktion: y = {a.item():.6f} * X + {b.item():.6f}\n')
         if digit == previous_digit:
             counter += 1
         else:
@@ -50,36 +60,31 @@ def startTrain():
         previous_digit = digit
         if counter >= patience:
             print(f"Stopping early at epoch {i} as the {precision}-th decimal hasn´t changed")
-            print(f'Iteration: {i} \n Loss: {loss.item():.4f} \n a: {a.item():.6f}\n b: {b.item():.6f}')
             break
 
     # Plotting the loss
-    plt.figure(figsize=(10, 5))
-    plt.subplot(1, 2, 1)
-    plt.plot(loss_list, 'r')
-    plt.grid(True, color='y')
-    plt.xlabel("Iterations")
-    plt.ylabel("Loss")
-    plt.title("Loss over iterations")
+    if plot:
+        plt.figure(figsize=(10, 5))
+        plt.subplot(1, 2, 1)
+        plt.plot(loss_list, 'r')
+        plt.grid(True, color='y')
+        plt.xlabel("Iterations")
+        plt.ylabel("Loss")
+        plt.title("Loss over iterations")
 
-    # Plotting the final result
-    plt.subplot(1, 2, 2)
-    with torch.no_grad():
-        plt.scatter(X.numpy(), Y.numpy(), color='blue', label='Target Points')
-        plt.plot(X.numpy(), forward(X).numpy(), color='red', label='Learned Line')
-    plt.grid(True, color='y')
-    plt.legend()
-    plt.title(f'Final: y = {a.item():.2f}x + {b.item():.2f}')
+        # Plotting the final result
+        plt.subplot(1, 2, 2)
+        with torch.no_grad():
+            plt.scatter(X.numpy(), Y.numpy(), color='blue', label='Target Points')
+            plt.plot(X.numpy(), linearFkt(a,b,X).numpy(), color='red', label='Learned Line')
+        plt.grid(True, color='y')
+        plt.legend()
+        plt.title(f'Final: y = {a.item():.2f}x + {b.item():.2f}')
 
-    plt.tight_layout()
-    plt.show()
+        plt.tight_layout()
+        plt.show()
 
-
-def forward(x):
-    return a * x + b
-
-def calculationMSE(y_pred, y):
-    return torch.mean((y_pred - y) ** 2)
+    return a.item(), b.item()
 
 def getDecimalDigit(value,position):
     as_str = f'{value:.{position + 2}f}'
