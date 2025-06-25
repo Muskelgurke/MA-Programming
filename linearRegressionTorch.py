@@ -2,6 +2,7 @@ import torch
 import matplotlib.pyplot as plt
 import yaml
 
+
 with open("config.yaml", "r") as file:
     config = yaml.safe_load(file)
 
@@ -28,30 +29,27 @@ def startTrain(plot = False):
     a = torch.tensor(value_a, requires_grad=True, dtype=torch.float32)
     b = torch.tensor(value_b, requires_grad=True, dtype=torch.float32)
     print(f'\nStarting training lReg with torch...\n'
-          f'Your Funktion: y = {a.item():.6f} * X + {b.item():.6f}\n'
-          f'Iterations: {iterations} \n '
-          f'learning rate: {learningRate} \n '
-          f'precision: {precision}')
+          f'\tYour Funktion: y = {a.item():.6f} * X + {b.item():.6f}\n'
+          f'\tIterations: {iterations} \n '
+          f'\tlearning rate: {learningRate} \n '
+          f'\tprecision: {precision}')
 
     loss_list = []
     previous_digit = 0
     counter = 0
 
     for i in range(iterations):
-
         loss = calculationMSE(a,b)
         loss_list.append(loss.item())
         loss.backward()
-
+        # print(f'Iteration: {i + 1} \n Loss: {loss.item():.4f} \n a: {a.item():.6f}\n b: {b.item():.6f}')
         # Update Parameters
         a.data = a.data - learningRate * a.grad.data
         b.data = b.data - learningRate * b.grad.data
-
+        digit = getDecimalDigit(a.item(), precision)
         #print(f'Iteration: {i} \n Loss: {loss.item():.4f} \n a: {a.item():.6f}\n b: {b.item():.6f}')
-        # Reset Gradient to 0 for next interation
         a.grad.data.zero_()
         b.grad.data.zero_()
-        digit = getDecimalDigit(a.item(), precision)
         # print(f'Your New Funktion: y = {a.item():.6f} * X + {b.item():.6f}\n')
         if digit == previous_digit:
             counter += 1
@@ -59,7 +57,7 @@ def startTrain(plot = False):
             counter = 0
         previous_digit = digit
         if counter >= patience:
-            print(f"Stopping early at epoch {i} as the {precision}-th decimal hasn´t changed")
+            print(f"\tStopping early at epoch {i} as the {precision}-th decimal hasn´t changed")
             break
 
     # Plotting the loss
