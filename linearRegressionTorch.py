@@ -1,5 +1,4 @@
 import torch
-import numpy as np
 import matplotlib.pyplot as plt
 import yaml
 
@@ -15,8 +14,8 @@ value_b = config["b"]
 data_x = config["x"]
 data_y = config["y"]
 
-X = torch.tensor([1, 2, -1, 1])
-Y = torch.tensor([2, 3, -1, 1])
+X = torch.tensor(data_x)
+Y = torch.tensor(data_y)
 
 a = torch.tensor(value_a, requires_grad=True,dtype=torch.float32)
 b = torch.tensor(value_b, requires_grad=True,dtype=torch.float32)
@@ -43,7 +42,7 @@ def startTrain():
         # Reset Gradient to 0 for next interation
         a.grad.data.zero_()
         b.grad.data.zero_()
-        # print(f'Iteration: {i} \n Loss: {loss.item():.4f} \n a: {a.item():.6f}\n b: {b.item():.6f}')
+
         if digit == previous_digit:
             counter += 1
         else:
@@ -51,6 +50,7 @@ def startTrain():
         previous_digit = digit
         if counter >= patience:
             print(f"Stopping early at epoch {i} as the {precision}-th decimal hasn´t changed")
+            print(f'Iteration: {i} \n Loss: {loss.item():.4f} \n a: {a.item():.6f}\n b: {b.item():.6f}')
             break
 
     # Plotting the loss
@@ -73,7 +73,8 @@ def startTrain():
 
     plt.tight_layout()
     plt.show()
-# defining the function for forward pass for prediction
+
+
 def forward(x):
     return a * x + b
 
@@ -84,4 +85,3 @@ def getDecimalDigit(value,position):
     as_str = f'{value:.{position + 2}f}'
     return int(as_str.split(".")[1][position - 1])
 
-startTrain()
