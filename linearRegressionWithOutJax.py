@@ -1,6 +1,15 @@
 import torch
 import numpy as np
 import matplotlib.pyplot as plt
+import yaml
+
+with open("config.yaml", "r") as file:
+    config = yaml.safe_load(file)
+
+learningRate = config["learningRate"]
+iterations = config["iterations"]
+patience = config["patience"]
+precision = config["precision"]
 
 
 # defining the function for forward pass for prediction
@@ -20,13 +29,11 @@ Y = torch.tensor([2,3,-1,1])
 a = torch.tensor(1.0,requires_grad=True)
 b = torch.tensor(2.0,requires_grad=True)
 
-learningRate = 0.01
+
 loss_list = []
-iterations = 5000
 previous_digit = 0
-patience = 5
 counter = 0
-precision = 5
+
 
 for i in range(iterations):
     Y_pred = forward(X)
@@ -51,6 +58,7 @@ for i in range(iterations):
     if counter >= patience:
         print(f"Stopping early at epoch {i} as the {precision}-th decimal hasn´t changed")
         break
+
 # Plotting the loss
 plt.figure(figsize=(10, 5))
 plt.subplot(1, 2, 1)

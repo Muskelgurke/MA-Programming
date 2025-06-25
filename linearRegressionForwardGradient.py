@@ -1,12 +1,12 @@
-import torch
+import
 import numpy as np
 import matplotlib.pyplot as plt
 
 
-# defining the function for forward pass for prediction
-def forward(x):
-    return a * x + b
 
+# defining the function for forward pass for prediction
+def forwardPath(theta):
+    return a * theta + b
 
 def calculationMSE(y_pred, y):
     return torch.mean((y_pred - y) ** 2)
@@ -27,10 +27,10 @@ iterations = 500
 previous_digit = 0
 patience = 5
 counter = 0
-precision = 5
+DecimalPrecision = 5
 
 for i in range(iterations):
-    Y_pred = forward(X)
+    Y_pred = forwardPath(X)
     loss = calculationMSE(Y_pred, Y)
     loss_list.append(loss.item())
     loss.backward()
@@ -38,7 +38,7 @@ for i in range(iterations):
     # Update Parameters
     a.data = a.data - learningRate * a.grad.data
     b.data = b.data - learningRate * b.grad.data
-    digit = getDecimalDigit(a.item(), precision)
+    digit = getDecimalDigit(a.item(), DecimalPrecision)
 
     # Reset Gradient to 0 for next interation
     a.grad.data.zero_()
@@ -50,8 +50,11 @@ for i in range(iterations):
         counter = 0
     previous_digit = digit
     if counter >= patience:
-        print(f"Stopping early at epoch {i} as the {precision}-th decimal hasn´t changed")
+        print(f"Stopping early at epoch {i} as the {DecimalPrecision}-th decimal hasn´t changed")
         break
+
+
+
 # Plotting the loss
 plt.figure(figsize=(10, 5))
 plt.subplot(1, 2, 1)
@@ -65,7 +68,7 @@ plt.title("Loss over iterations")
 plt.subplot(1, 2, 2)
 with torch.no_grad():
     plt.scatter(X.numpy(), Y.numpy(), color='blue', label='Target Points')
-    plt.plot(X.numpy(), forward(X).numpy(), color='red', label='Learned Line')
+    plt.plot(X.numpy(), forwardPath(X).numpy(), color='red', label='Learned Line')
 plt.grid(True, color='y')
 plt.legend()
 plt.title(f'Final: y = {a.item():.2f}x + {b.item():.2f}')

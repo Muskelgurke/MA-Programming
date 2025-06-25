@@ -1,0 +1,4 @@
+learningRate: 0.01
+iterations: 5000
+patience: 5
+precision: 5

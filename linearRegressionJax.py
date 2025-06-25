@@ -1,7 +1,15 @@
 import jax.numpy as jnp
 from jax import grad, jit
-import numpy as np
+import yaml
 import matplotlib.pyplot as plt
+
+with open("config.yaml", "r") as file:
+    config = yaml.safe_load(file)
+
+learningRate = config["learningRate"]
+iterations = config["iterations"]
+patience = config["patience"]
+precision = config["precision"]
 
 # defining the function for forward pass for prediction
 def forward(x):
@@ -21,16 +29,14 @@ y_jax = jnp.array([2,3,-1,-1])
 a = jnp.array([1.0])
 b = jnp.array([2.0])
 
-learningRate = 0.01
 loss_list = []
-iterations = 5000
 previous_digit = 0
-patience = 5
 counter = 0
-precision = 5
 grad_loss = jit(grad(calculationMSE))
+
 for i in range(iterations):
     Y_pred = forward(x_jax)
+    print(Y_pred)
     loss = calculationMSE(Y_pred, y_jax)
     loss_list.append(loss.item())
 
@@ -40,15 +46,18 @@ for i in range(iterations):
     b = b - learningRate * grad_loss(Y_pred, y_jax)
     digit = getDecimalDigit(a[0], precision)
 
-    print(f'Iteration: {i} \n Loss: {loss.item():.4f} \n a: {a[0].item():.6f}\n b: {b[0].item():.6f}')
+    print(f'Iteration: {i+1} \n Loss: {loss.item():.4f} \n a: {a[0].item():.6f}\n b: {b[0].item():.6f}')
     if digit == previous_digit:
         counter +=1
     else:
         counter = 0
     previous_digit = digit
     if counter >= patience:
-        print(f"Stopping early at epoch {i} as the {precision}-th decimal hasn´t changed")
+        print(f"Stopping early at Iteration {i+1} as the {precision}-th decimal hasn´t changed")
         break
+
+
+
 # Plotting the loss
 plt.figure(figsize=(10, 5))
 plt.subplot(1, 2, 1)
@@ -61,7 +70,12 @@ plt.title("Loss over iterations")
 # Plotting the final result
 plt.subplot(1, 2, 2)
 plt.scatter(x_jax, y_jax, color='blue', label='Target Points')
-plt.plot(x_jax, forward(x_jax), color='red', label='Learned Line')
+print("Before Drawing:")
+x_sorted = jnp.sort(x_jax)
+y_sorted = forward(x_sorted)
+print(x_sorted)
+print(y_sorted)
+plt.plot(x_sorted, y_sorted, color='red', label='Learned Line')
 plt.grid(True, color='y')
 plt.legend()
 plt.title(f'Final: y = {a[0].item():.2f}x + {b[0].item():.2f}')
