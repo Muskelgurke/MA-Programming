@@ -3,6 +3,7 @@ import jax.numpy as jnp
 from jax import random
 import yaml
 import matplotlib.pyplot as plt
+from sympy.abc import theta
 from sympy.printing.theanocode import theano
 
 with open("config.yaml", "r") as file:
@@ -17,8 +18,15 @@ value_b = config["b"]
 data_x = config["x"]
 data_y = config["y"]
 
-X_jax = jnp.stack(data_x, jnp.ones_like(data_x),axis=1)
+X_jax = jnp.array(data_x)
+ones = jnp.ones_like(X_jax)
+X_jax = jnp.stack([X_jax,ones], axis=1)
+print(X_jax)
 Y_jax = jnp.array(data_y)
+
+
+def linearFkt(a,b,x):
+    return a * x + b
 
 def calculationMSE(theta,X,y):
     Y_pred = X @ theta
@@ -34,15 +42,19 @@ def startTrain(plot=False):
     best_loss = jnp.inf
     counter = 0
     theta = jnp.array([value_a,value_b], dtype=float)
+    print(f'theta = {theta}')
     key = random.PRNGKey(42)
 
     for i in range(iterations):
         key, subkey = random.split(key)
 
         v = random.normal(key, shape=theta.shape)
+        print(f'v = {v}')
         f_val, directional_derivative = jax.jvp(lambda th: calculationMSE(th,X_jax,Y_jax),(theta,),(v,))
         g_theta = directional_derivative * v
-        theat_new = theta - learningRate * g_theta
+        print(f'g_theta = {g_theta}')
+        theta = theta - learningRate * g_theta
+        print(f'theta = {theta}')
 
         loss = f_val
         loss_list.append(loss.item())
@@ -57,9 +69,8 @@ def startTrain(plot=False):
         else:
             counter = 0
             best_loss = loss
-        a_learned, b_learned = theat_new
-        return a_learned, b_learned
 
+    a_learned, b_learned = theta
     # Plotting the loss
     if plot:
         plt.figure(figsize=(10, 5))
@@ -75,7 +86,7 @@ def startTrain(plot=False):
         plt.scatter(X_jax, Y_jax, color='blue', label='Target Points')
 
         x_sorted = jnp.sort(X_jax)
-        y_sorted = linearFkt(a,b,x_sorted)
+        y_sorted = linearFkt(a_learned,b_learned,x_sorted)
 
         plt.plot(x_sorted, y_sorted, color='red', label='Learned Line')
         plt.grid(True, color='y')
@@ -85,7 +96,8 @@ def startTrain(plot=False):
         plt.tight_layout()
         plt.show()
 
-    return a.item(),b.item()
+
+    return a_learned, b_learned
 
 def getDecimalDigit(value,position):
     as_str = f'{value:.{position + 2}f}'
