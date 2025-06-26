@@ -4,11 +4,12 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="42850218-2000-418b-853a-bfc2e47ba5d0" name="Changes" comment="Jax Forward Gradient hinzugefügt. aber noch errors">
+    <list default="true" id="42850218-2000-418b-853a-bfc2e47ba5d0" name="Changes" comment="JAX FGD implementiert.">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Main.py" beforeDir="false" afterPath="$PROJECT_DIR$/Main.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/config.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/config.yaml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/linearRegressionForwardGradient.py" beforeDir="false" afterPath="$PROJECT_DIR$/linearRegressionForwardGradient.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/linearRegressionJax.py" beforeDir="false" afterPath="$PROJECT_DIR$/linearRegressionJax.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -217,7 +218,15 @@
       <option name="project" value="LOCAL" />
       <updated>1750928862781</updated>
     </task>
-    <option name="localTasksCounter" value="11" />
+    <task id="LOCAL-00011" summary="JAX FGD implementiert.">
+      <option name="closed" value="true" />
+      <created>1750934102199</created>
+      <option name="number" value="00011" />
+      <option name="presentableId" value="LOCAL-00011" />
+      <option name="project" value="LOCAL" />
+      <updated>1750934102199</updated>
+    </task>
+    <option name="localTasksCounter" value="12" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -243,16 +252,17 @@
     <MESSAGE value="adding in lRJax and lRTorch a startTrain function" />
     <MESSAGE value="refactor" />
     <MESSAGE value="Jax Forward Gradient hinzugefügt. aber noch errors" />
-    <option name="LAST_COMMIT_MESSAGE" value="Jax Forward Gradient hinzugefügt. aber noch errors" />
+    <MESSAGE value="JAX FGD implementiert." />
+    <option name="LAST_COMMIT_MESSAGE" value="JAX FGD implementiert." />
   </component>
   <component name="com.intellij.coverage.CoverageDataManagerImpl">
-    <SUITE FILE_PATH="coverage/MA$linearRegressionJax.coverage" NAME="linearRegressionJax Coverage Results" MODIFIED="1750855163872" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/MA$linearRegressionJax.coverage" NAME="linearRegressionJax Coverage Results" MODIFIED="1750943731571" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/MA$firstTouch.coverage" NAME="firstTouch Coverage Results" MODIFIED="1747395551341" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/.venv" />
     <SUITE FILE_PATH="coverage/MA$linearRegressionTorch.coverage" NAME="linearRegressionTorch Coverage Results" MODIFIED="1750853949028" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
-    <SUITE FILE_PATH="coverage/MA$linearRegressionForwardGradient.coverage" NAME="linearRegressionForwardGradient Coverage Results" MODIFIED="1750930782646" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/MA$linearRegressionForwardGradient.coverage" NAME="linearRegressionForwardGradient Coverage Results" MODIFIED="1750943810756" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/MA$linearRegressionWithOutJax.coverage" NAME="linearRegressionWithOutJax Coverage Results" MODIFIED="1750844677174" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/MA$firstJaxOperation.coverage" NAME="firstJaxOperation Coverage Results" MODIFIED="1747312263691" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
-    <SUITE FILE_PATH="coverage/MA$Main.coverage" NAME="Main Coverage Results" MODIFIED="1750931063957" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/MA$Main.coverage" NAME="Main Coverage Results" MODIFIED="1750944741507" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/MA$main.coverage" NAME="main Coverage Results" MODIFIED="1747311245201" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
   </component>
 </project>

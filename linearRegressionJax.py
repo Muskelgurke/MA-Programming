@@ -2,6 +2,8 @@ import jax.numpy as jnp
 from jax import grad, jit
 import yaml
 import matplotlib.pyplot as plt
+from prompt_toolkit.utils import to_int
+from triton.language import dtype
 
 with open("config.yaml", "r") as file:
     config = yaml.safe_load(file)
@@ -25,37 +27,38 @@ def calculationMSE(a, b):
     Y_pred = linearFkt(a,b,X_jax)
     return jnp.mean((Y_pred - Y_jax) ** 2)
 
+
+
 def startTrain(plot=False):
+    print('\nstarting training linearRegressionJax - Backward Propagation...')
     a = jnp.array(value_a, dtype=float)
     b = jnp.array(value_b, dtype=float)
-    print(f'\nStarting training lReg with JAX...\n'
-          f'\tYour Funktion: y = {a.item():.6f} * X + {b.item():.6f}\n'
-          f'\tIterations: {iterations} \n '
-          f'\tlearning rate: {learningRate} \n '
-          f'\tprecision: {precision}')
-
     loss_list = []
-    previous_digit = 0
     counter = 0
+    best_loss = jnp.inf
+    save_grad = jnp.zeros((2, iterations), dtype=float)
     compute_gradients = jit(grad(calculationMSE, argnums=(0,1)))
+
     for i in range(iterations):
         loss = calculationMSE(a, b)
         loss_list.append(loss.item())
         #print(f'Iteration: {i + 1} \n Loss: {loss.item():.4f} \n a: {a.item():.6f}\n b: {b.item():.6f}')
         # Update Parameters
         grad_a, grad_b = compute_gradients(a,b)
+        save_grad = save_grad.at[:,i].set([grad_a,grad_b])
+
         a = a - learningRate * grad_a
         b = b - learningRate * grad_b
-        digit = getDecimalDigit(a, precision)
-        #print(f'Your New Funktion: y = {a.item():.6f} * X + {b.item():.6f}\n')
-        if digit == previous_digit:
+
+        if jnp.abs(loss-best_loss) < float(precision):
             counter += 1
+            if counter >= patience:
+                print(f"\n\tStopping early at Iteration {i + 1}-Change < {precision}\n")
+                break
         else:
             counter = 0
-        previous_digit = digit
-        if counter >= patience:
-            print(f"\tStopping early at Iteration {i + 1} as the {precision}-th decimal hasn´t changed")
-            break
+            best_loss = loss
+
 
     # Plotting the loss
     if plot:
