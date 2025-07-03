@@ -4,13 +4,14 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="42850218-2000-418b-853a-bfc2e47ba5d0" name="Changes" comment="JAX FGD implementiert.">
-      <change afterPath="$PROJECT_DIR$/linearRegression_FGD.py" afterDir="false" />
+    <list default="true" id="42850218-2000-418b-853a-bfc2e47ba5d0" name="Changes" comment="Type hint LR-FGD">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Main.py" beforeDir="false" afterPath="$PROJECT_DIR$/Main.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/linearRegressionForwardGradient.py" beforeDir="false" afterPath="$PROJECT_DIR$/ReLU-Linear_FGD.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/linearRegressionJax.py" beforeDir="false" afterPath="$PROJECT_DIR$/linearRegression_BP_JAX.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/linearRegressionTorch.py" beforeDir="false" afterPath="$PROJECT_DIR$/linearRegression_BP_Torch.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ReLU-Linear_FGD.py" beforeDir="false" afterPath="$PROJECT_DIR$/FGD/relu_Linear_FGD.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/SeLuWithJax.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/linearRegression_BP_JAX.py" beforeDir="false" afterPath="$PROJECT_DIR$/BP/linearRegression_BP_JAX.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/linearRegression_BP_Torch.py" beforeDir="false" afterPath="$PROJECT_DIR$/BP/linearRegression_BP_Torch.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/linearRegression_FGD.py" beforeDir="false" afterPath="$PROJECT_DIR$/FGD/linearRegression_FGD.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -97,6 +98,8 @@
       <recent name="$PROJECT_DIR$/.venv/ForwardGradient" />
     </key>
     <key name="MoveFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$/FGD" />
+      <recent name="$PROJECT_DIR$/BP" />
       <recent name="$PROJECT_DIR$" />
       <recent name="$PROJECT_DIR$/.venv" />
     </key>
@@ -152,7 +155,7 @@
       <workItem from="1749732786788" duration="41000" />
       <workItem from="1750235375845" duration="5059000" />
       <workItem from="1751530011039" duration="129000" />
-      <workItem from="1751530153463" duration="461000" />
+      <workItem from="1751530153463" duration="4362000" />
     </task>
     <task id="LOCAL-00001" summary="Initial commit">
       <option name="closed" value="true" />
@@ -242,7 +245,15 @@
       <option name="project" value="LOCAL" />
       <updated>1750934102199</updated>
     </task>
-    <option name="localTasksCounter" value="12" />
+    <task id="LOCAL-00012" summary="Type hint tha LR-FGD">
+      <option name="closed" value="true" />
+      <created>1751530649011</created>
+      <option name="number" value="00012" />
+      <option name="presentableId" value="LOCAL-00012" />
+      <option name="project" value="LOCAL" />
+      <updated>1751530649011</updated>
+    </task>
+    <option name="localTasksCounter" value="13" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -269,7 +280,9 @@
     <MESSAGE value="refactor" />
     <MESSAGE value="Jax Forward Gradient hinzugefügt. aber noch errors" />
     <MESSAGE value="JAX FGD implementiert." />
-    <option name="LAST_COMMIT_MESSAGE" value="JAX FGD implementiert." />
+    <MESSAGE value="Type hint LR-FGD" />
+    <MESSAGE value="Type hint LR-FGD" />
+    <option name="LAST_COMMIT_MESSAGE" value="Type hint LR-FGD" />
   </component>
   <component name="com.intellij.coverage.CoverageDataManagerImpl">
     <SUITE FILE_PATH="coverage/MA$linearRegressionJax.coverage" NAME="linearRegressionJax Coverage Results" MODIFIED="1750943731571" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
@@ -278,7 +291,7 @@
     <SUITE FILE_PATH="coverage/MA$linearRegressionForwardGradient.coverage" NAME="linearRegressionForwardGradient Coverage Results" MODIFIED="1751448946691" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/MA$linearRegressionWithOutJax.coverage" NAME="linearRegressionWithOutJax Coverage Results" MODIFIED="1750844677174" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/MA$firstJaxOperation.coverage" NAME="firstJaxOperation Coverage Results" MODIFIED="1747312263691" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
-    <SUITE FILE_PATH="coverage/MA$Main.coverage" NAME="Main Coverage Results" MODIFIED="1751528747288" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/MA$Main.coverage" NAME="Main Coverage Results" MODIFIED="1751535954896" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/MA$main.coverage" NAME="main Coverage Results" MODIFIED="1747311245201" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
   </component>
 </project>

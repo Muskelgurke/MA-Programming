@@ -4,7 +4,7 @@ from jax import random
 import yaml
 import matplotlib.pyplot as plt
 
-with open("config.yaml", "r") as file:
+with open("../config.yaml", "r") as file:
     config = yaml.safe_load(file)
 
 learningRate = config["learningRate"]

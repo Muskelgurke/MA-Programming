@@ -4,7 +4,7 @@ from jax import random
 import yaml
 import matplotlib.pyplot as plt
 
-with open("config.yaml", "r") as file:
+with open("../config.yaml", "r") as file:
     config = yaml.safe_load(file)
 
 learningRate = config["learningRate"]
@@ -21,12 +21,12 @@ ones = jnp.ones_like(X_jax)
 X_jax = jnp.stack([X_jax,ones], axis=1)
 Y_jax = jnp.array(data_y)
 
-def linearFkt(a,b,x):
+def linearFkt(a: float, b: float, x: jnp.ndarray) -> jnp.ndarray:
     return a * x + b
 
-def calculationMSE(theta,X,y):
-    Y_pred = X @ theta
-    return jnp.mean((Y_pred - y) ** 2)
+def calculationMSE(theta: jnp.ndarray, X: jnp.ndarray, y: jnp.ndarray) -> jnp.ndarray:
+        Y_pred = X @ theta
+        return jnp.mean((Y_pred - y) ** 2)
 
 def startTrain(plot=False):
     print('\nstarting training linearRegressionJax - Forward Gradient...')
@@ -43,6 +43,9 @@ def startTrain(plot=False):
         v = random.normal(key, shape=theta.shape,dtype=float)
 
         f_val, directional_derivative = jax.jvp(lambda th: calculationMSE(th,X_jax,Y_jax),(theta,),(v,))
+
+        print(f'directional_derivative = {directional_derivative}')
+        print(f'jax_grad = {jax.grad(calculationMSE)(theta, X_jax, Y_jax)}')
         loss = f_val
         loss_list.append(loss.item())
 
@@ -95,7 +98,7 @@ def startTrain(plot=False):
 
     return a_learned, b_learned
 
-def getDecimalDigit(value,position):
+def getDecimalDigit(value: float, position: int) -> int:
     as_str = f'{value:.{position + 2}f}'
     return int(as_str.split(".")[1][position - 1])
 
