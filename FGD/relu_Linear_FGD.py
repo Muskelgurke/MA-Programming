@@ -51,7 +51,13 @@ def startTrain(plot=False):
         key, subkey = random.split(key)
 
         v = random.normal(key, shape=theta.shape,dtype=float)
+        print(f'v = {v}')
+        # Jacobi-Matrix berechnen
+        jacobian_fn = jax.jacobian(lossMSE)  # Ableitung von lossMSE nach theta
+        J = jacobian_fn(theta)  # Evaluierung an theta = [a, b]
 
+        print("Jacobian at theta =", theta, ": ", J)
+        print("Jacobian multiplication with v:", J @ v)
         f_val, directional_derivative = jax.jvp(lossMSE,(theta,),(v,))
 
         print(f'directional_derivative = {directional_derivative}')

@@ -46,7 +46,7 @@ def startTrain(plot=False):
         # Update Parameters
         grad_a, grad_b = compute_gradients(a,b)
         save_grad = save_grad.at[:,i].set([grad_a,grad_b])
-
+        print(f'grad_a: {grad_a.item():.6f}, grad_b: {grad_b.item():.6f}')
         a = a - learningRate * grad_a
         b = b - learningRate * grad_b
 
