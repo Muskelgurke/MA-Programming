@@ -4,14 +4,12 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="42850218-2000-418b-853a-bfc2e47ba5d0" name="Changes" comment="Type hint LR-FGD">
+    <list default="true" id="42850218-2000-418b-853a-bfc2e47ba5d0" name="Changes" comment="Add new directory">
+      <change afterPath="$PROJECT_DIR$/jax_jvp_Example.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/FGD/linearRegression_FGD.py" beforeDir="false" afterPath="$PROJECT_DIR$/FGD/linearRegression_FGD.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/FGD/relu_Linear_FGD.py" beforeDir="false" afterPath="$PROJECT_DIR$/FGD/relu_Linear_FGD.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Main.py" beforeDir="false" afterPath="$PROJECT_DIR$/Main.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ReLU-Linear_FGD.py" beforeDir="false" afterPath="$PROJECT_DIR$/FGD/relu_Linear_FGD.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/SeLuWithJax.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/linearRegression_BP_JAX.py" beforeDir="false" afterPath="$PROJECT_DIR$/BP/linearRegression_BP_JAX.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/linearRegression_BP_Torch.py" beforeDir="false" afterPath="$PROJECT_DIR$/BP/linearRegression_BP_Torch.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/linearRegression_FGD.py" beforeDir="false" afterPath="$PROJECT_DIR$/FGD/linearRegression_FGD.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -66,31 +64,33 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
-    &quot;Python.Main.executor&quot;: &quot;Run&quot;,
-    &quot;Python.firstJaxOperation.executor&quot;: &quot;Run&quot;,
-    &quot;Python.firstTouch.executor&quot;: &quot;Run&quot;,
-    &quot;Python.linearRegressionForwardGradient.executor&quot;: &quot;Run&quot;,
-    &quot;Python.linearRegressionJax.executor&quot;: &quot;Run&quot;,
-    &quot;Python.linearRegressionTorch.executor&quot;: &quot;Run&quot;,
-    &quot;Python.linearRegressionWithOutJax.executor&quot;: &quot;Run&quot;,
-    &quot;Python.main.executor&quot;: &quot;Run&quot;,
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;FG-complexRegression&quot;,
-    &quot;junie.onboarding.icon.badge.shown&quot;: &quot;true&quot;,
-    &quot;last_opened_file_path&quot;: &quot;/home/muskelgurke/PycharmProjects/MA&quot;,
-    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
-    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
-    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
-    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
-    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
-    &quot;settings.editor.selected.configurable&quot;: &quot;preferences.pluginManager&quot;,
-    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "ModuleVcsDetector.initialDetectionPerformed": "true",
+    "Python.Main.executor": "Run",
+    "Python.firstJaxOperation.executor": "Run",
+    "Python.firstTouch.executor": "Run",
+    "Python.jax_jvp_Example.executor": "Run",
+    "Python.linearRegressionForwardGradient.executor": "Run",
+    "Python.linearRegressionJax.executor": "Run",
+    "Python.linearRegressionTorch.executor": "Run",
+    "Python.linearRegressionWithOutJax.executor": "Run",
+    "Python.main.executor": "Run",
+    "Python.relu_Linear_FGD.executor": "Run",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.git.unshallow": "true",
+    "git-widget-placeholder": "FG-complexRegression",
+    "junie.onboarding.icon.badge.shown": "true",
+    "last_opened_file_path": "/home/muskelgurke/PycharmProjects/MA",
+    "node.js.detected.package.eslint": "true",
+    "node.js.detected.package.tslint": "true",
+    "node.js.selected.package.eslint": "(autodetect)",
+    "node.js.selected.package.tslint": "(autodetect)",
+    "nodejs_package_manager_path": "npm",
+    "settings.editor.selected.configurable": "preferences.pluginManager",
+    "vue.rearranger.settings.migration": "true"
   }
-}</component>
+}]]></component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
       <recent name="$PROJECT_DIR$" />
@@ -155,7 +155,7 @@
       <workItem from="1749732786788" duration="41000" />
       <workItem from="1750235375845" duration="5059000" />
       <workItem from="1751530011039" duration="129000" />
-      <workItem from="1751530153463" duration="4362000" />
+      <workItem from="1751530153463" duration="11993000" />
     </task>
     <task id="LOCAL-00001" summary="Initial commit">
       <option name="closed" value="true" />
@@ -253,7 +253,15 @@
       <option name="project" value="LOCAL" />
       <updated>1751530649011</updated>
     </task>
-    <option name="localTasksCounter" value="13" />
+    <task id="LOCAL-00013" summary="Add new directory">
+      <option name="closed" value="true" />
+      <created>1751536024802</created>
+      <option name="number" value="00013" />
+      <option name="presentableId" value="LOCAL-00013" />
+      <option name="project" value="LOCAL" />
+      <updated>1751536024802</updated>
+    </task>
+    <option name="localTasksCounter" value="14" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -282,7 +290,8 @@
     <MESSAGE value="JAX FGD implementiert." />
     <MESSAGE value="Type hint LR-FGD" />
     <MESSAGE value="Type hint LR-FGD" />
-    <option name="LAST_COMMIT_MESSAGE" value="Type hint LR-FGD" />
+    <MESSAGE value="Add new directory" />
+    <option name="LAST_COMMIT_MESSAGE" value="Add new directory" />
   </component>
   <component name="com.intellij.coverage.CoverageDataManagerImpl">
     <SUITE FILE_PATH="coverage/MA$linearRegressionJax.coverage" NAME="linearRegressionJax Coverage Results" MODIFIED="1750943731571" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
@@ -291,7 +300,9 @@
     <SUITE FILE_PATH="coverage/MA$linearRegressionForwardGradient.coverage" NAME="linearRegressionForwardGradient Coverage Results" MODIFIED="1751448946691" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/MA$linearRegressionWithOutJax.coverage" NAME="linearRegressionWithOutJax Coverage Results" MODIFIED="1750844677174" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/MA$firstJaxOperation.coverage" NAME="firstJaxOperation Coverage Results" MODIFIED="1747312263691" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
-    <SUITE FILE_PATH="coverage/MA$Main.coverage" NAME="Main Coverage Results" MODIFIED="1751535954896" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/MA$Main.coverage" NAME="Main Coverage Results" MODIFIED="1751545418669" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/MA$main.coverage" NAME="main Coverage Results" MODIFIED="1747311245201" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/MA$relu_Linear_FGD.coverage" NAME="relu_Linear_FGD Coverage Results" MODIFIED="1751544378144" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/FGD" />
+    <SUITE FILE_PATH="coverage/MA$jax_jvp_Example.coverage" NAME="jax_jvp_Example Coverage Results" MODIFIED="1751542135453" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
   </component>
 </project>

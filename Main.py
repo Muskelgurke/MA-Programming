@@ -17,6 +17,6 @@ if __name__ == '__main__':
     # a_torch, b_torch = lR_Torch.startTrain()
 
     #print(f'Torch\t\t\t y = {a_torch:.6f} * X + {b_torch:.6f}')
-    print(f'\nJAX - BP\t y = {a_jax:.6f} * X + {b_jax:.6f}')
-    print(f'JAX - FGD\t\t y = {a_jax_fgd:.6f} * X + {b_jax_fgd:.6f}')
-    print(f'JAX - FGD - LR + ReLU\t\t y = {a_jax_fgd_lrRelu:.6f} * X + {b_jax_fgd_lrRelu:.6f}\n')
+    print(f'\nJAX - BP\n\t y = {a_jax:.6f} * X + {b_jax:.6f}')
+    print(f'JAX - FGD\n\t y = {a_jax_fgd:.6f} * X + {b_jax_fgd:.6f}')
+    print(f'JAX - FGD - LR + ReLU\n\t y = {a_jax_fgd_lrRelu:.6f} * X + {b_jax_fgd_lrRelu:.6f}\n')

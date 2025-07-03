@@ -4,7 +4,7 @@ from jax import random
 import yaml
 import matplotlib.pyplot as plt
 
-with open("../config.yaml", "r") as file:
+with open("config.yaml", "r") as file:
     config = yaml.safe_load(file)
 
 learningRate = config["learningRate"]
@@ -24,13 +24,23 @@ Y_jax = jnp.array(data_y)
 def linearFkt(a: float, b: float, x: jnp.ndarray) -> jnp.ndarray:
     return a * x + b
 
-def calculationMSE(theta: jnp.ndarray, X: jnp.ndarray, y: jnp.ndarray) -> jnp.ndarray:
-        Y_pred = X @ theta
-        return jnp.mean((Y_pred - y) ** 2)
+def relu(x: jnp.ndarray) -> jnp.ndarray:
+    return jnp.maximum(0, x)
+
+def predict(theta: jnp.array, inputs: jnp.array) -> jnp.array:
+    """Predicts the output of a linear model"""
+    return inputs @ theta
+
+def lossMSE(theta: jnp.array) -> jnp.array:
+    """Calculates the mean squared error loss."""
+    y_pred = predict(theta, X_jax)
+    return jnp.mean((y_pred - Y_jax) ** 2)
+
 
 def startTrain(plot=False):
     print('\nstarting training linearRegressionJax - Forward Gradient...')
     theta = jnp.array([value_a, value_b], dtype=float)
+
     loss_list = []
     counter = 0
     best_loss = jnp.inf
@@ -42,10 +52,9 @@ def startTrain(plot=False):
 
         v = random.normal(key, shape=theta.shape,dtype=float)
 
-        f_val, directional_derivative = jax.jvp(lambda th: calculationMSE(th,X_jax,Y_jax),(theta,),(v,))
+        f_val, directional_derivative = jax.jvp(lossMSE,(theta,),(v,))
 
         print(f'directional_derivative = {directional_derivative}')
-        print(f'jax_grad = {jax.grad(calculationMSE)(theta, X_jax, Y_jax)}')
         loss = f_val
         loss_list.append(loss.item())
 
@@ -54,7 +63,7 @@ def startTrain(plot=False):
         #print(f'g_theta = {g_theta}')
 
         theta = theta - learningRate * g_theta
-        #print(f'theta = {theta}')
+        #print(f'theta_new = {theta}')
 
         #print(f'Iteration: {i} \n Loss: {loss_list[i]:.4f} \n a: {theta.item(0):.6f}\n b: {theta.item(1):.6f}')
         # print(f'Your New Funktion: y = {a.item():.6f} * X + {b.item():.6f}\n')
