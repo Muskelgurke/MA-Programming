@@ -1,6 +1,6 @@
-import linearRegressionJax as lR_Jax
-import linearRegressionTorch as lR_Torch
-import linearRegressionForwardGradient as lR_JaxFG
+import linearRegression_BP_JAX as lR_Jax
+import linearRegression_BP_Torch as lR_Torch
+import linearRegression_FGD as lR_JaxFG
 import yaml
 
 if __name__ == '__main__':
