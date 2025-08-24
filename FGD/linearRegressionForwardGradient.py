@@ -1,11 +1,10 @@
+import jax
 import jax.numpy as jnp
-from jax import grad, jit
+from jax import random
 import yaml
 import matplotlib.pyplot as plt
-from prompt_toolkit.utils import to_int
-from triton.language import dtype
 
-with open("config.yaml", "r") as file:
+with open("../config.yaml", "r") as file:
     config = yaml.safe_load(file)
 
 learningRate = config["learningRate"]
@@ -18,38 +17,46 @@ data_x = config["x"]
 data_y = config["y"]
 
 X_jax = jnp.array(data_x)
+ones = jnp.ones_like(X_jax)
+X_jax = jnp.stack([X_jax,ones], axis=1)
 Y_jax = jnp.array(data_y)
 
 def linearFkt(a,b,x):
     return a * x + b
 
-def calculationMSE(a, b):
-    Y_pred = linearFkt(a,b,X_jax)
-    return jnp.mean((Y_pred - Y_jax) ** 2)
-
-
+def calculationMSE(theta,X,y):
+    Y_pred = X @ theta
+    return jnp.mean((Y_pred - y) ** 2)
 
 def startTrain(plot=False):
-    print('\nstarting training linearRegressionJax - Backward Propagation...')
-    a = jnp.array(value_a, dtype=float)
-    b = jnp.array(value_b, dtype=float)
+    print('\nstarting training linearRegressionJax - Forward Gradient...')
+    theta = jnp.array([value_a, value_b], dtype=float)
     loss_list = []
     counter = 0
     best_loss = jnp.inf
-    save_grad = jnp.zeros((2, iterations), dtype=float)
-    compute_gradients = jit(grad(calculationMSE, argnums=(0,1)))
+    save_fg = jnp.zeros((2, iterations), dtype=float)
+    key = random.PRNGKey(42)
 
     for i in range(iterations):
-        loss = calculationMSE(a, b)
+        key, subkey = random.split(key)
+
+        v = random.normal(key, shape=theta.shape,dtype=float)
+
+        f_val, directional_derivative = jax.jvp(lambda th: calculationMSE(th,X_jax,Y_jax),(theta,),(v,))
+        loss = f_val
         loss_list.append(loss.item())
-        #print(f'Iteration: {i + 1} \n Loss: {loss.item():.4f} \n a: {a.item():.6f}\n b: {b.item():.6f}')
-        # Update Parameters
-        grad_a, grad_b = compute_gradients(a,b)
-        save_grad = save_grad.at[:,i].set([grad_a,grad_b])
 
-        a = a - learningRate * grad_a
-        b = b - learningRate * grad_b
+        g_theta = directional_derivative * v
+        save_fg = save_fg.at[:,i].set(g_theta)
+        #print(f'g_theta = {g_theta}')
 
+        theta = theta - learningRate * g_theta
+        #print(f'theta = {theta}')
+
+        #print(f'Iteration: {i} \n Loss: {loss_list[i]:.4f} \n a: {theta.item(0):.6f}\n b: {theta.item(1):.6f}')
+        # print(f'Your New Funktion: y = {a.item():.6f} * X + {b.item():.6f}\n')
+
+        # Early Stopping: Converged to?
         if jnp.abs(loss-best_loss) < float(precision):
             counter += 1
             if counter >= patience:
@@ -59,7 +66,8 @@ def startTrain(plot=False):
             counter = 0
             best_loss = loss
 
-
+    #print(f'save_fg: {save_fg}')
+    a_learned, b_learned = theta
     # Plotting the loss
     if plot:
         plt.figure(figsize=(10, 5))
@@ -75,18 +83,24 @@ def startTrain(plot=False):
         plt.scatter(X_jax, Y_jax, color='blue', label='Target Points')
 
         x_sorted = jnp.sort(X_jax)
-        y_sorted = linearFkt(a,b,x_sorted)
+        y_sorted = linearFkt(a_learned,b_learned,x_sorted)
 
         plt.plot(x_sorted, y_sorted, color='red', label='Learned Line')
         plt.grid(True, color='y')
         plt.legend()
-        plt.title(f'Final: y = {a.item():.2f}x + {b.item():.2f}')
+        plt.title(f'Final: y = {a_learned:.2f}x + {b_learned:.2f}')
 
         plt.tight_layout()
         plt.show()
 
-    return a.item(),b.item()
+    return a_learned, b_learned
 
 def getDecimalDigit(value,position):
     as_str = f'{value:.{position + 2}f}'
     return int(as_str.split(".")[1][position - 1])
+
+def standardize_vectors(vectors):
+    """Standardize a matrix of vectors (shape: [dimension, count])"""
+    means = jnp.mean(vectors, axis=1, keepdims=True)
+    stds = jnp.std(vectors, axis=1, keepdims=True)
+    return (vectors - means) / stds
