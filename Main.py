@@ -2,7 +2,6 @@ from BP import linearRegressionJax as lR_Jax
 from FGD import linearRegressionForwardGradient as lR_JaxFG
 import yaml
 
-
 def startJAXTraining():
     with open("config.yaml", "r") as file:
         config = yaml.safe_load(file)
