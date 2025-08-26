@@ -16,14 +16,14 @@ from triton.language import dtype
 
 # We need a fucntion to intilize the weights and biases for a dense neural network layer
 
-def random_layer_params(m: int,n: int,key: int,scale: float=1e-2) -> Tuple[Array, Array]:
+def random_layer_params(m: int,n: int,key: int,scale: float=1e-2) -> tuple[Array, Array]:
     w_key, b_key = random.split(key)
     return scale * random.normal(w_key, (n,m)), scale * random.normal(b_key, (n,))
 
 # initialize all layers for a fully-connected NN with sizes
 # sizes = numbeer of neurons in each layer
 # keys =
-def init_network_params(sizes, key):
+def init_network_params(sizes: List[int], key: Array) -> List[Tuple[Array, Array]]:
   keys = random.split(key, len(sizes))
   return [random_layer_params(m, n, k) for m, n, k in zip(sizes[:-1], sizes[1:], keys)]
 
@@ -34,10 +34,11 @@ batch_size = 128
 n_targets = 10 # handschriftliche Ziffern 0-9
 params = init_network_params(layer_sizes, random.key(0))
 
-def relu(x):
+def relu(x: Array) -> Array:
   return jnp.maximum(0, x)
 
-def predict(params, image):
+def predict(params: List[Tuple[Array, Array]], image: Array) -> Array:
+  """ Predict the class of a single"""
   # per-example predictions
   activations = image
   for w, b in params[:-1]:
