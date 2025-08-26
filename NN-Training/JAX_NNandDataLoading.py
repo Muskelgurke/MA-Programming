@@ -1,5 +1,7 @@
 import jax.numpy as jnp
-import numpy as np
+from typing import List, Tuple, Any, Callable
+from jax import Array
+from jax.random import PRNGKey
 import numpy as np
 from jax.tree_util import tree_map
 from torch.utils.data import DataLoader, default_collate
@@ -14,7 +16,7 @@ from triton.language import dtype
 
 # We need a fucntion to intilize the weights and biases for a dense neural network layer
 
-def random_layer_params(m,n,key,scale=1e-2):
+def random_layer_params(m: int,n: int,key: int,scale: float=1e-2) -> Tuple[Array, Array]:
     w_key, b_key = random.split(key)
     return scale * random.normal(w_key, (n,m)), scale * random.normal(b_key, (n,))
 
@@ -102,7 +104,7 @@ def numpy_collate(batch):
   """  Collate function specifies how to combine a list of data samples into a batch.
   default_collate creates pytorch tensors, then tree_map converts them into numpy arrays.
   """
-  return tree_map(np.asarray, default_collate(batch_size))
+  return tree_map(np.asarray, default_collate(batch))
 
 def flatten_and_cast(pic):
   """Convert PIL image to flat (1-dimensional) numpy array.
