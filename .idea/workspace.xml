@@ -4,19 +4,15 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="42850218-2000-418b-853a-bfc2e47ba5d0" name="Changes" comment="JAX FGD implementiert.">
+    <list default="true" id="42850218-2000-418b-853a-bfc2e47ba5d0" name="Changes" comment="solved error in NumPy 2.0 jnp.array -&gt; jnp.asarray">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Main.py" beforeDir="false" afterPath="$PROJECT_DIR$/Main.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/config.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/config.yaml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/linearRegressionForwardGradient.py" beforeDir="false" afterPath="$PROJECT_DIR$/linearRegressionForwardGradient.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/linearRegressionJax.py" beforeDir="false" afterPath="$PROJECT_DIR$/linearRegressionJax.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
     <option name="LAST_RESOLUTION" value="IGNORE" />
   </component>
-  <component name="ChangesViewManager">
+  <component name="ChangesViewManager" show_ignored="true">
     <option name="groupingKeys">
       <option value="directory" />
       <option value="repository" />
@@ -36,7 +32,7 @@
   <component name="Git.Settings">
     <option name="RECENT_BRANCH_BY_REPOSITORY">
       <map>
-        <entry key="$PROJECT_DIR$" value="master" />
+        <entry key="$PROJECT_DIR$" value="FG-complexRegression" />
       </map>
     </option>
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
@@ -67,6 +63,7 @@
   <component name="PropertiesComponent"><![CDATA[{
   "keyToString": {
     "ModuleVcsDetector.initialDetectionPerformed": "true",
+    "Python.JAX_NNandDataLoading.executor": "Run",
     "Python.Main.executor": "Run",
     "Python.firstJaxOperation.executor": "Run",
     "Python.firstTouch.executor": "Run",
@@ -76,8 +73,9 @@
     "Python.linearRegressionWithOutJax.executor": "Run",
     "Python.main.executor": "Run",
     "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
     "RunOnceActivity.git.unshallow": "true",
-    "git-widget-placeholder": "FG-Implementation",
+    "git-widget-placeholder": "JAX-NN-Training",
     "junie.onboarding.icon.badge.shown": "true",
     "last_opened_file_path": "/home/muskelgurke/PycharmProjects/MA/.venv",
     "node.js.detected.package.eslint": "true",
@@ -86,6 +84,7 @@
     "node.js.selected.package.tslint": "(autodetect)",
     "nodejs_package_manager_path": "npm",
     "settings.editor.selected.configurable": "ml.llm.AIAssistantPromptsLibrary",
+    "to.speed.mode.migration.done": "true",
     "vue.rearranger.settings.migration": "true"
   }
 }]]></component>
@@ -95,33 +94,18 @@
       <recent name="$PROJECT_DIR$/.venv/ForwardGradient" />
     </key>
     <key name="MoveFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$/Old" />
+      <recent name="$PROJECT_DIR$/BP" />
+      <recent name="$PROJECT_DIR$/FGD" />
       <recent name="$PROJECT_DIR$" />
       <recent name="$PROJECT_DIR$/.venv" />
     </key>
   </component>
-  <component name="RunManager">
-    <configuration default="true" type="tests" factoryName="Autodetect">
-      <module name="MA" />
-      <option name="ENV_FILES" value="" />
-      <option name="INTERPRETER_OPTIONS" value="" />
-      <option name="PARENT_ENVS" value="true" />
-      <option name="SDK_HOME" value="" />
-      <option name="WORKING_DIRECTORY" value="" />
-      <option name="IS_MODULE_SDK" value="false" />
-      <option name="ADD_CONTENT_ROOTS" value="true" />
-      <option name="ADD_SOURCE_ROOTS" value="true" />
-      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
-      <option name="_new_additionalArguments" value="&quot;&quot;" />
-      <option name="_new_target" value="&quot;&quot;" />
-      <option name="_new_targetType" value="&quot;PATH&quot;" />
-      <method v="2" />
-    </configuration>
-  </component>
   <component name="SharedIndexes">
     <attachedChunks>
       <set>
-        <option value="bundled-js-predefined-d6986cc7102b-b26f3e71634d-JavaScript-PY-251.26094.141" />
-        <option value="bundled-python-sdk-9f8e2b94138c-36ea0e71a18c-com.jetbrains.pycharm.pro.sharedIndexes.bundled-PY-251.26094.141" />
+        <option value="bundled-js-predefined-d6986cc7102b-e03c56caf84a-JavaScript-PY-252.23892.515" />
+        <option value="bundled-python-sdk-7e47963ff851-f0eec537fc84-com.jetbrains.pycharm.pro.sharedIndexes.bundled-PY-252.23892.515" />
       </set>
     </attachedChunks>
   </component>
@@ -137,6 +121,7 @@
       <workItem from="1747385450978" duration="23049000" />
       <workItem from="1749732786788" duration="41000" />
       <workItem from="1750235375845" duration="5059000" />
+      <workItem from="1756205505593" duration="2486000" />
     </task>
     <task id="LOCAL-00001" summary="Initial commit">
       <option name="closed" value="true" />
@@ -226,7 +211,47 @@
       <option name="project" value="LOCAL" />
       <updated>1750934102199</updated>
     </task>
-    <option name="localTasksCounter" value="12" />
+    <task id="LOCAL-00012" summary="Updated fucntions:&#10;-&gt; make clear how jacobian is created. (see print outs, and notes in Diary)">
+      <option name="closed" value="true" />
+      <created>1756051155350</created>
+      <option name="number" value="00012" />
+      <option name="presentableId" value="LOCAL-00012" />
+      <option name="project" value="LOCAL" />
+      <updated>1756051155350</updated>
+    </task>
+    <task id="LOCAL-00013" summary="copied tu 98% the tutorial of JAX-NN with pytorch.&#10;-&gt; problems with torchvision installation">
+      <option name="closed" value="true" />
+      <created>1756142413621</created>
+      <option name="number" value="00013" />
+      <option name="presentableId" value="LOCAL-00013" />
+      <option name="project" value="LOCAL" />
+      <updated>1756142413621</updated>
+    </task>
+    <task id="LOCAL-00014" summary="solved installation problem of torchvision. Over Terminal">
+      <option name="closed" value="true" />
+      <created>1756191064680</created>
+      <option name="number" value="00014" />
+      <option name="presentableId" value="LOCAL-00014" />
+      <option name="project" value="LOCAL" />
+      <updated>1756191064680</updated>
+    </task>
+    <task id="LOCAL-00015" summary="problems with the MNIST Dataset">
+      <option name="closed" value="true" />
+      <created>1756205329949</created>
+      <option name="number" value="00015" />
+      <option name="presentableId" value="LOCAL-00015" />
+      <option name="project" value="LOCAL" />
+      <updated>1756205329949</updated>
+    </task>
+    <task id="LOCAL-00016" summary="solved error in NumPy 2.0 jnp.array -&gt; jnp.asarray">
+      <option name="closed" value="true" />
+      <created>1756206755433</created>
+      <option name="number" value="00016" />
+      <option name="presentableId" value="LOCAL-00016" />
+      <option name="project" value="LOCAL" />
+      <updated>1756206755433</updated>
+    </task>
+    <option name="localTasksCounter" value="17" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -253,16 +278,26 @@
     <MESSAGE value="refactor" />
     <MESSAGE value="Jax Forward Gradient hinzugefügt. aber noch errors" />
     <MESSAGE value="JAX FGD implementiert." />
-    <option name="LAST_COMMIT_MESSAGE" value="JAX FGD implementiert." />
+    <MESSAGE value="Refactoring: extract Method startJaxTraining &#10;and&#10;Moved the files in more specific folders" />
+    <MESSAGE value="Refactoring: extract Method startJaxTraining" />
+    <MESSAGE value="Refactoring: extract Method startJaxTraining &#10;and&#10;Moved the files in more specific folders" />
+    <MESSAGE value="copied tu 98% the tutorial of JAX-NN with pytorch.&#10;-&gt; problems with torchvision installation" />
+    <MESSAGE value="solved installation problem of torchvision. Over Terminal" />
+    <MESSAGE value="problems with the MNIST Dataset" />
+    <MESSAGE value="solved error in NumPy 2.0 jnp.array -&gt; jnp.asarray" />
+    <option name="LAST_COMMIT_MESSAGE" value="solved error in NumPy 2.0 jnp.array -&gt; jnp.asarray" />
   </component>
   <component name="com.intellij.coverage.CoverageDataManagerImpl">
+    <SUITE FILE_PATH="coverage/MA$relu_Linear_FGD.coverage" NAME="relu_Linear_FGD Coverage Results" MODIFIED="1751544378144" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/FGD" />
+    <SUITE FILE_PATH="coverage/MA$JAX_NNandDataLoading.coverage" NAME="JAX_NNandDataLoading Coverage Results" MODIFIED="1756206688822" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/NN-Training" />
+    <SUITE FILE_PATH="coverage/MA$firstJaxOperation.coverage" NAME="firstJaxOperation Coverage Results" MODIFIED="1747312263691" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/MA$linearRegressionJax.coverage" NAME="linearRegressionJax Coverage Results" MODIFIED="1750943731571" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/MA$firstTouch.coverage" NAME="firstTouch Coverage Results" MODIFIED="1747395551341" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/.venv" />
+    <SUITE FILE_PATH="coverage/MA$Main.coverage" NAME="Main Coverage Results" MODIFIED="1756050806733" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/MA$linearRegressionTorch.coverage" NAME="linearRegressionTorch Coverage Results" MODIFIED="1750853949028" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
-    <SUITE FILE_PATH="coverage/MA$linearRegressionForwardGradient.coverage" NAME="linearRegressionForwardGradient Coverage Results" MODIFIED="1750943810756" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/MA$linearRegressionForwardGradient.coverage" NAME="linearRegressionForwardGradient Coverage Results" MODIFIED="1751448946691" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/MA$jax_jvp_Example.coverage" NAME="jax_jvp_Example Coverage Results" MODIFIED="1751542135453" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/MA$linearRegressionWithOutJax.coverage" NAME="linearRegressionWithOutJax Coverage Results" MODIFIED="1750844677174" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
-    <SUITE FILE_PATH="coverage/MA$firstJaxOperation.coverage" NAME="firstJaxOperation Coverage Results" MODIFIED="1747312263691" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
-    <SUITE FILE_PATH="coverage/MA$Main.coverage" NAME="Main Coverage Results" MODIFIED="1750944741507" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/MA$main.coverage" NAME="main Coverage Results" MODIFIED="1747311245201" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
   </component>
 </project>
