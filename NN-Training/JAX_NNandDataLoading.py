@@ -9,6 +9,7 @@ import time
 from jax import grad, jit, vmap
 from jax import random
 from jax.scipy.special import logsumexp
+from triton.language import dtype
 
 
 # We need a fucntion to intilize the weights and biases for a dense neural network layer
@@ -115,12 +116,12 @@ mnist_dataset = MNIST('/tmp/mnist/', download=True, transform=flatten_and_cast)
 training_generator = DataLoader(mnist_dataset, batch_size=batch_size, collate_fn=numpy_collate)
 
 # Get the full train dataset (for checking accuracy while training)
-train_images = np.array(mnist_dataset.data).reshape(len(mnist_dataset.data), -1)
-train_labels = one_hot(np.array(mnist_dataset.targets), n_targets)
+train_images = np.asarray(mnist_dataset.data,dtype=jnp.float32).reshape(len(mnist_dataset.data), -1)
+train_labels = one_hot(np.asarray(mnist_dataset.targets,dtype=jnp.float32), n_targets)
 # Get full test dataset
 mnist_dataset_test = MNIST('/tmp/mnist/', download=True, train=False)
-test_images = jnp.array(mnist_dataset_test.data.numpy().reshape(len(mnist_dataset_test.data), -1), dtype=jnp.float32)
-test_labels = one_hot(np.array(mnist_dataset_test.targets), n_targets)
+test_images = jnp.asarray(mnist_dataset_test.data.numpy().reshape(len(mnist_dataset_test.data), -1), dtype=jnp.float32)
+test_labels = one_hot(np.asarray(mnist_dataset_test.targets,dtype=jnp.float32), n_targets)
 
 for epoch in range(num_epochs):
   start_time = time.time()
