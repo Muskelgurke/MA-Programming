@@ -3,7 +3,7 @@ import numpy as np
 import numpy as np
 from jax.tree_util import tree_map
 from torch.utils.data import DataLoader, default_collate
-import torchvision.datasets
+from torchvision.datasets import MNIST
 
 from jax import grad, jit, vmap
 from jax import random
