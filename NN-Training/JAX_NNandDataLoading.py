@@ -72,7 +72,7 @@ random_flattened_images = random.normal(random.key(1), (10, 28*28))
 batched_preds = batched_predict(params, random_flattened_images)
 print(batched_preds.shape)
 
-def one_hot(x, k, dtype=jnp.float32):
+def one_hot(x: np.ndarray, k: int, dtype=jnp.float32):
   """Create a one-hot encoding of x of size k.
   1.Klassen-Indizes -> jnp.arange(k)
   2.x[:,None] -> x in Spaltenvektor umwandeln

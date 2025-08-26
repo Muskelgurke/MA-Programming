@@ -4,7 +4,8 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="42850218-2000-418b-853a-bfc2e47ba5d0" name="Changes" comment="refactoring: typisierung">
+    <list default="true" id="42850218-2000-418b-853a-bfc2e47ba5d0" name="Changes" comment="refactoring: typisierung of functions">
+      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/NN-Training/JAX_NNandDataLoading.py" beforeDir="false" afterPath="$PROJECT_DIR$/NN-Training/JAX_NNandDataLoading.py" afterDir="false" />
     </list>
@@ -260,7 +261,15 @@
       <option name="project" value="LOCAL" />
       <updated>1756209309962</updated>
     </task>
-    <option name="localTasksCounter" value="18" />
+    <task id="LOCAL-00018" summary="refactoring: typisierung of functions">
+      <option name="closed" value="true" />
+      <created>1756209826781</created>
+      <option name="number" value="00018" />
+      <option name="presentableId" value="LOCAL-00018" />
+      <option name="project" value="LOCAL" />
+      <updated>1756209826781</updated>
+    </task>
+    <option name="localTasksCounter" value="19" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -295,7 +304,8 @@
     <MESSAGE value="problems with the MNIST Dataset" />
     <MESSAGE value="solved error in NumPy 2.0 jnp.array -&gt; jnp.asarray" />
     <MESSAGE value="refactoring: typisierung" />
-    <option name="LAST_COMMIT_MESSAGE" value="refactoring: typisierung" />
+    <MESSAGE value="refactoring: typisierung of functions" />
+    <option name="LAST_COMMIT_MESSAGE" value="refactoring: typisierung of functions" />
   </component>
   <component name="com.intellij.coverage.CoverageDataManagerImpl">
     <SUITE FILE_PATH="coverage/MA$relu_Linear_FGD.coverage" NAME="relu_Linear_FGD Coverage Results" MODIFIED="1751544378144" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/FGD" />
