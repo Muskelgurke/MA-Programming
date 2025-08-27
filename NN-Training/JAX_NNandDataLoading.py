@@ -80,7 +80,7 @@ def one_hot(x: np.ndarray, k: int, dtype=jnp.float32) -> Array:
   """
   return jnp.array(x[:, None] == jnp.arange(k), dtype)
 
-def accuracy(params: List[Tuple[Array, Array]], images:Array, targets:Array)-> Array:
+def accuracy(params: List[Tuple[Array, Array]], images: Array, targets:Array)-> Array:
   target_class = jnp.argmax(targets, axis=1)
   predicted_class = jnp.argmax(batched_predict(params,images), axis=1)
   return jnp.mean(predicted_class == target_class)
@@ -115,7 +115,7 @@ def flatten_and_cast(pic):
   return np.ravel(np.array(pic, dtype=jnp.float32))
 
 #define our dataset, using torch datasets
-mnist_dataset = MNIST('/tmp/mnist/', download=True, transform=flatten_and_cast)
+mnist_dataset = MNIST('dataset/mnist/', download=True, transform=flatten_and_cast)
 
 # create pytorch data loader with custom collate function
 training_generator = DataLoader(mnist_dataset, batch_size=batch_size, collate_fn=numpy_collate)
@@ -124,7 +124,7 @@ training_generator = DataLoader(mnist_dataset, batch_size=batch_size, collate_fn
 train_images = np.asarray(mnist_dataset.data,dtype=jnp.float32).reshape(len(mnist_dataset.data), -1)
 train_labels = one_hot(np.asarray(mnist_dataset.targets,dtype=jnp.float32), n_targets)
 # Get full test dataset
-mnist_dataset_test = MNIST('/tmp/mnist/', download=True, train=False)
+mnist_dataset_test = MNIST('dataset/mnist/', download=True, train=False)
 test_images = jnp.asarray(mnist_dataset_test.data.numpy().reshape(len(mnist_dataset_test.data), -1), dtype=jnp.float32)
 test_labels = one_hot(np.asarray(mnist_dataset_test.targets,dtype=jnp.float32), n_targets)
 
