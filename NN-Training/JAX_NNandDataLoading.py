@@ -102,11 +102,12 @@ def update(params: List[Tuple[Array,Array]], x: Array, y: Array)-> List[Tuple[Ar
   return [(w-step_size * dw, b-step_size * db)
           for (w,b), (dw,db)in zip(params, grads)]
 
-def numpy_collate(batch):
+def numpy_collate(batch: List)-> List:
   """  Collate function specifies how to combine a list of data samples into a batch.
   default_collate creates pytorch tensors, then tree_map converts them into numpy arrays.
   """
-  return tree_map(np.asarray, default_collate(batch))
+  output = tree_map(np.asarray, default_collate(batch))
+  return output
 
 def flatten_and_cast(pic):
   """Convert PIL image to flat (1-dimensional) numpy array.
