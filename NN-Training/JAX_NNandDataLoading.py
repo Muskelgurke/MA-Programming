@@ -1,21 +1,18 @@
-import jax.numpy as jnp
-from typing import List, Tuple, Any, Callable
-from jax import Array
-from jax.random import PRNGKey
 import numpy as np
-from jax.tree_util import tree_map
+from typing import List, Tuple
+import matplotlib.pyplot as plt
+import time
 from torch.utils.data import DataLoader, default_collate
 from torchvision.datasets import MNIST
-import time
-
+import jax.numpy as jnp
 from jax import grad, jit, vmap
 from jax import random
 from jax.scipy.special import logsumexp
-from triton.language import dtype
+from jax import Array
+from jax.tree_util import tree_map
 
 
 # We need a fucntion to intilize the weights and biases for a dense neural network layer
-
 def random_layer_params(m: int,n: int,key: int,scale: float=1e-2) -> tuple[Array, Array]:
     w_key, b_key = random.split(key)
     return scale * random.normal(w_key, (n,m)), scale * random.normal(b_key, (n,))
@@ -70,7 +67,6 @@ random_flattened_images = random.normal(random.key(1), (10, 28*28))
 
 # `batched_predict` has the same call signature as `predict`
 batched_preds = batched_predict(params, random_flattened_images)
-print(batched_preds.shape)
 
 def one_hot(x: np.ndarray, k: int, dtype=jnp.float32) -> Array:
   """Create a one-hot encoding of x of size k.
@@ -114,29 +110,147 @@ def flatten_and_cast(pic):
   np.ravel(...) -> Aus einer 28x28 matrix wird ein Vektor mit 784 Elementen"""
   return np.ravel(np.array(pic, dtype=jnp.float32))
 
-#define our dataset, using torch datasets
-mnist_dataset = MNIST('dataset/mnist/', download=True, transform=flatten_and_cast)
 
-# create pytorch data loader with custom collate function
-training_generator = DataLoader(mnist_dataset, batch_size=batch_size, collate_fn=numpy_collate)
+def prepareData():
+    global training_generator, train_images, train_labels, test_images, test_labels
+    # define our dataset, using torch datasets
+    mnist_dataset = MNIST('dataset/mnist/', download=True, transform=flatten_and_cast)
+    # create pytorch data loader with custom collate function
+    training_generator = DataLoader(mnist_dataset, batch_size=batch_size, collate_fn=numpy_collate)
+    # Get the full train dataset (for checking accuracy while training)
+    train_images = np.asarray(mnist_dataset.data, dtype=jnp.float32).reshape(len(mnist_dataset.data), -1)
+    train_labels = one_hot(np.asarray(mnist_dataset.targets, dtype=jnp.float32), n_targets)
+    # Get full test dataset
+    mnist_dataset_test = MNIST('dataset/mnist/', download=True, train=False)
+    test_images = jnp.asarray(mnist_dataset_test.data.numpy().reshape(len(mnist_dataset_test.data), -1),
+                              dtype=jnp.float32)
+    test_labels = one_hot(np.asarray(mnist_dataset_test.targets, dtype=jnp.float32), n_targets)
+def train_with_visualization():
+    # Reset parameters
+    params = init_network_params(layer_sizes, random.key(0))
 
-# Get the full train dataset (for checking accuracy while training)
-train_images = np.asarray(mnist_dataset.data,dtype=jnp.float32).reshape(len(mnist_dataset.data), -1)
-train_labels = one_hot(np.asarray(mnist_dataset.targets,dtype=jnp.float32), n_targets)
-# Get full test dataset
-mnist_dataset_test = MNIST('dataset/mnist/', download=True, train=False)
-test_images = jnp.asarray(mnist_dataset_test.data.numpy().reshape(len(mnist_dataset_test.data), -1), dtype=jnp.float32)
-test_labels = one_hot(np.asarray(mnist_dataset_test.targets,dtype=jnp.float32), n_targets)
+    # Tracking-Listen
+    train_accuracies = []
+    test_accuracies = []
+    train_losses = []
+    test_losses = []
+    epoch_times = []
 
-for epoch in range(num_epochs):
-  start_time = time.time()
-  for x, y in training_generator:
-    y = one_hot(y, n_targets)
-    params = update(params, x, y)
-  epoch_time = time.time() - start_time
+    print("🚀 Training gestartet...")
+    print("-" * 60)
 
-  train_acc = accuracy(params, train_images, train_labels)
-  test_acc = accuracy(params, test_images, test_labels)
-  print("Epoch {} in {:0.2f} sec".format(epoch, epoch_time))
-  print("Training set accuracy {}".format(train_acc))
-  print("Test set accuracy {}".format(test_acc))
+    for epoch in range(num_epochs):
+        start_time = time.time()
+        for x, y in training_generator:
+            y = one_hot(y, n_targets)
+            params = update(params, x, y)
+        epoch_time = time.time() - start_time
+        epoch_times.append(epoch_time)
+
+        # Metriken berechnen
+        train_acc = accuracy(params, train_images, train_labels)
+        test_acc = accuracy(params, test_images, test_labels)
+        train_loss_val = loss(params, train_images, train_labels)
+        test_loss_val = loss(params, test_images, test_labels)
+
+        # Tracking
+        train_accuracies.append(float(train_acc))
+        test_accuracies.append(float(test_acc))
+        train_losses.append(float(train_loss_val))
+        test_losses.append(float(test_loss_val))
+
+        # Status ausgeben
+        print(f"Epoch {epoch + 1:2d}/{num_epochs} | "
+              f"Zeit: {epoch_time:5.2f}s | "
+              f"Train Acc: {train_acc:.4f} | "
+              f"Test Acc: {test_acc:.4f} | "
+              f"Train Loss: {train_loss_val:.4f} | "
+              f"Test Loss: {test_loss_val:.4f}")
+
+    print("-" * 60)
+    print(f"✅ Training abgeschlossen! Durchschnittliche Zeit pro Epoch: {np.mean(epoch_times):.2f}s")
+
+    return train_accuracies, test_accuracies, train_losses, test_losses, params
+
+
+def plot_accuracy_curve(train_accuracies: List[float], test_accuracies: List[float],
+                        title: str = "Model Accuracy over Epochs"):
+    """
+    Plottet die Accuracy-Kurven für Training und Test-Daten.
+
+    Args:
+        train_accuracies: Liste der Training-Accuracies pro Epoch
+        test_accuracies: Liste der Test-Accuracies pro Epoch
+        title: Titel des Plots
+    """
+    epochs = range(1, len(train_accuracies) + 1)
+
+    plt.figure(figsize=(10, 6))
+    plt.plot(epochs, train_accuracies, 'b-o', label='Training Accuracy', linewidth=2, markersize=6)
+    plt.plot(epochs, test_accuracies, 'r-s', label='Test Accuracy', linewidth=2, markersize=6)
+
+    plt.title(title, fontsize=16, fontweight='bold')
+    plt.xlabel('Epoch', fontsize=12)
+    plt.ylabel('Accuracy', fontsize=12)
+    plt.legend(fontsize=11)
+    plt.grid(True, alpha=0.3)
+    plt.xlim(0.5, len(train_accuracies) + 0.5)
+    plt.ylim(0, 1)
+
+    plt.tight_layout()
+    plt.show()
+    pass
+
+
+def plot_comprehensive_metrics(train_accuracies: List[float], test_accuracies: List[float],
+                              train_losses: List[float] = None, test_losses: List[float] = None):
+    """
+    Plottet umfassende Metriken.
+
+    Args:
+        train_accuracies: Training-Accuracies
+        test_accuracies: Test-Accuracies
+        train_losses: Training-Losses (optional)
+        test_losses: Test-Losses (optional)
+    """
+    epochs = range(1, len(train_accuracies) + 1)
+
+    # Bestimme Anzahl der Subplots
+    n_plots = 2 if (train_losses is not None and test_losses is not None) else 1
+
+    fig, axes = plt.subplots(1, n_plots, figsize=(15, 6))
+    if n_plots == 1:
+        axes = [axes]
+
+    # Accuracy Plot
+    ax1 = axes[0]
+    ax1.plot(epochs, train_accuracies, 'b-o', label='Training Accuracy', linewidth=2, markersize=6)
+    ax1.plot(epochs, test_accuracies, 'r-s', label='Test Accuracy', linewidth=2, markersize=6)
+    ax1.set_title('Model Accuracy', fontsize=14, fontweight='bold')
+    ax1.set_xlabel('Epoch')
+    ax1.set_ylabel('Accuracy')
+    ax1.legend()
+    ax1.grid(True, alpha=0.3)
+    ax1.set_ylim(0, 1)
+
+    # Loss Plot (falls verfügbar)
+    if n_plots == 2 and train_losses is not None and test_losses is not None:
+        ax2 = axes[1]
+        ax2.plot(epochs, train_losses, 'b-o', label='Training Loss', linewidth=2, markersize=6)
+        ax2.plot(epochs, test_losses, 'r-s', label='Test Loss', linewidth=2, markersize=6)
+        ax2.set_title('Model Loss', fontsize=14, fontweight='bold')
+        ax2.set_xlabel('Epoch')
+        ax2.set_ylabel('Loss')
+        ax2.legend()
+        ax2.grid(True, alpha=0.3)
+
+    plt.tight_layout()
+    plt.show()
+
+if __name__ == "__main__":
+    # Training mit Visualisierung durchführen
+    prepareData()
+    train_accs, test_accs, train_losses, test_losses, final_params = train_with_visualization()
+    # Visualisierungen erstellen
+    plot_accuracy_curve(train_accs, test_accs, "MNIST Classification Accuracy")
+    plot_comprehensive_metrics(train_accs, test_accs, train_losses, test_losses)
