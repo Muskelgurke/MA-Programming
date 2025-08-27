@@ -72,7 +72,7 @@ random_flattened_images = random.normal(random.key(1), (10, 28*28))
 batched_preds = batched_predict(params, random_flattened_images)
 print(batched_preds.shape)
 
-def one_hot(x: np.ndarray, k: int, dtype=jnp.float32):
+def one_hot(x: np.ndarray, k: int, dtype=jnp.float32) -> Array:
   """Create a one-hot encoding of x of size k.
   1.Klassen-Indizes -> jnp.arange(k)
   2.x[:,None] -> x in Spaltenvektor umwandeln
@@ -80,27 +80,28 @@ def one_hot(x: np.ndarray, k: int, dtype=jnp.float32):
   """
   return jnp.array(x[:, None] == jnp.arange(k), dtype)
 
-def accuracy(params, images, targets):
+def accuracy(params: List[Tuple[Array, Array]], images:Array, targets:Array)-> Array:
   target_class = jnp.argmax(targets, axis=1)
   predicted_class = jnp.argmax(batched_predict(params,images), axis=1)
   return jnp.mean(predicted_class == target_class)
 
-def loss(params, images, targets):
+def loss(params: List[Tuple[Array, Array]], images:Array, targets:Array)-> Array:
   """ Negative Log-Likelihood(NLL) eine Form von Cross-Entropy-Loss"""
   preds = batched_predict(params,images)
   return -jnp.mean(preds*targets)
 
 ## Mean Squared Error Loss
 ## Bei Klassifikationsproblemen, kommt es zu langsameren Lernen
-def mse_loss(params, images, targets):
+def mse_loss(params: List[Tuple[Array, Array]], images:Array, targets:Array)-> Array:
   preds = batched_predict(params,images)
   return jnp.mean((preds - targets)**2)
 
 @jit
-def update(params, x, y):
+def update(params: List[Tuple[Array,Array]], x: Array, y: Array)-> List[Tuple[Array,Array]]:
   grads = grad(loss)(params, x, y)
   return [(w-step_size * dw, b-step_size * db)
           for (w,b), (dw,db)in zip(params, grads)]
+
 def numpy_collate(batch):
   """  Collate function specifies how to combine a list of data samples into a batch.
   default_collate creates pytorch tensors, then tree_map converts them into numpy arrays.
