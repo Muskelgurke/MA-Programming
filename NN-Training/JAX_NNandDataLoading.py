@@ -136,7 +136,7 @@ def train_with_visualization():
     test_losses = []
     epoch_times = []
 
-    print("🚀 Training gestartet...")
+    print("Training gestartet...")
     print("-" * 60)
 
     for epoch in range(num_epochs):
@@ -168,7 +168,7 @@ def train_with_visualization():
               f"Test Loss: {test_loss_val:.4f}")
 
     print("-" * 60)
-    print(f"✅ Training abgeschlossen! Durchschnittliche Zeit pro Epoch: {np.mean(epoch_times):.2f}s")
+    print(f"Training abgeschlossen! Durchschnittliche Zeit pro Epoch: {np.mean(epoch_times):.2f}s")
 
     return train_accuracies, test_accuracies, train_losses, test_losses, params
 
