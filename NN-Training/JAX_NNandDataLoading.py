@@ -1,26 +1,16 @@
 import numpy as np
-from typing import List, Tuple
+from typing import List, Tuple, Literal
 import matplotlib.pyplot as plt
 import time
 import yaml
 from torch.utils.data import DataLoader, default_collate
-from torchvision.datasets import MNIST
+import torchvision.datasets as datasets
 import jax.numpy as jnp
 from jax import grad, jit, vmap
 from jax import random
 from jax.scipy.special import logsumexp
 from jax import Array
 from jax.tree_util import tree_map
-
-with open("../config.yaml", "r") as file:
-    config = yaml.safe_load(file)
-
-learningRate = config["learningRate"]
-numEpochs = config["numEpochs"]
-batchSize = config["batchSize"]
-
-patience = config["patience"]
-precision = config["precision"]
 
 # We need a fuction to intilize the weights and biases for a dense neural network layer
 def random_layer_params(m: int, n: int,key: int,scale: float=1e-2) -> tuple[Array, Array]:
@@ -114,22 +104,32 @@ def flatten_and_cast(pic):
   return np.ravel(np.array(pic, dtype=jnp.float32))
 
 
-def prepareData():
+def prepareData(dataset_name: Literal["mnist", "fashionmnist"]):
     global training_generator, train_images, train_labels, test_images, test_labels
-    # define our dataset, using torch datasets
-    mnist_dataset = MNIST('dataset/mnist/', download=True, transform=flatten_and_cast)
-    # create pytorch data loader with custom collate function
-    training_generator = DataLoader(mnist_dataset, batch_size=batchSize, collate_fn=numpy_collate)
-    # Get the full train dataset (for checking accuracy while training)
-    train_images = np.asarray(mnist_dataset.data, dtype=jnp.float32).reshape(len(mnist_dataset.data), -1)
-    train_labels = one_hot(np.asarray(mnist_dataset.targets, dtype=jnp.float32), n_targets)
-    # Get full test dataset
-    mnist_dataset_test = MNIST('dataset/mnist/', download=True, train=False)
-    test_images = jnp.asarray(mnist_dataset_test.data.numpy().reshape(len(mnist_dataset_test.data), -1),
-                              dtype=jnp.float32)
-    test_labels = one_hot(np.asarray(mnist_dataset_test.targets, dtype=jnp.float32), n_targets)
 
-def train_with_visualization(num_epochs: int = numEpochs, opt_state) -> Tuple[List[float], List[float], List[float], List[float], List[Tuple[Array, Array]]]:
+    if dataset_name.lower() == "mnist":
+        DatasetClass = datasets.MNIST
+        n_targets = 10
+    elif dataset_name.lower() == "fashionmnist":
+        DatasetClass = datasets.FashionMNIST
+        n_targets = 10
+    else:
+        raise ValueError(f"Unknown dataset: {dataset_name}")
+
+    # define our dataset, using torch datasets
+    dataset = DatasetClass('dataset/', download=True, transform=flatten_and_cast)
+    # create pytorch data loader with custom collate function
+    training_generator = DataLoader(dataset, batch_size=batchSize, collate_fn=numpy_collate)
+    # Get the full train dataset (for checking accuracy while training)
+    train_images = np.asarray(dataset.data, dtype=jnp.float32).reshape(len(dataset.data), -1)
+    train_labels = one_hot(np.asarray(dataset.targets, dtype=jnp.float32), n_targets)
+    # Get full test dataset
+    testDataSet = DatasetClass('dataset/', download=True, train=False)
+    test_images = jnp.asarray(testDataSet.data.numpy().reshape(len(testDataSet.data), -1),
+                              dtype=jnp.float32)
+    test_labels = one_hot(np.asarray(testDataSet.targets, dtype=jnp.float32), n_targets)
+
+def train_with_visualization(num_epochs: int) -> Tuple[List[float], List[float], List[float], List[float], List[Tuple[Array, Array]]]:
     # Reset parameters
     params = init_network_params(layer_sizes, random.key(0))
 
@@ -253,8 +253,17 @@ def plot_comprehensive_metrics(train_accuracies: List[float], test_accuracies: L
 
 if __name__ == "__main__":
     # Training mit Visualisierung durchführen
-    prepareData()
-    train_accs, test_accs, train_losses, test_losses, final_params = train_with_visualization()
+    with open("Configuration/config.yaml", "r") as file:
+        config = yaml.safe_load(file)
+
+    learningRate = config["learningRate"]
+    numEpochs = config["numEpochs"]
+    batchSize = config["batchSize"]
+
+
+    prepareData("mnist")
+
+    train_accs, test_accs, train_losses, test_losses, final_params = train_with_visualization(numEpochs)
     # Visualisierungen erstellen
     plot_accuracy_curve(train_accs, test_accs, "MNIST Classification Accuracy")
     plot_comprehensive_metrics(train_accs, test_accs, train_losses, test_losses)
