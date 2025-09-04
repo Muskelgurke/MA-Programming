@@ -1,3 +1,4 @@
 learningRate: 0.01
 numEpochs: 8
 batchSize: 128
+layerSizes: [784, 512, 512, 10]

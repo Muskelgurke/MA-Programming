@@ -24,11 +24,8 @@ def init_network_params(sizes: List[int], key: Array) -> List[Tuple[Array, Array
   keys = random.split(key, len(sizes))
   return [random_layer_params(m, n, k) for m, n, k in zip(sizes[:-1], sizes[1:], keys)]
 
-layer_sizes = [784, 512, 512, 10]
 
 
-n_targets = 10 # handschriftliche Ziffern 0-9
-params = init_network_params(layer_sizes, random.key(0))
 
 def relu(x: Array) -> Array:
   return jnp.maximum(0, x)
@@ -60,12 +57,8 @@ except TypeError:
 
 # --- Auto-Batched version of predict ---
 
-# Make a batched version of the `predict` function
-batched_predict = vmap(forward, in_axes=(None, 0))
-random_flattened_images = random.normal(random.key(1), (10, 28*28))
+# Make a batched version of the `forward` function
 
-# `batched_predict` has the same call signature as `predict`
-batched_preds = batched_predict(params, random_flattened_images)
 
 def one_hot(x: np.ndarray, k: int, dtype=jnp.float32) -> Array:
   """Create a one-hot encoding of x of size k.
@@ -105,14 +98,14 @@ def flatten_and_cast(pic):
 
 
 def prepareData(dataset_name: Literal["mnist", "fashionmnist"]):
-    global training_generator, train_images, train_labels, test_images, test_labels
+    global training_generator, train_images, train_labels, test_images, test_labels, n_targets
 
     if dataset_name.lower() == "mnist":
         DatasetClass = datasets.MNIST
-        n_targets = 10
+        n_targets = 10 # 10 Klassen (Ziffern 0-9)
     elif dataset_name.lower() == "fashionmnist":
         DatasetClass = datasets.FashionMNIST
-        n_targets = 10
+        n_targets = 10 # 10 Klassen (Ziffern 0-9)
     else:
         raise ValueError(f"Unknown dataset: {dataset_name}")
 
@@ -251,16 +244,28 @@ def plot_comprehensive_metrics(train_accuracies: List[float], test_accuracies: L
     plt.tight_layout()
     plt.show()
 
-if __name__ == "__main__":
-    # Training mit Visualisierung durchführen
+
+def initializingConfigurationOfTraining():
+    global learningRate, numEpochs, batchSize, layer_sizes, params
     with open("Configuration/config.yaml", "r") as file:
         config = yaml.safe_load(file)
 
     learningRate = config["learningRate"]
     numEpochs = config["numEpochs"]
     batchSize = config["batchSize"]
+    layer_sizes = config["layerSizes"]
+    params = init_network_params(layer_sizes, random.key(0))
 
 
+def buildAutoBatchedFkt():
+    global batched_predict
+    batched_predict = vmap(forward, in_axes=(None, 0))
+
+
+if __name__ == "__main__":
+    # Training mit Visualisierung durchführen
+    initializingConfigurationOfTraining()
+    buildAutoBatchedFkt()
     prepareData("mnist")
 
     train_accs, test_accs, train_losses, test_losses, final_params = train_with_visualization(numEpochs)
