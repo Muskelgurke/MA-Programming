@@ -135,6 +135,8 @@ def train_with_visualization(num_epochs: int) -> Tuple[List[float], List[float],
 
     print("Training gestartet...")
     print("-" * 60)
+    print(" Schritt für Schritt ")
+
 
     for epoch in range(num_epochs):
         start_time = time.time()
