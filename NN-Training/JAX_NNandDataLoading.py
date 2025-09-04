@@ -126,9 +126,9 @@ def train_with_visualization():
     params = init_network_params(layer_sizes, random.key(0))
 
     # Tracking-Listen
-    train_accuracies = []
-    test_accuracies = []
-    train_losses = []
+    log_acc_train = []
+    log_acc_test = []
+    train_loss = []
     test_losses = []
     epoch_times = []
 
@@ -150,9 +150,9 @@ def train_with_visualization():
         test_loss_val = loss(params, test_images, test_labels)
 
         # Tracking
-        train_accuracies.append(float(train_acc))
-        test_accuracies.append(float(test_acc))
-        train_losses.append(float(train_loss_val))
+        log_acc_train.append(float(train_acc))
+        log_acc_test.append(float(test_acc))
+        train_loss.append(float(train_loss_val))
         test_losses.append(float(test_loss_val))
 
         # Status ausgeben
@@ -166,7 +166,7 @@ def train_with_visualization():
     print("-" * 60)
     print(f"Training abgeschlossen! Durchschnittliche Zeit pro Epoch: {np.mean(epoch_times):.2f}s")
 
-    return train_accuracies, test_accuracies, train_losses, test_losses, params
+    return log_acc_train, log_acc_test, train_loss, test_losses, params
 
 
 def plot_accuracy_curve(train_accuracies: List[float], test_accuracies: List[float],
