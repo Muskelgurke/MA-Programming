@@ -17,7 +17,7 @@ with open("../config.yaml", "r") as file:
 
 learningRate = config["learningRate"]
 numEpochs = config["numEpochs"]
-
+batchSize = config["batchSize"]
 
 patience = config["patience"]
 precision = config["precision"]
@@ -29,22 +29,21 @@ def random_layer_params(m: int, n: int,key: int,scale: float=1e-2) -> tuple[Arra
 
 # initialize all layers for a fully-connected NN with sizes
 # sizes = numbeer of neurons in each layer
-# keys =
+
 def init_network_params(sizes: List[int], key: Array) -> List[Tuple[Array, Array]]:
   keys = random.split(key, len(sizes))
   return [random_layer_params(m, n, k) for m, n, k in zip(sizes[:-1], sizes[1:], keys)]
 
 layer_sizes = [784, 512, 512, 10]
 
-numEpochs = 8
-batch_size = 128
+
 n_targets = 10 # handschriftliche Ziffern 0-9
 params = init_network_params(layer_sizes, random.key(0))
 
 def relu(x: Array) -> Array:
   return jnp.maximum(0, x)
 
-def predict(params: List[Tuple[Array, Array]], image: Array) -> Array:
+def forward(params: List[Tuple[Array, Array]], image: Array) -> Array:
   """ Predict the class of a single"""
   # per-example predictions
   activations = image
@@ -72,7 +71,7 @@ except TypeError:
 # --- Auto-Batched version of predict ---
 
 # Make a batched version of the `predict` function
-batched_predict = vmap(predict, in_axes=(None, 0))
+batched_predict = vmap(forward, in_axes=(None, 0))
 random_flattened_images = random.normal(random.key(1), (10, 28*28))
 
 # `batched_predict` has the same call signature as `predict`
@@ -120,7 +119,7 @@ def prepareData():
     # define our dataset, using torch datasets
     mnist_dataset = MNIST('dataset/mnist/', download=True, transform=flatten_and_cast)
     # create pytorch data loader with custom collate function
-    training_generator = DataLoader(mnist_dataset, batch_size=batch_size, collate_fn=numpy_collate)
+    training_generator = DataLoader(mnist_dataset, batch_size=batchSize, collate_fn=numpy_collate)
     # Get the full train dataset (for checking accuracy while training)
     train_images = np.asarray(mnist_dataset.data, dtype=jnp.float32).reshape(len(mnist_dataset.data), -1)
     train_labels = one_hot(np.asarray(mnist_dataset.targets, dtype=jnp.float32), n_targets)
