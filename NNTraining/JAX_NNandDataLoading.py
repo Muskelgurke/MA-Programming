@@ -1,5 +1,6 @@
 import numpy as np
 from typing import List, Tuple, Literal
+from NNTraining.helpers import plotting
 import matplotlib.pyplot as plt
 import time
 import yaml
@@ -122,7 +123,7 @@ def prepareData(dataset_name: Literal["mnist", "fashionmnist"]):
                               dtype=jnp.float32)
     test_labels = one_hot(np.asarray(testDataSet.targets, dtype=jnp.float32), n_targets)
 
-def train_with_visualization(num_epochs: int) -> Tuple[List[float], List[float], List[float], List[float], List[Tuple[Array, Array]]]:
+def train(num_epochs: int) -> Tuple[List[float], List[float], List[float], List[float], List[Tuple[Array, Array]]]:
     # Reset parameters
     params = init_network_params(layer_sizes, random.key(0))
 
@@ -137,12 +138,12 @@ def train_with_visualization(num_epochs: int) -> Tuple[List[float], List[float],
     print("-" * 60)
     print(" Schritt für Schritt ")
 
-
     for epoch in range(num_epochs):
         start_time = time.time()
         for x, y in training_generator:
             y = one_hot(y, n_targets)
             params = update(params, x, y)
+
         epoch_time = time.time() - start_time
         epoch_times.append(epoch_time)
 
@@ -246,6 +247,9 @@ def plot_comprehensive_metrics(train_accuracies: List[float], test_accuracies: L
     plt.tight_layout()
     plt.show()
 
+def buildAutoBatchedFktForJAX():
+    global batched_predict
+    batched_predict = vmap(forward, in_axes=(None, 0))
 
 def initializingConfigurationOfTraining():
     global learningRate, numEpochs, batchSize, layer_sizes, params
@@ -257,20 +261,19 @@ def initializingConfigurationOfTraining():
     batchSize = config["batchSize"]
     layer_sizes = config["layerSizes"]
     params = init_network_params(layer_sizes, random.key(0))
+    buildAutoBatchedFktForJAX()
 
 
-def buildAutoBatchedFkt():
-    global batched_predict
-    batched_predict = vmap(forward, in_axes=(None, 0))
 
 
 if __name__ == "__main__":
     # Training mit Visualisierung durchführen
     initializingConfigurationOfTraining()
-    buildAutoBatchedFkt()
+
     prepareData("mnist")
 
-    train_accs, test_accs, train_losses, test_losses, final_params = train_with_visualization(numEpochs)
+    train_accs, test_accs, train_loss, test_loss, final_params = train(numEpochs)
+    plotting.plot_performance(train_loss, train_accs, test_accs, epoch_times=None)
     # Visualisierungen erstellen
-    plot_accuracy_curve(train_accs, test_accs, "MNIST Classification Accuracy")
-    plot_comprehensive_metrics(train_accs, test_accs, train_losses, test_losses)
+    #plot_accuracy_curve(train_accs, test_accs, "MNIST Classification Accuracy")
+    #plot_comprehensive_metrics(train_accs, test_accs, train_losses, test_losses)
