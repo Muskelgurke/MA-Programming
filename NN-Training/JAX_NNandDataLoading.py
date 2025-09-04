@@ -2,6 +2,7 @@ import numpy as np
 from typing import List, Tuple
 import matplotlib.pyplot as plt
 import time
+import torch
 from torch.utils.data import DataLoader, default_collate
 from torchvision.datasets import MNIST
 import jax.numpy as jnp
@@ -86,12 +87,6 @@ def loss(params: List[Tuple[Array, Array]], images:Array, targets:Array)-> Array
   preds = batched_predict(params,images)
   return -jnp.mean(preds*targets)
 
-## Mean Squared Error Loss
-## Bei Klassifikationsproblemen, kommt es zu langsameren Lernen
-def mse_loss(params: List[Tuple[Array, Array]], images:Array, targets:Array)-> Array:
-  preds = batched_predict(params,images)
-  return jnp.mean((preds - targets)**2)
-
 @jit
 def update(params: List[Tuple[Array,Array]], x: Array, y: Array)-> List[Tuple[Array,Array]]:
   grads = grad(loss)(params, x, y)
@@ -125,6 +120,7 @@ def prepareData():
     test_images = jnp.asarray(mnist_dataset_test.data.numpy().reshape(len(mnist_dataset_test.data), -1),
                               dtype=jnp.float32)
     test_labels = one_hot(np.asarray(mnist_dataset_test.targets, dtype=jnp.float32), n_targets)
+
 def train_with_visualization():
     # Reset parameters
     params = init_network_params(layer_sizes, random.key(0))
