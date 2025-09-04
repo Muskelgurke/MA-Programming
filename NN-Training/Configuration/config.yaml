@@ -1,0 +1,3 @@
+learningRate: 0.01
+numEpochs: 8
+batchSize: 128

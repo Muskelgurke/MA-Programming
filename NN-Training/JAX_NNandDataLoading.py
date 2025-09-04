@@ -2,7 +2,7 @@ import numpy as np
 from typing import List, Tuple
 import matplotlib.pyplot as plt
 import time
-import torch
+import yaml
 from torch.utils.data import DataLoader, default_collate
 from torchvision.datasets import MNIST
 import jax.numpy as jnp
@@ -12,9 +12,18 @@ from jax.scipy.special import logsumexp
 from jax import Array
 from jax.tree_util import tree_map
 
+with open("../config.yaml", "r") as file:
+    config = yaml.safe_load(file)
 
-# We need a fucntion to intilize the weights and biases for a dense neural network layer
-def random_layer_params(m: int,n: int,key: int,scale: float=1e-2) -> tuple[Array, Array]:
+learningRate = config["learningRate"]
+numEpochs = config["numEpochs"]
+
+
+patience = config["patience"]
+precision = config["precision"]
+
+# We need a fuction to intilize the weights and biases for a dense neural network layer
+def random_layer_params(m: int, n: int,key: int,scale: float=1e-2) -> tuple[Array, Array]:
     w_key, b_key = random.split(key)
     return scale * random.normal(w_key, (n,m)), scale * random.normal(b_key, (n,))
 
@@ -26,8 +35,8 @@ def init_network_params(sizes: List[int], key: Array) -> List[Tuple[Array, Array
   return [random_layer_params(m, n, k) for m, n, k in zip(sizes[:-1], sizes[1:], keys)]
 
 layer_sizes = [784, 512, 512, 10]
-step_size = 0.01
-num_epochs = 8
+
+numEpochs = 8
 batch_size = 128
 n_targets = 10 # handschriftliche Ziffern 0-9
 params = init_network_params(layer_sizes, random.key(0))
@@ -90,7 +99,7 @@ def loss(params: List[Tuple[Array, Array]], images:Array, targets:Array)-> Array
 @jit
 def update(params: List[Tuple[Array,Array]], x: Array, y: Array)-> List[Tuple[Array,Array]]:
   grads = grad(loss)(params, x, y)
-  return [(w-step_size * dw, b-step_size * db)
+  return [(w - learningRate * dw, b - learningRate * db)
           for (w,b), (dw,db)in zip(params, grads)]
 
 def numpy_collate(batch: List)-> List:
@@ -121,7 +130,7 @@ def prepareData():
                               dtype=jnp.float32)
     test_labels = one_hot(np.asarray(mnist_dataset_test.targets, dtype=jnp.float32), n_targets)
 
-def train_with_visualization():
+def train_with_visualization(num_epochs: int = numEpochs, opt_state) -> Tuple[List[float], List[float], List[float], List[float], List[Tuple[Array, Array]]]:
     # Reset parameters
     params = init_network_params(layer_sizes, random.key(0))
 
