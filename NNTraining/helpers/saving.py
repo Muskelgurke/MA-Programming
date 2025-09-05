@@ -10,6 +10,8 @@ from jax import Array
 import toml
 
 from NNTraining.helpers import plotting
+from NNTraining.helpers.TrainingResults import TrainingResults
+
 
 def save_jax_array(array: Array, filepath: Path) -> None:
     """Save JAX array preserving its type information"""
@@ -34,16 +36,20 @@ def load_jax_array(filepath: Path) -> Array:
     jax_array = jnp.array(array_data, dtype=getattr(jnp, metadata.get('dtype', 'float32')))
     return jax_array
 
-def save_training_session(train_accs: List[float], test_accs: List[float],
-                          train_losses: List[float], test_losses: List[float],
-                          final_params: List[Tuple[Array, Array]],epoch_times: List[float],
-                          config: Dict[str, Any]):
+def save_training_session(TrainingResult: TrainingResults, config: Dict[str, Any]):
     """
     Save the training session including model parameters, metrics, and configuration.
 ss
     Returns:
         Path to the created training directory
     """
+    train_accs = TrainingResult.train_accs
+    test_accs = TrainingResult.test_accs
+    train_losses = TrainingResult.train_loss
+    test_losses = TrainingResult.test_loss
+    final_params = TrainingResult.final_params
+    epoch_times = TrainingResult.epoch_times
+
     # Create timestamp-based directory
     timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
     training_dir = Path(f"training_sessions/{timestamp}")

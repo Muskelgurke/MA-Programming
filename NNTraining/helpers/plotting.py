@@ -17,7 +17,7 @@ def plot_performance(batch_losses: list[float],
         epoch_times: Optional, Liste der Epochen-Zeiten
     """
     fig = plt.figure(figsize=(15, 10))
-    fig.suptitle('Performance - ' + datsetName, fontsize=16, fontweight='bold')
+    fig.suptitle('Performance - ' + str(datsetName), fontsize=16, fontweight='bold')
     epochs = createXaxis(train_accuracies)
 
     plot_TrainingLoss(batch_losses)
