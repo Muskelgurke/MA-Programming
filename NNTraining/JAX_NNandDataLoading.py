@@ -172,81 +172,6 @@ def train(num_epochs: int) -> Tuple[List[float], List[float], List[float], List[
 
     return log_acc_train, log_acc_test, train_loss, test_losses, params, epoch_times
 
-
-def plot_accuracy_curve(train_accuracies: List[float], test_accuracies: List[float],
-                        title: str = "Model Accuracy over Epochs"):
-    """
-    Plottet die Accuracy-Kurven für Training und Test-Daten.
-
-    Args:
-        train_accuracies: Liste der Training-Accuracies pro Epoch
-        test_accuracies: Liste der Test-Accuracies pro Epoch
-        title: Titel des Plots
-    """
-    epochs = range(1, len(train_accuracies) + 1)
-
-    plt.figure(figsize=(10, 6))
-    plt.plot(epochs, train_accuracies, 'b-o', label='Training Accuracy', linewidth=2, markersize=6)
-    plt.plot(epochs, test_accuracies, 'r-s', label='Test Accuracy', linewidth=2, markersize=6)
-
-    plt.title(title, fontsize=16, fontweight='bold')
-    plt.xlabel('Epoch', fontsize=12)
-    plt.ylabel('Accuracy', fontsize=12)
-    plt.legend(fontsize=11)
-    plt.grid(True, alpha=0.3)
-    plt.xlim(0.5, len(train_accuracies) + 0.5)
-    plt.ylim(0, 1)
-
-    plt.tight_layout()
-    plt.show()
-    pass
-
-
-def plot_comprehensive_metrics(train_accuracies: List[float], test_accuracies: List[float],
-                              train_losses: List[float] = None, test_losses: List[float] = None):
-    """
-    Plottet umfassende Metriken.
-
-    Args:
-        train_accuracies: Training-Accuracies
-        test_accuracies: Test-Accuracies
-        train_losses: Training-Losses (optional)
-        test_losses: Test-Losses (optional)
-    """
-    epochs = range(1, len(train_accuracies) + 1)
-
-    # Bestimme Anzahl der Subplots
-    n_plots = 2 if (train_losses is not None and test_losses is not None) else 1
-
-    fig, axes = plt.subplots(1, n_plots, figsize=(15, 6))
-    if n_plots == 1:
-        axes = [axes]
-
-    # Accuracy Plot
-    ax1 = axes[0]
-    ax1.plot(epochs, train_accuracies, 'b-o', label='Training Accuracy', linewidth=2, markersize=6)
-    ax1.plot(epochs, test_accuracies, 'r-s', label='Test Accuracy', linewidth=2, markersize=6)
-    ax1.set_title('Model Accuracy', fontsize=14, fontweight='bold')
-    ax1.set_xlabel('Epoch')
-    ax1.set_ylabel('Accuracy')
-    ax1.legend()
-    ax1.grid(True, alpha=0.3)
-    ax1.set_ylim(0, 1)
-
-    # Loss Plot (falls verfügbar)
-    if n_plots == 2 and train_losses is not None and test_losses is not None:
-        ax2 = axes[1]
-        ax2.plot(epochs, train_losses, 'b-o', label='Training Loss', linewidth=2, markersize=6)
-        ax2.plot(epochs, test_losses, 'r-s', label='Test Loss', linewidth=2, markersize=6)
-        ax2.set_title('Model Loss', fontsize=14, fontweight='bold')
-        ax2.set_xlabel('Epoch')
-        ax2.set_ylabel('Loss')
-        ax2.legend()
-        ax2.grid(True, alpha=0.3)
-
-    plt.tight_layout()
-    plt.show()
-
 def buildAutoBatchedFktForJAX():
     global batched_predict
     batched_predict = vmap(forward, in_axes=(None, 0))
@@ -275,6 +200,3 @@ if __name__ == "__main__":
 
     train_accs, test_accs, train_loss, test_loss, final_params, epoch_times = train(numEpochs)
     plotting.plot_performance(train_loss, train_accs, test_accs, epoch_times)
-    # Visualisierungen erstellen
-    #plot_accuracy_curve(train_accs, test_accs, "MNIST Classification Accuracy")
-    #plot_comprehensive_metrics(train_accs, test_accs, train_losses, test_losses)
