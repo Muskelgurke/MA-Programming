@@ -263,6 +263,7 @@ def initializingConfigurationOfTraining():
     params = init_network_params(layer_sizes, random.key(0))
     buildAutoBatchedFktForJAX()
 
+def saving_training_session()
 
 
 
