@@ -215,9 +215,8 @@ ss
                 f"Test Acc: {test_acc:.4f} | "
                 f"Train Loss: {train_loss:.4f} | "
                 f"Test Loss: {test_loss:.4f}\n"
-                f"Training abgeschlossen! Durchschnittliche Zeit pro Epoch: {np.mean(epoch_times):.2f}s"
             )
-
+        log_file.write(f"Training abgeschlossen! Durchschnittliche Zeit pro Epoch: {np.mean(epoch_times):.2f}s")
 
 def train(num_epochs: int, randomKey: Array) -> Tuple[List[float], List[float], List[float], List[float], List[Tuple[Array, Array]], List[float]]:
     # Reset parameters
