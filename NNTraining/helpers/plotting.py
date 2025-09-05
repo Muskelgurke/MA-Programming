@@ -1,6 +1,9 @@
 import matplotlib.pyplot as plt
 
-def plot_performance(batch_losses, train_accuracies, test_accuracies, epoch_times=None):
+def plot_performance(batch_losses: list[float],
+    train_accuracies: list[float],
+    test_accuracies: list[float],
+    epoch_times: list[float]):
     """
     Erstellt einen umfassenden Performance-Plot
     Args:
@@ -19,7 +22,7 @@ def plot_performance(batch_losses, train_accuracies, test_accuracies, epoch_time
     ax1.set_xlabel('# Batch Updates')
     ax1.set_ylabel('Batch Loss')
     ax1.grid(True, alpha=0.3)
-    ax1.set_ylim(bottom=0)
+    ax1.set_ylim(0,0.5)
 
     # 2. Accuracy Plot (oben rechts)
     ax2 = plt.subplot(2, 2, 2)
@@ -65,4 +68,3 @@ def plot_performance(batch_losses, train_accuracies, test_accuracies, epoch_time
 
     plt.tight_layout()
     plt.subplots_adjust(top=0.93)
-    plt.show()

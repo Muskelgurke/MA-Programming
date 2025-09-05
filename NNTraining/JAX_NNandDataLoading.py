@@ -123,7 +123,7 @@ def prepareData(dataset_name: Literal["mnist", "fashionmnist"]):
                               dtype=jnp.float32)
     test_labels = one_hot(np.asarray(testDataSet.targets, dtype=jnp.float32), n_targets)
 
-def train(num_epochs: int) -> Tuple[List[float], List[float], List[float], List[float], List[Tuple[Array, Array]]]:
+def train(num_epochs: int) -> Tuple[List[float], List[float], List[float], List[float], List[Tuple[Array, Array]], List[float]]:
     # Reset parameters
     params = init_network_params(layer_sizes, random.key(0))
 
@@ -170,7 +170,7 @@ def train(num_epochs: int) -> Tuple[List[float], List[float], List[float], List[
     print("-" * 60)
     print(f"Training abgeschlossen! Durchschnittliche Zeit pro Epoch: {np.mean(epoch_times):.2f}s")
 
-    return log_acc_train, log_acc_test, train_loss, test_losses, params
+    return log_acc_train, log_acc_test, train_loss, test_losses, params, epoch_times
 
 
 def plot_accuracy_curve(train_accuracies: List[float], test_accuracies: List[float],
@@ -263,7 +263,7 @@ def initializingConfigurationOfTraining():
     params = init_network_params(layer_sizes, random.key(0))
     buildAutoBatchedFktForJAX()
 
-def saving_training_session()
+#def saving_training_session():
 
 
 
@@ -273,8 +273,8 @@ if __name__ == "__main__":
 
     prepareData("mnist")
 
-    train_accs, test_accs, train_loss, test_loss, final_params = train(numEpochs)
-    plotting.plot_performance(train_loss, train_accs, test_accs, epoch_times=None)
+    train_accs, test_accs, train_loss, test_loss, final_params, epoch_times = train(numEpochs)
+    plotting.plot_performance(train_loss, train_accs, test_accs, epoch_times)
     # Visualisierungen erstellen
     #plot_accuracy_curve(train_accs, test_accs, "MNIST Classification Accuracy")
     #plot_comprehensive_metrics(train_accs, test_accs, train_losses, test_losses)
