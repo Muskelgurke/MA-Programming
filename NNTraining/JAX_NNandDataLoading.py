@@ -1,7 +1,7 @@
 import numpy as np
 from typing import List, Tuple, Literal
 from NNTraining.helpers import plotting
-import matplotlib.pyplot as plt
+from pathlib import Path
 import time
 import yaml
 from torch.utils.data import DataLoader, default_collate
@@ -19,14 +19,11 @@ def random_layer_params(m: int, n: int,key: int,scale: float=1e-2) -> tuple[Arra
     return scale * random.normal(w_key, (n,m)), scale * random.normal(b_key, (n,))
 
 # initialize all layers for a fully-connected NN with sizes
-# sizes = numbeer of neurons in each layer
+# sizes = number of neurons in each layer
 
 def init_network_params(sizes: List[int], key: Array) -> List[Tuple[Array, Array]]:
   keys = random.split(key, len(sizes))
   return [random_layer_params(m, n, k) for m, n, k in zip(sizes[:-1], sizes[1:], keys)]
-
-
-
 
 def relu(x: Array) -> Array:
   return jnp.maximum(0, x)
@@ -42,24 +39,6 @@ def forward(params: List[Tuple[Array, Array]], image: Array) -> Array:
   final_w, final_b = params[-1]
   logits = jnp.dot(final_w, activations) + final_b
   return logits - logsumexp(logits) # Bessere und numerisch stabilere Softmax
-
-"""
-# This works on single examples
-random_flattened_image = random.normal(random.key(1), (28 * 28,))
-preds = predict(params, random_flattened_image)
-print(preds.shape)
-# Doesn't work with a batch
-random_flattened_images = random.normal(random.key(1), (10, 28 * 28))
-try:
-  preds = predict(params, random_flattened_images)
-except TypeError:
-  print('Invalid shapes!')
-"""
-
-# --- Auto-Batched version of predict ---
-
-# Make a batched version of the `forward` function
-
 
 def one_hot(x: np.ndarray, k: int, dtype=jnp.float32) -> Array:
   """Create a one-hot encoding of x of size k.
@@ -123,6 +102,30 @@ def prepareData(dataset_name: Literal["mnist", "fashionmnist"]):
                               dtype=jnp.float32)
     test_labels = one_hot(np.asarray(testDataSet.targets, dtype=jnp.float32), n_targets)
 
+def save_jax_array(array: Array, filepath: Path) -> None:
+    """Save JAX array preserving its type information"""
+    # Convert to numpy for storage but preserve the original shape and dtype
+    np_array = np.array(array)
+    with open(filepath, 'wb') as f:
+        # Save metadata and array data
+        metadata = {
+            'shape': np_array.shape,
+            'dtype': str(np_array.dtype),
+            'is_jax': True
+        }
+        np.savez(filepath, data=np_array, metadata=metadata)
+
+def load_jax_array(filepath: Path) -> Array:
+    """Load JAX array from file"""
+    data = np.load(filepath)
+    array_data = data['data']
+    metadata = data['metadata'].item() if 'metadata' in data else {}
+
+    # Convert back to JAX array
+    jax_array = jnp.array(array_data, dtype=getattr(jnp, metadata.get('dtype', 'float32')))
+    return jax_array
+
+
 def train(num_epochs: int) -> Tuple[List[float], List[float], List[float], List[float], List[Tuple[Array, Array]], List[float]]:
     # Reset parameters
     params = init_network_params(layer_sizes, random.key(0))
@@ -181,10 +184,10 @@ def initializingConfigurationOfTraining():
     with open("Configuration/config.yaml", "r") as file:
         config = yaml.safe_load(file)
 
-    learningRate = config["learningRate"]
-    numEpochs = config["numEpochs"]
-    batchSize = config["batchSize"]
-    layer_sizes = config["layerSizes"]
+    numEpochs = int(config["numEpochs"])
+    learningRate = float(config["learningRate"])
+    batchSize = int(config["batchSize"])
+    layer_sizes = list(config["layerSizes"])
     params = init_network_params(layer_sizes, random.key(0))
     buildAutoBatchedFktForJAX()
 
@@ -199,4 +202,5 @@ if __name__ == "__main__":
     prepareData("mnist")
 
     train_accs, test_accs, train_loss, test_loss, final_params, epoch_times = train(numEpochs)
+
     plotting.plot_performance(train_loss, train_accs, test_accs, epoch_times)
