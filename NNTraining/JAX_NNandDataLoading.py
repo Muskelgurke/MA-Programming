@@ -35,12 +35,12 @@ def relu(x: Array) -> Array:
   return jnp.maximum(0, x)
 
 def forward(params: List[Tuple[Array, Array]], image: Array) -> Array:
-  """ Predict the class of a single"""
-  # per-example predictions
-  activations = image
-  for w, b in params[:-1]:
-    outputs = jnp.dot(w, activations) + b # Neuronen berechnung y = w * x + b
-    activations = relu(outputs) # Aktivierung meiner Neuronen
+  """ Predict the class of a single Neuronal Layer"""
+
+  activations = image # set input to the first layer
+  for weights, bias in params[:-1]:
+    outputs = jnp.dot(weights, activations) + bias # Neuronen berechnung y = w * x + b
+    activations = relu(outputs) # aktiviert die Neuronen mit ReLu und setzt die Ausgabe als Input für die nächste Schicht
 
   final_w, final_b = params[-1]
   logits = jnp.dot(final_w, activations) + final_b
@@ -83,20 +83,20 @@ def flatten_and_cast(pic):
   return np.ravel(np.array(pic, dtype=jnp.float32))
 
 
-def prepareData(dataset_name: Literal["mnist", "fashionmnist", "cifar10", "cifar100", "svhn"]):
+def prepareData(dataset_name):
     global training_generator, train_images, train_labels, test_images, test_labels, n_targets
 
-    if dataset_name.lower() == "mnist":
+    if dataset_name == "mnist":
         DatasetClass = datasets.MNIST
         n_targets = 10 # 10 Klassen (Ziffern 0-9)
-    elif dataset_name.lower() == "fashionmnist":
+    elif dataset_name == "fashionmnist":
         DatasetClass = datasets.FashionMNIST
         n_targets = 10 # 10 Klassen (Ziffern 0-9)
-    elif dataset_name.lower() == "cifar10":
+    elif dataset_name == "cifar10":
         DatasetClass = datasets.CIFAR10
         n_targets = 10 # 10 Klassen
-    elif dataset_name.lower() == "cifar100":
-        DatasetClass = datasets.CIFAR100
+    elif dataset_name == "cifar100":
+        DatasetClass = datasets.CIFAR100s
         n_targets = 100 # 100 Klassen
     else:
         raise ValueError(f"Unknown dataset: {dataset_name}")
@@ -285,19 +285,40 @@ def initializingConfigurationOfTraining():
 
     return learningRate, numEpochs, batchSize, layer_sizes, params, randomKey, config
 
+
+def checkConfigIfMultipleDatasets() -> bool:
+    return len(list(config["dataset"])) > 1
+
+
 if __name__ == "__main__":
     # Training mit Visualisierung durchführen
     learningRate, numEpochs, batchSize, layer_sizes, params, randomKey, config = initializingConfigurationOfTraining()
+    if checkConfigIfMultipleDatasets():
+        # Multiple datasets - train on each one sequentially
+        for dataset_name in config["dataset"]:
+            print(f"\nTraining on dataset: {dataset_name}")
+            prepareData(dataset_name)
+            train_accs, test_accs, train_loss, test_loss, final_params, epoch_times = train(numEpochs, randomKey)
 
-    prepareData(config["dataset"])
+            # Modify config for this specific dataset
+            dataset_config = config.copy()
+            dataset_config["dataset"] = dataset_name
 
-    train_accs, test_accs, train_loss, test_loss, final_params, epoch_times = train(numEpochs,randomKey)
-
-    save_training_session(train_accs,
-                          test_accs,
-                          train_loss,
-                          test_loss,
-                          final_params,
-                          epoch_times,
-                          config)
-
+            save_training_session(train_accs,
+                                  test_accs,
+                                  train_loss,
+                                  test_loss,
+                                  final_params,
+                                  epoch_times,
+                                  dataset_config)
+    else:
+        # Single dataset training
+        prepareData(config["dataset"][0])
+        train_accs, test_accs, train_loss, test_loss, final_params, epoch_times = train(numEpochs, randomKey)
+        save_training_session(train_accs,
+                              test_accs,
+                              train_loss,
+                              test_loss,
+                              final_params,
+                              epoch_times,
+                              config)
