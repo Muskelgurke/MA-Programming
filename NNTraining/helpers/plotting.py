@@ -6,7 +6,8 @@ def plot_performance(batch_losses: list[float],
     train_accuracies: list[float],
     test_accuracies: list[float],
     epoch_times: list[float],
-    savePath: Path = None):
+    savePath: Path = None, datsetName: str = ""
+) -> None:
     """
     Erstellt einen umfassenden Performance-Plot
     Args:
@@ -16,7 +17,7 @@ def plot_performance(batch_losses: list[float],
         epoch_times: Optional, Liste der Epochen-Zeiten
     """
     fig = plt.figure(figsize=(15, 10))
-    fig.suptitle('Performance', fontsize=16, fontweight='bold')
+    fig.suptitle('Performance - ' + datsetName.title(), fontsize=16, fontweight='bold')
     epochs = createXaxis(train_accuracies)
 
     plot_TrainingLoss(batch_losses)
@@ -66,11 +67,11 @@ def plot_EpochTimes(epoch_times: list[float], epochs: range):
         ax3.set_title('Epoch Duration', fontweight='bold')
 
 
-def plot_TrainingAcc(xAxis: range, test_accuracies: list[float], train_accuracies: list[float]):
+def plot_TrainingAcc(x_axis: range, test_accuracies: list[float], train_accuracies: list[float]):
     # 2. Accuracy Plot (oben rechts)
     ax2 = plt.subplot(2, 2, 2)
-    ax2.plot(xAxis, train_accuracies, 'b-', label='Training', marker='o', markersize=4)
-    ax2.plot(xAxis, test_accuracies, 'r-', label='Test', marker='s', markersize=4)
+    ax2.plot(x_axis, train_accuracies, 'b-', label='Training', marker='o', markersize=4)
+    ax2.plot(x_axis, test_accuracies, 'r-', label='Test', marker='s', markersize=4)
     ax2.set_title('Accuracy', fontweight='bold')
     ax2.set_xlabel('# Epochs')
     ax2.set_ylabel('Prediction Accuracy')

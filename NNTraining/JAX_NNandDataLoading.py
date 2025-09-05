@@ -83,7 +83,7 @@ def flatten_and_cast(pic):
   return np.ravel(np.array(pic, dtype=jnp.float32))
 
 
-def prepareData(dataset_name: Literal["mnist", "fashionmnist"]):
+def prepareData(dataset_name: Literal["mnist", "fashionmnist", "cifar10", "cifar100", "svhn"]):
     global training_generator, train_images, train_labels, test_images, test_labels, n_targets
 
     if dataset_name.lower() == "mnist":
@@ -92,6 +92,12 @@ def prepareData(dataset_name: Literal["mnist", "fashionmnist"]):
     elif dataset_name.lower() == "fashionmnist":
         DatasetClass = datasets.FashionMNIST
         n_targets = 10 # 10 Klassen (Ziffern 0-9)
+    elif dataset_name.lower() == "cifar10":
+        DatasetClass = datasets.CIFAR10
+        n_targets = 10 # 10 Klassen
+    elif dataset_name.lower() == "cifar100":
+        DatasetClass = datasets.CIFAR100
+        n_targets = 100 # 100 Klassen
     else:
         raise ValueError(f"Unknown dataset: {dataset_name}")
 
@@ -157,7 +163,7 @@ ss
             "final_test_accuracy": float(test_accs[-1]),
             "final_train_loss": float(train_losses[-1]),
             "final_test_loss": float(test_losses[-1]),
-            "dataset": config.get("dataset", "mnist")
+            "dataset": config["dataset"]
         },
         "model_configuration": config,
         "training_metrics": {
@@ -166,13 +172,6 @@ ss
             "train_losses": train_losses,
             "test_losses": test_losses,
             "epoch_times": epoch_times
-        },
-        "model_architecture": {
-            "layer_sizes": layer_sizes,
-            "learning_rate": learningRate,
-            "batch_size": batchSize,
-            "num_epochs": numEpochs,
-            "random_seed": config.get("random_seed", 0)
         }
     }
 
@@ -194,7 +193,7 @@ ss
     with open(training_dir / "model_params.pkl", 'wb') as f:
         pickle.dump(final_params, f)
 
-    plotting.plot_performance(train_losses, train_accs, test_accs, epoch_times, training_dir)
+    plotting.plot_performance(train_losses, train_accs, test_accs, epoch_times, training_dir, config["dataset"])
 
     # Save configuration as JSON for easy reading
     with open(training_dir / "config.json", 'w') as f:
@@ -290,7 +289,7 @@ if __name__ == "__main__":
     # Training mit Visualisierung durchführen
     learningRate, numEpochs, batchSize, layer_sizes, params, randomKey, config = initializingConfigurationOfTraining()
 
-    prepareData("mnist")
+    prepareData(config["dataset"])
 
     train_accs, test_accs, train_loss, test_loss, final_params, epoch_times = train(numEpochs,randomKey)
 
