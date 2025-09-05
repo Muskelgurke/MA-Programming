@@ -1,3 +1,4 @@
+randomSeed: 42
 learningRate: 0.01
 numEpochs: 4
 batchSize: 128

@@ -1,9 +1,12 @@
+from pathlib import Path
+
 import matplotlib.pyplot as plt
 
 def plot_performance(batch_losses: list[float],
     train_accuracies: list[float],
     test_accuracies: list[float],
-    epoch_times: list[float]):
+    epoch_times: list[float],
+    savePath: Path = None):
     """
     Erstellt einen umfassenden Performance-Plot
     Args:
@@ -14,42 +17,23 @@ def plot_performance(batch_losses: list[float],
     """
     fig = plt.figure(figsize=(15, 10))
     fig.suptitle('Performance', fontsize=16, fontweight='bold')
+    epochs = createXaxis(train_accuracies)
 
-    # 1. Batch Loss Plot (oben links)
-    ax1 = plt.subplot(2, 2, 1)
-    ax1.plot(batch_losses, 'b-', alpha=0.7, linewidth=0.8)
-    ax1.set_title('Training Loss', fontweight='bold')
-    ax1.set_xlabel('# Batch Updates')
-    ax1.set_ylabel('Batch Loss')
-    ax1.grid(True, alpha=0.3)
-    ax1.set_ylim(0,0.5)
+    plot_TrainingLoss(batch_losses)
 
-    # 2. Accuracy Plot (oben rechts)
-    ax2 = plt.subplot(2, 2, 2)
-    epochs = range(1, len(train_accuracies) + 1)
-    ax2.plot(epochs, train_accuracies, 'b-', label='Training', marker='o', markersize=4)
-    ax2.plot(epochs, test_accuracies, 'r-', label='Test', marker='s', markersize=4)
-    ax2.set_title('Accuracy', fontweight='bold')
-    ax2.set_xlabel('# Epochs')
-    ax2.set_ylabel('Prediction Accuracy')
-    ax2.legend()
-    ax2.grid(True, alpha=0.3)
-    ax2.set_ylim(0, 1.0)
+    plot_TrainingAcc(epochs, test_accuracies, train_accuracies)
 
-    # 3. Epochen-Zeiten Plot (unten links) - optional
-    ax3 = plt.subplot(2, 2, 3)
-    if epoch_times is not None:
-        ax3.bar(epochs, epoch_times, alpha=0.7, color='green')
-        ax3.set_title('Epoch Duration', fontweight='bold')
-        ax3.set_xlabel('# Epochs')
-        ax3.set_ylabel('Time (seconds)')
-        ax3.grid(True, alpha=0.3)
-    else:
-        ax3.text(0.5, 0.5, 'No epoch time data',
-                 horizontalalignment='center', verticalalignment='center',
-                 transform=ax3.transAxes, fontsize=12)
-        ax3.set_title('Epoch Duration', fontweight='bold')
+    plot_EpochTimes(epoch_times, epochs)
 
+    plot_TrainCompareTestACC(test_accuracies, train_accuracies)
+
+    plt.tight_layout()
+    plt.subplots_adjust(top=0.93)
+
+    plt.savefig(savePath / "training_metrics.png")
+
+
+def plot_TrainCompareTestACC(test_accuracies: list[float], train_accuracies: list[float]):
     # 4. Final Accuracy Vergleich (unten rechts)
     ax4 = plt.subplot(2, 2, 4)
     categories = ['Training', 'Test']
@@ -66,5 +50,46 @@ def plot_performance(batch_losses: list[float],
         ax4.text(bar.get_x() + bar.get_width() / 2., height + 0.01,
                  f'{accuracy:.3f}', ha='center', va='bottom')
 
-    plt.tight_layout()
-    plt.subplots_adjust(top=0.93)
+
+def plot_EpochTimes(epoch_times: list[float], epochs: range):
+    ax3 = plt.subplot(2, 2, 3)
+    if epoch_times is not None:
+        ax3.bar(epochs, epoch_times, alpha=0.7, color='green')
+        ax3.set_title('Epoch Duration', fontweight='bold')
+        ax3.set_xlabel('# Epochs')
+        ax3.set_ylabel('Time (seconds)')
+        ax3.grid(True, alpha=0.3)
+    else:
+        ax3.text(0.5, 0.5, 'No epoch time data',
+                 horizontalalignment='center', verticalalignment='center',
+                 transform=ax3.transAxes, fontsize=12)
+        ax3.set_title('Epoch Duration', fontweight='bold')
+
+
+def plot_TrainingAcc(xAxis: range, test_accuracies: list[float], train_accuracies: list[float]):
+    # 2. Accuracy Plot (oben rechts)
+    ax2 = plt.subplot(2, 2, 2)
+    ax2.plot(xAxis, train_accuracies, 'b-', label='Training', marker='o', markersize=4)
+    ax2.plot(xAxis, test_accuracies, 'r-', label='Test', marker='s', markersize=4)
+    ax2.set_title('Accuracy', fontweight='bold')
+    ax2.set_xlabel('# Epochs')
+    ax2.set_ylabel('Prediction Accuracy')
+    ax2.legend()
+    ax2.grid(True, alpha=0.3)
+    ax2.set_ylim(0, 1.0)
+
+
+def createXaxis(train_accuracies: list[float]) -> range:
+    epochs = range(1, len(train_accuracies) + 1)
+    return epochs
+
+
+def plot_TrainingLoss(batch_losses: list[float]):
+    # 1. Batch Loss Plot (oben links)
+    ax1 = plt.subplot(2, 2, 1)
+    ax1.plot(batch_losses, 'b-', alpha=0.7, linewidth=0.8)
+    ax1.set_title('Training Loss', fontweight='bold')
+    ax1.set_xlabel('# Batch Updates')
+    ax1.set_ylabel('Batch Loss')
+    ax1.grid(True, alpha=0.3)
+    ax1.set_ylim(0, 0.5)
