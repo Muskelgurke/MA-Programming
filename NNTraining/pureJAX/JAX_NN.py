@@ -18,9 +18,6 @@ from jax.scipy.special import logsumexp
 from jax import Array
 from jax.tree_util import tree_map
 
-
-
-
 # We need a fuction to intilize the weights and biases for a dense neural network layer
 def random_layer_params(m: int, n: int,key: int,scale: float=1e-2) -> tuple[Array, Array]:
     w_key, b_key = random.split(key)
@@ -102,24 +99,20 @@ def prepareData(dataset_name: str, batchSize: int):
     elif dataset_name == "fashionmnist":
         DatasetClass = datasets.FashionMNIST
         n_targets = 10 # 10 Klassen (Ziffern 0-9)
-    elif dataset_name == "cifar10":
-        DatasetClass = datasets.CIFAR10
-        n_targets = 10 # 10 Klassen
-    elif dataset_name == "cifar100":
-        DatasetClass = datasets.CIFAR100s
-        n_targets = 100 # 100 Klassen
     else:
         raise ValueError(f"Unknown dataset: {dataset_name}")
 
     # define our dataset, using torch datasets
-    dataset = DatasetClass('dataset/', download=True, transform=flatten_and_cast)
+    dataset = DatasetClass('_dataset/', download=True, transform=flatten_and_cast)
     # create pytorch data loader with custom collate function
     training_generator = DataLoader(dataset, batch_size=batchSize, collate_fn=numpy_collate)
-    # Get the full train dataset (for checking accuracy while training)
+
+    # Train dataset
     train_images = np.asarray(dataset.data, dtype=jnp.float32).reshape(len(dataset.data), -1)
     train_labels = one_hot(np.asarray(dataset.targets, dtype=jnp.float32), n_targets)
-    # Get full test dataset
-    testDataSet = DatasetClass('dataset/', download=True, train=False)
+
+    # Test dataset
+    testDataSet = DatasetClass('_dataset/', download=True, train=False)
     test_images = jnp.asarray(testDataSet.data.numpy().reshape(len(testDataSet.data), -1),
                               dtype=jnp.float32)
     test_labels = one_hot(np.asarray(testDataSet.targets, dtype=jnp.float32), n_targets)
@@ -214,7 +207,7 @@ def checkConfigIfMultipleDatasets(config: dict) -> bool:
     return len(list(configFile["dataset"])) > 1
 
 def loadConfigFile()-> dict:
-    with open("Configuration/config.yaml", "r") as file:
+    with open("pureJAX/Configuration/config.yaml", "r") as file:
         config = yaml.safe_load(file)
     return config
 

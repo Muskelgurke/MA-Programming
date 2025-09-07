@@ -2,7 +2,7 @@ import datetime
 import pickle
 import json
 from pathlib import Path
-from typing import List, Tuple, Dict, Any
+from typing import Dict, Any
 
 import numpy as np
 import jax.numpy as jnp
@@ -52,7 +52,7 @@ ss
 
     # Create timestamp-based directory
     timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-    training_dir = Path(f"training_sessions/{timestamp}")
+    training_dir = Path(f"pureJAX/training_sessions/{timestamp}")
     training_dir.mkdir(parents=True, exist_ok=True)
 
     # Prepare training data for TOML

@@ -3,7 +3,7 @@ from FGD import linearRegressionForwardGradient as lR_JaxFG
 import yaml
 
 def startJAXTraining():
-    with open("config.yaml", "r") as file:
+    with open("Old_config.yaml", "r") as file:
         config = yaml.safe_load(file)
     print(f'\nStarting training lReg with JAX...\n'
           f'Your Funktion: y = {config["a"]} * X + {config["b"]}\n'
