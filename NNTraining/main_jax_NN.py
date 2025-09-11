@@ -1,5 +1,3 @@
-from scipy.cluster.hierarchy import weighted
-
 from NNTraining.helpers import saving
 from NNTraining.helpers.TrainingConfiguration import TrainingConfiguration
 from NNTraining.helpers.TrainingResults import TrainingResults
@@ -16,8 +14,6 @@ import time
 import yaml
 import torchvision.datasets as datasets
 
-
-
 import jax.numpy as jnp
 from jax import grad, jit, vmap
 from jax import random
@@ -25,24 +21,6 @@ from jax.scipy.special import logsumexp
 from jax import Array
 from jax.tree_util import tree_map
 
-# We need a fuction to intilize the weights and biases for a dense neural network layer
-def initialize_random_layer_params(
-    input_dimension: int,
-    output_dimension: int,
-    random_seed_key: int,
-    initialization_scale: float = 1e-2) -> tuple[Array, Array]:
-
-    weight_key, bias_key = random.split(random_seed_key)
-    random_weight_matrix = initialization_scale * random.normal(key=weight_key, shape=(output_dimension, input_dimension))
-    random_bias_matrix = initialization_scale * random.normal(bias_key, (output_dimension,))
-    return random_weight_matrix, random_bias_matrix
-
-# initialize all layers for a fully-connected NN with sizes
-# sizes = number of neurons in each layer
-
-def init_network_params(sizes: List[int], key: int) -> List[Tuple[Array, Array]]:
-  keys = random.split(key, len(sizes))
-  return [initialize_random_layer_params(m, n, k) for m, n, k in zip(sizes[:-1], sizes[1:], keys)]
 
 def relu(x: Array) -> Array:
   return jnp.maximum(0, x)
@@ -143,7 +121,8 @@ def prepareData(dataset_name: str, batchSize: int)-> TrainingData:
         n_targets=n_targets
     )
 
-def train(data: TrainingData, config: TrainingConfiguration) -> TrainingResults:
+def train(data: TrainingData, config: TrainingConfiguration, model: JAXModel) -> TrainingResults:
+
     # Reset parameters
     randomKey = config.randomKey
     train_images = data.train_images
@@ -153,7 +132,8 @@ def train(data: TrainingData, config: TrainingConfiguration) -> TrainingResults:
     n_targets = data.n_targets
     layer_sizes = config.layerSizes
 
-    params = init_network_params(layer_sizes, randomKey)
+
+    params = model.params
 
     # Tracking-Listen
     train_accs = []
@@ -238,13 +218,16 @@ if __name__ == "__main__":
     # Training mit Visualisierung durchführen
     configFile = loadConfigFile()
     trainingConfiguration = createTrainingConfiguration(configFile)
+    model = JAXModel(trainingConfiguration.layerSizes, trainingConfiguration.randomKey)
+
+
 
     if checkConfigIfMultipleDatasets(configFile):
         # Multiple datasets - train on each one sequentially
         for dataset_name in configFile["dataset"]:
             print(f"\nTraining on dataset: {dataset_name}")
             TrainData = prepareData(dataset_name, trainingConfiguration.batchSize)
-            TrainingResult = train(TrainData, trainingConfiguration)
+            TrainingResult = train(TrainData, trainingConfiguration, model)
 
             # Modify config for this specific dataset
             dataset_config = configFile.copy()
@@ -255,5 +238,5 @@ if __name__ == "__main__":
         # Single dataset trainings
         dataset_name = configFile["dataset"][0]
         TrainData = prepareData(dataset_name, trainingConfiguration.batchSize)
-        TrainingResult = train(TrainData, trainingConfiguration)
+        TrainingResult = train(TrainData, trainingConfiguration, model)
         saving.save_training_session(TrainingResult, configFile)
