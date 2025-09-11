@@ -1,7 +1,10 @@
+from scipy.cluster.hierarchy import weighted
+
 from NNTraining.helpers import saving
 from NNTraining.helpers.TrainingConfiguration import TrainingConfiguration
 from NNTraining.helpers.TrainingResults import TrainingResults
 from NNTraining.helpers.TrainingData import TrainingData
+from NNTraining.helpers.JAXModel import JAXModel
 
 from typing import List, Tuple, Callable
 from torch.utils.data import DataLoader, default_collate
@@ -13,6 +16,8 @@ import time
 import yaml
 import torchvision.datasets as datasets
 
+
+
 import jax.numpy as jnp
 from jax import grad, jit, vmap
 from jax import random
@@ -21,16 +26,23 @@ from jax import Array
 from jax.tree_util import tree_map
 
 # We need a fuction to intilize the weights and biases for a dense neural network layer
-def random_layer_params(m: int, n: int,key: int,scale: float=1e-2) -> tuple[Array, Array]:
-    w_key, b_key = random.split(key)
-    return scale * random.normal(w_key, (n,m)), scale * random.normal(b_key, (n,))
+def initialize_random_layer_params(
+    input_dimension: int,
+    output_dimension: int,
+    random_seed_key: int,
+    initialization_scale: float = 1e-2) -> tuple[Array, Array]:
+
+    weight_key, bias_key = random.split(random_seed_key)
+    random_weight_matrix = initialization_scale * random.normal(key=weight_key, shape=(output_dimension, input_dimension))
+    random_bias_matrix = initialization_scale * random.normal(bias_key, (output_dimension,))
+    return random_weight_matrix, random_bias_matrix
 
 # initialize all layers for a fully-connected NN with sizes
 # sizes = number of neurons in each layer
 
 def init_network_params(sizes: List[int], key: int) -> List[Tuple[Array, Array]]:
   keys = random.split(key, len(sizes))
-  return [random_layer_params(m, n, k) for m, n, k in zip(sizes[:-1], sizes[1:], keys)]
+  return [initialize_random_layer_params(m, n, k) for m, n, k in zip(sizes[:-1], sizes[1:], keys)]
 
 def relu(x: Array) -> Array:
   return jnp.maximum(0, x)
@@ -123,13 +135,13 @@ def prepareData(dataset_name: str, batchSize: int)-> TrainingData:
     test_labels = one_hot(np.asarray(testDataSet.targets, dtype=jnp.float32), n_targets)
 
     return  TrainingData(
-            training_generator=training_generator,
-            train_images=train_images,
-            train_labels=train_labels,
-            test_images=test_images,
-            test_labels=test_labels,
-            n_targets=n_targets
-        )
+        training_generator=training_generator,
+        train_images=train_images,
+        train_labels=train_labels,
+        test_images=test_images,
+        test_labels=test_labels,
+        n_targets=n_targets
+    )
 
 def train(data: TrainingData, config: TrainingConfiguration) -> TrainingResults:
     # Reset parameters
@@ -187,13 +199,14 @@ def train(data: TrainingData, config: TrainingConfiguration) -> TrainingResults:
     print("-" * 60)
     print(f"Training abgeschlossen! Durchschnittliche Zeit pro Epoch: {np.mean(epoch_times):.2f}s")
 
-    return TrainingResults( train_accs=train_accs,
-                            test_accs=test_accs,
-                            train_loss=train_losses,
-                            test_loss=test_losses,
-                            final_params=params,
-                            epoch_times=epoch_times
-                            )
+    return TrainingResults(
+        train_accs=train_accs,
+        test_accs=test_accs,
+        train_loss=train_losses,
+        test_loss=test_losses,
+        final_params=params,
+        epoch_times=epoch_times
+    )
 
 
 
@@ -204,7 +217,14 @@ def createTrainingConfiguration(loadedConfig: dict) -> TrainingConfiguration:
     randomKey = random.PRNGKey(int(loadedConfig.get("randomSeed", 0)))
     layer_sizes = list(loadedConfig["layerSizes"])
     buildAutoBatchedFktForJAX()
-    return TrainingConfiguration(learningRate=learningRate, numEpochs=numEpochs, batchSize=batchSize, randomKey=randomKey, layerSizes=layer_sizes)
+
+    return TrainingConfiguration(
+        learningRate=learningRate,
+        numEpochs=numEpochs,
+        batchSize=batchSize,
+        randomKey=randomKey,
+        layerSizes=layer_sizes
+    )
 
 def checkConfigIfMultipleDatasets(config: dict) -> bool:
     return len(list(configFile["dataset"])) > 1
