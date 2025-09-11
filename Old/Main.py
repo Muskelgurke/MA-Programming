@@ -1,5 +1,5 @@
-from BP import linearRegressionJax as lR_Jax
-from FGD import linearRegressionForwardGradient as lR_JaxFG
+from Old.BP import linearRegressionJax as lR_Jax
+from Old.FGD import linearRegressionForwardGradient as lR_JaxFG
 import yaml
 
 def startJAXTraining():

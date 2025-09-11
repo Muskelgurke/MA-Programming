@@ -6,6 +6,8 @@ from NNTraining.helpers.TrainingData import TrainingData
 from typing import List, Tuple, Callable
 from torch.utils.data import DataLoader, default_collate
 
+from functools import partial
+
 import numpy as np
 import time
 import yaml
@@ -72,11 +74,11 @@ def loss_fn(params: List[Tuple[Array, Array]], images:Array, targets:Array)-> Ar
   preds = batched_predict(params,images)
   return -jnp.mean(preds*targets)
 
+
 def grad_calculator_backward(params: List[Tuple[Array, Array]], x: Array, y: Array)-> Array:
   return grad(loss_fn)(params, x, y)
 
-
-@jit
+@partial(jit, static_argnames=['grad_calculator'])
 def update(params: List[Tuple[Array,Array]], x: Array, y: Array, learningRate: float, grad_calculator: Callable[[List[Tuple[Array, Array]], Array, Array,], Array])-> List[Tuple[Array,Array]]:
   grads = grad_calculator(params, x, y)
   return [(w - learningRate * dw, b - learningRate * db)
@@ -107,7 +109,7 @@ def prepareData(dataset_name: str, batchSize: int)-> TrainingData:
         raise ValueError(f"Unknown dataset: {dataset_name}")
 
     # define our dataset, using torch datasets
-    dataset = DatasetClass('_dataset/', download=True, transform=flatten_and_cast)
+    dataset = DatasetClass('../_Dataset/', download=True, transform=flatten_and_cast)
     # create pytorch data loader with custom collate function
     training_generator = DataLoader(dataset, batch_size=batchSize, collate_fn=numpy_collate)
 
@@ -116,7 +118,7 @@ def prepareData(dataset_name: str, batchSize: int)-> TrainingData:
     train_labels = one_hot(np.asarray(dataset.targets, dtype=jnp.float32), n_targets)
 
     # Test dataset
-    testDataSet = DatasetClass('_dataset/', download=True, train=False)
+    testDataSet = DatasetClass('../_Dataset/', download=True, train=False)
     test_images = jnp.asarray(testDataSet.data.numpy().reshape(len(testDataSet.data), -1),
                               dtype=jnp.float32)
     test_labels = one_hot(np.asarray(testDataSet.targets, dtype=jnp.float32), n_targets)
@@ -211,7 +213,7 @@ def checkConfigIfMultipleDatasets(config: dict) -> bool:
     return len(list(configFile["dataset"])) > 1
 
 def loadConfigFile()-> dict:
-    with open("pureJAX/Configuration/config.yaml", "r") as file:
+    with open("_Configuration/config.yaml", "r") as file:
         config = yaml.safe_load(file)
     return config
 
