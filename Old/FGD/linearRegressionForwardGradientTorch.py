@@ -4,6 +4,7 @@ from numpy import random
 import yaml
 import matplotlib.pyplot as plt
 from torch.autograd.functional import jvp
+import torch
 
 with open("/home/muskelgurke/PycharmProjects/MA/Old/Old_config.yaml", "r") as file:
     config = yaml.safe_load(file)
@@ -25,45 +26,45 @@ Y_np = np.array(data_y)
 def linearFkt(a,b,x):
     return a * x + b
 
-def calculationMSE(theta,X,y):
+def calculationMSE(theta, X, y):
     Y_pred = X @ theta
-    return np.mean((Y_pred - y) ** 2)
+    return torch.mean((Y_pred - y) ** 2)
 
 # Numerische Richtungsableitung (Forward-Gradient)
-def directional_derivative(f, theta, v, X, Y, eps=1e-8):
-    """
-    Approximiert f'(theta)·v
-    """
-    return (f(theta + eps*v, X, Y) - f(theta, X, Y)) / eps
 
 def startTrain(plot=False):
     print('\nstarting training linearRegressionnp - Forward Gradient...')
-    theta = np.array([value_a, value_b], dtype=float)
+    theta_t = torch.tensor([value_a, value_b], dtype=torch.float32, requires_grad=True)
+    X_t = torch.tensor(X_np, dtype=torch.float32)
+    Y_t = torch.tensor(Y_np, dtype=torch.float32)
+
+
     loss_list = []
     counter = 0
     best_loss = np.inf
     save_fg = np.zeros((2, iterations), dtype=float)
-    rng = np.random.default_rng(42)
+    rng = np.random.default_rng(1)
 
     for i in range(iterations):
-        v = rng.normal(size=theta.shape)
+        v = rng.normal(size=theta_t.shape)
+        v_t = torch.tensor(v, dtype=torch.float32)
 
-        directional_grad = directional_derivative(calculationMSE, theta, v, X_np, Y_np)
-        g_theta = directional_grad * v
+        #JVP berechnen
+        f_val, directional_derivative = jvp(
+            lambda th: calculationMSE(th, X_t, Y_t),
+            (theta_t,),
+            (v_t,)
+        )
 
-        # Update speichern
-        save_fg[:, i] = g_theta
+        g_theta = directional_derivative * v_t
+        save_fg[:, i] = g_theta.detach().numpy()  # speichern als NumPy
 
         # Parameter-Update
-        theta = theta - learningRate * g_theta
+        theta_t = theta_t - learningRate * g_theta
 
         # Loss berechnen
-        loss = calculationMSE(theta, X_np, Y_np)
+        loss = calculationMSE(theta_t, X_t, Y_t).item()
         loss_list.append(loss)
-        #print(f'theta = {theta}')
-
-        #print(f'Iteration: {i} \n Loss: {loss_list[i]:.4f} \n a: {theta.item(0):.6f}\n b: {theta.item(1):.6f}')
-        # print(f'Your New Funktion: y = {a.item():.6f} * X + {b.item():.6f}\n')
 
         # Early Stopping: Converged to?
         if np.abs(loss-best_loss) < float(precision):
@@ -76,7 +77,7 @@ def startTrain(plot=False):
             best_loss = loss
 
     #print(f'save_fg: {save_fg}')
-    a_learned, b_learned = theta
+    a_learned, b_learned = theta_t.detach().numpy()
     # Plotting the loss
     if plot:
         plt.figure(figsize=(10, 5))
