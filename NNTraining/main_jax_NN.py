@@ -74,7 +74,6 @@ def loss_fn(params: List[Tuple[Array, Array]], images:Array, targets:Array)-> Ar
   preds = batched_predict(params,images)
   return -jnp.mean(preds*targets)
 
-
 def grad_calculator_backward(params: List[Tuple[Array, Array]], x: Array, y: Array)-> Array:
   return grad(loss_fn)(params, x, y)
 
@@ -204,9 +203,7 @@ def createTrainingConfiguration(loadedConfig: dict) -> TrainingConfiguration:
     batchSize = int(loadedConfig["batchSize"])
     randomKey = random.PRNGKey(int(loadedConfig.get("randomSeed", 0)))
     layer_sizes = list(loadedConfig["layerSizes"])
-
     buildAutoBatchedFktForJAX()
-
     return TrainingConfiguration(learningRate=learningRate, numEpochs=numEpochs, batchSize=batchSize, randomKey=randomKey, layerSizes=layer_sizes)
 
 def checkConfigIfMultipleDatasets(config: dict) -> bool:
