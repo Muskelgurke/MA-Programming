@@ -129,9 +129,6 @@ def train(data: TrainingData, config: TrainingConfiguration, model: JAXModel) ->
     train_labels = data.train_labels
     test_images = data.test_images
     test_labels = data.test_labels
-    n_targets = data.n_targets
-    layer_sizes = config.layerSizes
-
 
     params = model.params
 

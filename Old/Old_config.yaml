@@ -1,5 +1,5 @@
 learningRate: 0.01
-iterations: 2000
+iterations: 1
 patience: 5
 precision: 1e-5
 a: 1

@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 from prompt_toolkit.utils import to_int
 from triton.language import dtype
 
-with open("../Old_config.yaml", "r") as file:
+with open("/home/muskelgurke/PycharmProjects/MA/Old/Old_config.yaml", "r") as file:
     config = yaml.safe_load(file)
 
 learningRate = config["learningRate"]
