@@ -3,7 +3,7 @@ from NNTraining.helpers.TrainingConfiguration import TrainingConfiguration
 from NNTraining.helpers.TrainingResults import TrainingResults
 from NNTraining.helpers.TrainingData import TrainingData
 
-from typing import List, Tuple
+from typing import List, Tuple, Callable
 from torch.utils.data import DataLoader, default_collate
 
 import numpy as np
@@ -67,14 +67,18 @@ def accuracy(params: List[Tuple[Array, Array]], images: Array, targets:Array)-> 
   predicted_class = jnp.argmax(batched_predict(params,images), axis=1)
   return jnp.mean(predicted_class == target_class)
 
-def loss(params: List[Tuple[Array, Array]], images:Array, targets:Array)-> Array:
+def loss_fn(params: List[Tuple[Array, Array]], images:Array, targets:Array)-> Array:
   """ Negative Log-Likelihood(NLL) eine Form von Cross-Entropy-Loss"""
   preds = batched_predict(params,images)
   return -jnp.mean(preds*targets)
 
+def grad_calculator_backward(params: List[Tuple[Array, Array]], x: Array, y: Array)-> Array:
+  return grad(loss_fn)(params, x, y)
+
+
 @jit
-def update(params: List[Tuple[Array,Array]], x: Array, y: Array,learningRate: float)-> List[Tuple[Array,Array]]:
-  grads = grad(loss)(params, x, y)
+def update(params: List[Tuple[Array,Array]], x: Array, y: Array, learningRate: float, grad_calculator: Callable[[List[Tuple[Array, Array]], Array, Array,], Array])-> List[Tuple[Array,Array]]:
+  grads = grad_calculator(params, x, y)
   return [(w - learningRate * dw, b - learningRate * db)
           for (w,b), (dw,db)in zip(params, grads)]
 
@@ -91,7 +95,7 @@ def flatten_and_cast(pic):
   return np.ravel(np.array(pic, dtype=jnp.float32))
 
 
-def prepareData(dataset_name: str, batchSize: int):
+def prepareData(dataset_name: str, batchSize: int)-> TrainingData:
 
     if dataset_name == "mnist":
         DatasetClass = datasets.MNIST
@@ -153,7 +157,7 @@ def train(data: TrainingData, config: TrainingConfiguration) -> TrainingResults:
         start_time = time.time()
         for x, y in data.training_generator:
             y = one_hot(y, data.n_targets)
-            params = update(params, x, y, config.learningRate)
+            params = update(params, x, y, config.learningRate, grad_calculator_backward)
 
         epoch_time = time.time() - start_time
         epoch_times.append(epoch_time)
@@ -161,8 +165,8 @@ def train(data: TrainingData, config: TrainingConfiguration) -> TrainingResults:
         # Metriken berechnen
         train_acc = accuracy(params, train_images, train_labels)
         test_acc = accuracy(params, test_images, test_labels)
-        train_loss_val = loss(params, train_images, train_labels)
-        test_loss_val = loss(params, test_images, test_labels)
+        train_loss_val = loss_fn(params, train_images, train_labels)
+        test_loss_val = loss_fn(params, test_images, test_labels)
 
         # Tracking
         train_accs.append(float(train_acc))
