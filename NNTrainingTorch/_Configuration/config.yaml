@@ -1,0 +1,8 @@
+dataset: [mnist] #lowercase!!!
+randomSeed: 42
+learningRate: 0.01
+numEpochs: 1
+batchSize: 128
+layerSizes: [784, 512, 512, 10]
+
+path2save: 

@@ -1,8 +1,8 @@
-from NNTraining.helpers import saving
-from NNTraining.helpers.TrainingConfiguration import TrainingConfiguration
-from NNTraining.helpers.TrainingResults import TrainingResults
-from NNTraining.helpers.TrainingData import TrainingData
-from NNTraining.helpers.JAXModel import JAXModel
+from NNTrainingJAX.helpers import saving
+from NNTrainingJAX.helpers.TrainingConfiguration import TrainingConfiguration
+from NNTrainingJAX.helpers.TrainingResults import TrainingResults
+from NNTrainingJAX.helpers.TrainingData import TrainingData
+from NNTrainingJAX.helpers.JAXModel import JAXModel
 
 from typing import List, Tuple, Callable
 from torch.utils.data import DataLoader, default_collate
@@ -142,6 +142,8 @@ def train(data: TrainingData, config: TrainingConfiguration, model: JAXModel) ->
     print("Training gestartet...")
     print("-" * 60)
     print(" Schritt für Schritt ")
+
+
 
     for epoch in range(config.numEpochs):
         start_time = time.time()

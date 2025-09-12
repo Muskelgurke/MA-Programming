@@ -9,8 +9,8 @@ import jax.numpy as jnp
 from jax import Array
 import toml
 
-from NNTraining.helpers import plotting
-from NNTraining.helpers.TrainingResults import TrainingResults
+from NNTrainingJAX.helpers import plotting
+from NNTrainingJAX.helpers.TrainingResults import TrainingResults
 
 
 def save_jax_array(array: Array, filepath: Path) -> None:
@@ -52,7 +52,7 @@ ss
 
     # Create timestamp-based directory
     timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-    training_dir = Path(f"../NNTraining/training_runs/{timestamp}")
+    training_dir = Path(f"../NNTrainingJAX/training_runs/{timestamp}")
     training_dir.mkdir(parents=True, exist_ok=True)
 
     # Prepare training data for TOML
