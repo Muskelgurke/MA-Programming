@@ -9,7 +9,10 @@ class Config:
     learningRate: float
     numEpochs: int
     batchSize: int
-    path2save: Optional[str] = None
+    dataset_path: str
+    augmentData: bool = False
+    earlyStopping: bool = False
+    patience: Optional[int] = None
 
     @classmethod
     def from_yaml(cls, yaml_path: str = "") -> "Config":

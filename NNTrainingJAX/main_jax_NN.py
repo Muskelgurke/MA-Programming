@@ -154,7 +154,7 @@ def train(data: TrainingData, config: TrainingConfiguration, model: JAXModel) ->
         epoch_time = time.time() - start_time
         epoch_times.append(epoch_time)
 
-        # Metriken berechnen
+        #Metriken berechnen
         train_acc = accuracy(params, train_images, train_labels)
         test_acc = accuracy(params, test_images, test_labels)
         train_loss_val = loss_fn(params, train_images, train_labels)
@@ -218,7 +218,6 @@ if __name__ == "__main__":
     configFile = loadConfigFile()
     trainingConfiguration = createTrainingConfiguration(configFile)
     model = JAXModel(trainingConfiguration.layerSizes, trainingConfiguration.randomKey)
-
 
 
     if checkConfigIfMultipleDatasets(configFile):

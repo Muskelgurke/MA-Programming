@@ -1,9 +1,16 @@
-dataset: mnist #lowercase!!!
 randomSeed: 42
 learningRate: 0.01
 numEpochs: 1
+
+
+# Dataset Configurations
+dataset: mnist #lowercase!!!
 batchSize: 128
+augmentData: False
+
+#Early Stopping Configurations
+earlyStopping: True
+patience: 3
 
 
-
-path2save: 
+dataset_path: /home/muskelgurke/PycharmProjects/MA/_Dataset
