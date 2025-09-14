@@ -5,7 +5,7 @@ numEpochs: 1
 
 # Dataset Configurations
 dataset: mnist #lowercase!!!
-batchSize: 128
+batchSize: 256
 augmentData: False
 
 #Early Stopping Configurations

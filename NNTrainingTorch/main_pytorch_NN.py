@@ -1,3 +1,4 @@
+import statistics
 import time
 import torch
 from torch import nn
@@ -14,7 +15,7 @@ import NNTrainingTorch.helpers.model as model_helper
 
 def train_epoch(model: torch.nn.Module,
                 train_loader: torch.utils.data.DataLoader,
-                criterion,
+                loss_function: nn.Module,
                 optimizer,
                 device: torch.device
                 )-> tuple[float, float]:
@@ -23,14 +24,15 @@ def train_epoch(model: torch.nn.Module,
     running_loss = 0.0
     correct = 0
     total = 0
-    pbar = tqdm(train_loader, desc="Training") # just a nice to have progress bar
-
+    #ToDo: Name ändern damit man weiß wie viele Batches man hat.
+    pbar = tqdm(train_loader, desc=f'"Training one Epoch with {train_loader}') #just a nice to have progress bar
     for batch_idx, (inputs,targets) in enumerate(pbar):
+        
         inputs, targets = inputs.to(device), targets.to(device)
         optimizer.zero_grad() # reset gradients from previous iteration
 
         outputs = model(inputs) # forward pass
-        loss = criterion(outputs, targets)
+        loss = loss_function(outputs, targets)
         loss.backward()
         optimizer.step()
         train_losses.append(loss.item())
@@ -87,7 +89,7 @@ def start_NN(config: Config, train_loader: torch.utils.data.DataLoader, test_loa
 
     # Loss function
     # ToDo: switch between different loss functions
-    criterion = nn.CrossEntropyLoss()
+    Verlustfunktion = nn.CrossEntropyLoss()
 
     # Optimizers
     # ToDo: switch between different optimizers
@@ -100,38 +102,47 @@ def start_NN(config: Config, train_loader: torch.utils.data.DataLoader, test_loa
     test_accs = []
     epoch_times = []
 
+    print("Training gestartet...")
+    print("-" * 60)
+    print(" Schritt für Schritt ")
+
     for epoch in range(config.numEpochs):
         start_time = time.time()
-        train_loss, train_acc = train_epoch(model, train_loader, criterion, optimizer, device)
+        train_loss_val, train_acc = train_epoch(model, train_loader, Verlustfunktion, optimizer, device)
 
-        test_loss, test_acc = test_epoch(model, test_loader, criterion, device)
+        test_loss_val, test_acc = test_epoch(model, test_loader, Verlustfunktion, device)
+
         epoch_time = time.time() - start_time
         epoch_times.append(epoch_time)
 
-        train_losses.append(train_loss)
+        train_losses.append(train_loss_val)
         train_accs.append(train_acc)
         test_losses.append(test_losses)
         test_accs.append(test_acc)
 
-        print(f"Train Loss: {train_loss:.4f}, Train Acc: {train_acc:.2f}%")
-        print(f"Val Loss: {test_loss:.4f}, Val Acc: {test_acc:.2f}%")
-
-
         if config.earlyStopping:
-            if epoch > config.patience and test_loss > min(test_losses[-config.patience:]):
+            if epoch > config.patience and test_loss_val > min(test_losses[-config.patience:]):
                 print(f"Early stopping at epoch {epoch + 1}")
                 break
-        print(f"Epoch {epoch + 1}/{config.numEpochs} completed in {epoch_time:.2f}s")
-    print("-"*30)
+
+        print(f"Epoch {epoch + 1:2d}/{config.numEpochs} | "
+              f"Zeit: {epoch_time:5.2f}s | "
+              f"Train Acc: {train_acc:.4f} | "
+              f"Test Acc: {test_acc:.4f} | "
+              f"Train Loss: {train_loss_val:.4f} | "
+              f"Test Loss: {test_loss_val:.4f}")
+
+    print("-"* 60)
     print("\nTraining and Testing completed")
-    print(f"Best validation accuracy: {max(test_accs):.2f}%")
-    print("-" * 30)
+    print(f"Training abgeschlossen! Durchschnittliche Zeit pro Epoch: {statistics.mean(epoch_times):.2f}s")
+    print("-" * 60)
 
     results = TrainingResults(
         train_accs=train_accs,
         test_accs=test_accs,
         train_loss=train_losses,
         test_loss=test_losses,
+        final_params= '',
         epoch_times=epoch_times
     )
     saver = TorchModelSaver()
