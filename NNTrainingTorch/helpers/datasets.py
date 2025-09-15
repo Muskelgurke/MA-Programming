@@ -23,7 +23,7 @@ def get_mnist_dataloaders(config: Config)-> torch.utils.data.DataLoader:
     train_dataset = datasets.MNIST(config.dataset_path, train=True, download=True, transform=transform_mnist)
     train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=config.batch_size, shuffle=True)
 
-    # Load test dataset
+    # Load test dataset der 10.000 Bilder hat
     test_dataset = datasets.MNIST(config.dataset_path, train=False, download=True, transform=transform_mnist)
     test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=config.batch_size, shuffle=False)
 

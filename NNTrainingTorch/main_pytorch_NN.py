@@ -26,9 +26,10 @@ def train_epoch(model: torch.nn.Module,
     running_loss = 0.0
     correct = 0
     total = 0
+    x = len(train_loader)
     #ToDo: Name ändern damit man weiß wie viele Batches man hat.
     pbar = tqdm(iterable =train_loader, desc=f'Training Epoch {epoch_num}/{total_epochs}',
-                bar_format='{desc}: {percentage:3.0f}%|{bar}| Estimated Time: {remaining} {postfix}') #just a nice to have progress bar
+                bar_format='| {bar} | {desc} -> Batch {n}/{total} | Estimated Time: {remaining} | Time: {elapsed} {postfix}') #just a nice to have progress bar
     for batch_idx, (inputs,targets) in enumerate(pbar):
         
         inputs, targets = inputs.to(device), targets.to(device)
@@ -46,8 +47,8 @@ def train_epoch(model: torch.nn.Module,
         correct += (predicted == targets).sum().item()
         # Update progress bar
         pbar.set_postfix({
-            'Loss': f'{ loss.item():.4f}',
-            'Acc': f'{ 100. * correct / total:.2f}%'
+            'Train Loss': f' {loss.item():.4f}',
+            'Train Acc': f' {100. * correct / total:.2f}%'
         })
 
     avg_train_loss_of_epoch = running_loss / len(train_loader)
@@ -55,7 +56,7 @@ def train_epoch(model: torch.nn.Module,
     return avg_train_loss_of_epoch, avg_train_acc_of_epoch
 
 
-def test_epoch(model, test_loader, criterion, device):
+def test_epoch(model, test_loader, criterion, device, epoch_num: int, total_epochs:int) -> tuple[float, float]:
     """
         Validate the model on test data.
 
@@ -65,7 +66,8 @@ def test_epoch(model, test_loader, criterion, device):
     test_loss = 0
     correct = 0
     total = 0
-
+    pbar = tqdm(iterable=test_loader, desc=f'Test Epoch {epoch_num}/{total_epochs}',
+                bar_format='| {bar} | {desc} -> Batch {n}/{total} {postfix}')
     with torch.no_grad():  # Disable gradient computation for efficiency
         for data, targets in test_loader:
             data, targets = data.to(device), targets.to(device)
@@ -76,9 +78,14 @@ def test_epoch(model, test_loader, criterion, device):
             _, predicted = torch.max(outputs, 1)
             total += targets.size(0)
             correct += (predicted == targets).sum().item()
+            current_acc = 100. * correct / total
+            pbar.set_postfix({
+                'Test Acc': f'{current_acc:.2f}%'
+            })
 
     test_loss /= len(test_loader)
     test_acc = 100. * correct / total
+
 
     return test_loss, test_acc
 
@@ -122,7 +129,9 @@ def start_NN(config: Config, train_loader: torch.utils.data.DataLoader, test_loa
         test_loss_of_Epoch, test_acc_of_Epoch = test_epoch(model,
                                                            test_loader,
                                                            loss_function,
-                                                           device)
+                                                           device,
+                                                           epoch+1,
+                                                           config.num_epochs)
 
         epoch_time = time.time() - start_time
         epoch_times.append(epoch_time)
