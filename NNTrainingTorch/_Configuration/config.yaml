@@ -1,6 +1,6 @@
 random_seed: 42
 learning_rate: 0.01
-num_epochs: 1
+num_epochs: 2
 
 
 # Dataset Configurations

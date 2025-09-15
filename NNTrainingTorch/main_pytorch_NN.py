@@ -1,6 +1,7 @@
 import statistics
 import time
 import torch
+from flax.linen import avg_pool
 from torch import nn
 import torch.nn.functional as F
 from tqdm import tqdm
@@ -17,14 +18,14 @@ def train_epoch(model: torch.nn.Module,
                 loss_function: nn.Module,
                 optimizer,
                 device: torch.device
-                )-> tuple[float, float]:
+                )->tuple[float, float]:
     model.train() # preparing model fo training
     train_losses = []
     running_loss = 0.0
     correct = 0
     total = 0
     #ToDo: Name ändern damit man weiß wie viele Batches man hat.
-    pbar = tqdm(train_loader, desc=f'"Training one Epoch with {train_loader}') #just a nice to have progress bar
+    pbar = tqdm(iterable =train_loader, desc=f'"Training one Epoch with {8}') #just a nice to have progress bar
     for batch_idx, (inputs,targets) in enumerate(pbar):
         
         inputs, targets = inputs.to(device), targets.to(device)
@@ -43,12 +44,12 @@ def train_epoch(model: torch.nn.Module,
         # Update progress bar
         pbar.set_postfix({
             'Loss': f'{loss.item():.4f}',
-            'Acc': f'{100. * correct / total:.2f}%'
+            'Acc': f'{100. * correct / total:.2f}% \n'
         })
 
-    epoch_avg_loss = running_loss / len(train_loader)
-    epoch_avg_acc = 100. * correct / total
-    return epoch_avg_loss, epoch_avg_acc
+    avg_train_loss_of_epoch = running_loss / len(train_loader)
+    avg_train_acc_of_epoch = 100. * correct / total
+    return avg_train_loss_of_epoch, avg_train_acc_of_epoch
 
 
 def test_epoch(model, test_loader, criterion, device):
@@ -88,7 +89,7 @@ def start_NN(config: Config, train_loader: torch.utils.data.DataLoader, test_loa
 
     # Loss function
     # ToDo: switch between different loss functions
-    Verlustfunktion = nn.CrossEntropyLoss()
+    loss_function = nn.CrossEntropyLoss()
 
     # Optimizers
     # ToDo: switch between different optimizers
@@ -107,29 +108,29 @@ def start_NN(config: Config, train_loader: torch.utils.data.DataLoader, test_loa
 
     for epoch in range(config.num_epochs):
         start_time = time.time()
-        train_loss_val, train_acc = train_epoch(model, train_loader, Verlustfunktion, optimizer, device)
+        train_loss_of_Epoch, train_acc_of_Epoch = train_epoch(model, train_loader, loss_function, optimizer, device)
 
-        test_loss_val, test_acc_val = test_epoch(model, test_loader, Verlustfunktion, device)
+        test_loss_of_Epoch, test_acc_of_Epoch = test_epoch(model, test_loader, loss_function, device)
 
         epoch_time = time.time() - start_time
         epoch_times.append(epoch_time)
 
-        train_losses.append(train_loss_val)
-        train_accs.append(train_acc)
-        test_losses.append(test_loss_val)
-        test_accs.append(test_acc_val)
+        train_losses.append(train_loss_of_Epoch)
+        train_accs.append(train_acc_of_Epoch)
+        test_losses.append(test_loss_of_Epoch)
+        test_accs.append(test_acc_of_Epoch)
 
         if config.early_stopping:
-            if epoch > config.early_stopping_patience and test_loss_val > min(test_losses[-config.early_stopping_patience:]):
+            if epoch > config.early_stopping_patience and test_loss_of_Epoch > min(test_losses[-config.early_stopping_patience:]):
                 print(f"Early stopping at epoch {epoch + 1}")
                 break
 
         print(f"Epoch {epoch + 1:2d}/{config.num_epochs} | "
               f"Zeit: {epoch_time:5.2f}s | "
-              f"Train Acc: {train_acc:.4f} | "
-              f"Test Acc: {test_acc_val:.4f} | "
-              f"Train Loss: {train_loss_val:.4f} | "
-              f"Test Loss: {test_loss_val:.4f}")
+              f"Train Acc: {train_acc_of_Epoch:.4f} | "
+              f"Test Acc: {test_acc_of_Epoch:.4f} | "
+              f"Train Loss: {train_loss_of_Epoch:.4f} | "
+              f"Test Loss: {test_loss_of_Epoch:.4f}")
 
     print("-"* 60)
     print("\nTraining and Testing completed")

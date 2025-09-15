@@ -100,8 +100,8 @@ class TorchModelSaver:
         if hasattr(training_result, 'optimizer_state') and training_result.optimizer_state:
             torch.save(training_result.optimizer_state, model_dir / "optimizer_state.pth")
 
-        # Generate performance plots
-        plotting.plot_performance(train_losses, train_accs, test_accs,
+        # Generate plots
+        plotting.plot_performance(train_losses, test_losses,train_accs, test_accs,
                                   epoch_times, training_dir, config.dataset_name)
 
         # Save configuration as JSON
