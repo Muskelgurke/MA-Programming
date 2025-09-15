@@ -144,9 +144,8 @@ class TorchModelSaver:
             config = json.load(f)
 
         # Load training info
-        import toml
-        with open(training_dir / "training_info.toml", 'r') as f:
-            training_info = toml.load(f)
+        with open(training_dir / "training_info.yaml", 'r') as f:
+            training_info = yaml.load(f)
 
         # Load model
         model_dir = training_dir / "model"

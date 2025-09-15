@@ -17,7 +17,9 @@ def train_epoch(model: torch.nn.Module,
                 train_loader: torch.utils.data.DataLoader,
                 loss_function: nn.Module,
                 optimizer,
-                device: torch.device
+                device: torch.device,
+                epoch_num: int,
+                total_epochs: int
                 )->tuple[float, float]:
     model.train() # preparing model fo training
     train_losses = []
@@ -25,7 +27,8 @@ def train_epoch(model: torch.nn.Module,
     correct = 0
     total = 0
     #ToDo: Name ändern damit man weiß wie viele Batches man hat.
-    pbar = tqdm(iterable =train_loader, desc=f'"Training one Epoch with {8}') #just a nice to have progress bar
+    pbar = tqdm(iterable =train_loader, desc=f'Training Epoch {epoch_num}/{total_epochs}',
+                bar_format='{desc}: {percentage:3.0f}%|{bar}| Estimated Time: {remaining} {postfix}') #just a nice to have progress bar
     for batch_idx, (inputs,targets) in enumerate(pbar):
         
         inputs, targets = inputs.to(device), targets.to(device)
@@ -43,8 +46,8 @@ def train_epoch(model: torch.nn.Module,
         correct += (predicted == targets).sum().item()
         # Update progress bar
         pbar.set_postfix({
-            'Loss': f'{loss.item():.4f}',
-            'Acc': f'{100. * correct / total:.2f}% \n'
+            'Loss': f'{ loss.item():.4f}',
+            'Acc': f'{ 100. * correct / total:.2f}%'
         })
 
     avg_train_loss_of_epoch = running_loss / len(train_loader)
@@ -108,9 +111,18 @@ def start_NN(config: Config, train_loader: torch.utils.data.DataLoader, test_loa
 
     for epoch in range(config.num_epochs):
         start_time = time.time()
-        train_loss_of_Epoch, train_acc_of_Epoch = train_epoch(model, train_loader, loss_function, optimizer, device)
+        train_loss_of_Epoch, train_acc_of_Epoch = train_epoch(model,
+                                                              train_loader,
+                                                              loss_function,
+                                                              optimizer,
+                                                              device,
+                                                              epoch+1,
+                                                              config.num_epochs)
 
-        test_loss_of_Epoch, test_acc_of_Epoch = test_epoch(model, test_loader, loss_function, device)
+        test_loss_of_Epoch, test_acc_of_Epoch = test_epoch(model,
+                                                           test_loader,
+                                                           loss_function,
+                                                           device)
 
         epoch_time = time.time() - start_time
         epoch_times.append(epoch_time)
@@ -125,12 +137,14 @@ def start_NN(config: Config, train_loader: torch.utils.data.DataLoader, test_loa
                 print(f"Early stopping at epoch {epoch + 1}")
                 break
 
+        '''
         print(f"Epoch {epoch + 1:2d}/{config.num_epochs} | "
               f"Zeit: {epoch_time:5.2f}s | "
               f"Train Acc: {train_acc_of_Epoch:.4f} | "
               f"Test Acc: {test_acc_of_Epoch:.4f} | "
               f"Train Loss: {train_loss_of_Epoch:.4f} | "
               f"Test Loss: {test_loss_of_Epoch:.4f}")
+        '''
 
     print("-"* 60)
     print("\nTraining and Testing completed")
