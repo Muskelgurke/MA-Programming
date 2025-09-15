@@ -1,9 +1,9 @@
 import torch.nn as nn
 
-from NNTrainingTorch.helpers.Config import Config
+from NNTrainingTorch.helpers.config_class import Config
 
 def get_model(config: Config) -> nn.Module:
-    if config.dataset.lower() in ["mnist", "fashionmnist"]:
+    if config.dataset_name.lower() in ["mnist", "fashionmnist"]:
         input_size = 28 * 28 # picture size
         hidden_size = 128 # number of neurons in hidden layer
         output_size = 10 # number of classes
@@ -11,7 +11,7 @@ def get_model(config: Config) -> nn.Module:
 
         return NeuralNetwork_for_MNIST(input_size, hidden_size, output_size)
     else:
-        raise ValueError(f"Unknown dataset: {config.dataset}")
+        raise ValueError(f"Unknown dataset: {config.dataset_name}")
 
 
 

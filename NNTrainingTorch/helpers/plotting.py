@@ -2,16 +2,16 @@ from pathlib import Path
 
 import matplotlib.pyplot as plt
 
-def plot_performance(batch_losses: list[float],
-    train_accuracies: list[float],
-    test_accuracies: list[float],
-    epoch_times: list[float],
-    savePath: Path = None, datsetName: str = ""
-) -> None:
+def plot_performance(train_batch_losses: list[float],
+                     train_accuracies: list[float],
+                     test_accuracies: list[float],
+                     epoch_times: list[float],
+                     savePath: Path = None, datsetName: str = ""
+                     ) -> None:
     """
     Erstellt einen umfassenden Performance-Plot
     Args:
-        batch_losses: Liste der Loss-Werte pro Batch-Update
+        train_batch_losses: Liste der Loss-Werte pro Batch-Update
         train_accuracies: Liste der Trainingsgenauigkeiten pro Epoche
         test_accuracies: Liste der Testgenauigkeiten pro Epoche
         epoch_times: Optional, Liste der Epochen-Zeiten
@@ -20,13 +20,13 @@ def plot_performance(batch_losses: list[float],
     fig.suptitle('Performance - ' + str(datsetName), fontsize=16, fontweight='bold')
     epochs = createXaxis(train_accuracies)
 
-    plot_TrainingLoss(batch_losses)
+    plot_Training_Loss(train_batch_losses)
 
-    plot_TrainingAcc(epochs, test_accuracies, train_accuracies)
+    plot_Training_Test_Acc(epochs, test_accuracies, train_accuracies)
 
-    plot_EpochTimes(epoch_times, epochs)
+    plot_Epoch_Times(epoch_times, epochs)
 
-    plot_TrainCompareTestACC(test_accuracies, train_accuracies)
+    plot_compare_Train_and_Test_ACC(test_accuracies, train_accuracies)
 
     plt.tight_layout()
     plt.subplots_adjust(top=0.93)
@@ -34,7 +34,7 @@ def plot_performance(batch_losses: list[float],
     plt.savefig(savePath / "training_metrics.png")
 
 
-def plot_TrainCompareTestACC(test_accuracies: list[float], train_accuracies: list[float]):
+def plot_compare_Train_and_Test_ACC(test_accuracies: list[float], train_accuracies: list[float]):
     # 4. Final Accuracy Vergleich (unten rechts)
     ax4 = plt.subplot(2, 2, 4)
     categories = ['Training', 'Test']
@@ -52,7 +52,7 @@ def plot_TrainCompareTestACC(test_accuracies: list[float], train_accuracies: lis
                  f'{accuracy:.3f}', ha='center', va='bottom')
 
 
-def plot_EpochTimes(epoch_times: list[float], epochs: range):
+def plot_Epoch_Times(epoch_times: list[float], epochs: range):
     ax3 = plt.subplot(2, 2, 3)
     if epoch_times is not None:
         ax3.bar(epochs, epoch_times, alpha=0.7, color='green')
@@ -67,7 +67,7 @@ def plot_EpochTimes(epoch_times: list[float], epochs: range):
         ax3.set_title('Epoch Duration', fontweight='bold')
 
 
-def plot_TrainingAcc(x_axis: range, test_accuracies: list[float], train_accuracies: list[float]):
+def plot_Training_Test_Acc(x_axis: range, test_accuracies: list[float], train_accuracies: list[float]):
     # 2. Accuracy Plot (oben rechts)
     ax2 = plt.subplot(2, 2, 2)
     ax2.plot(x_axis, train_accuracies, 'b-', label='Training', marker='o', markersize=4)
@@ -85,7 +85,7 @@ def createXaxis(train_accuracies: list[float]) -> range:
     return epochs
 
 
-def plot_TrainingLoss(batch_losses: list[float]):
+def plot_Training_Loss(batch_losses: list[float]):
     # 1. Batch Loss Plot (oben links)
     ax1 = plt.subplot(2, 2, 1)
     ax1.plot(batch_losses, 'b-', alpha=0.7, linewidth=0.8)

@@ -27,7 +27,6 @@ def plot_performance(batch_losses: list[float],
     plot_EpochTimes(epoch_times, epochs)
 
     plot_TrainCompareTestACC(test_accuracies, train_accuracies)
-
     plt.tight_layout()
     plt.subplots_adjust(top=0.93)
 

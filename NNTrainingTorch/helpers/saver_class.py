@@ -2,13 +2,16 @@ import datetime
 import pickle
 import json
 import torch
+import yaml
 from pathlib import Path
 from typing import Dict, Any, Union
 
 import numpy as np
 
-from NNTrainingJAX.helpers import plotting
-from NNTrainingJAX.helpers.TrainingResults import TrainingResults
+from NNTrainingTorch.helpers import plotting
+from NNTrainingTorch.helpers.TrainingResults import (TrainingResults)
+from NNTrainingTorch.helpers.config_class import Config
+
 
 class TorchModelSaver:
     """Class for saving and loading PyTorch model training sessions"""
@@ -39,7 +42,7 @@ class TorchModelSaver:
             return torch.load(filepath, map_location='cpu')
 
     def save_training_session(self, training_result: TrainingResults,
-                              config: Dict[str, Any], model: torch.nn.Module,
+                              config: Config, model: torch.nn.Module,
                               save_full_model: bool = False) -> Path:
         """
         Save complete PyTorch training session including model, metrics, and configuration.
@@ -55,8 +58,8 @@ class TorchModelSaver:
         """
         train_accs = training_result.train_accs
         test_accs = training_result.test_accs
-        train_losses = training_result.train_loss
-        test_losses = training_result.test_loss
+        train_losses = training_result.train_losses
+        test_losses = training_result.test_losses
         epoch_times = training_result.epoch_times
 
         # Create timestamp-based directory
@@ -65,33 +68,13 @@ class TorchModelSaver:
         training_dir.mkdir(parents=True, exist_ok=True)
 
         # Prepare training data for TOML
-        training_data = {
-            "metadata": {
-                "timestamp": timestamp,
-                "training_duration": f"{np.sum(epoch_times):.2f}s",
-                "average_epoch_time": f"{np.mean(epoch_times):.2f}s",
-                "final_train_accuracy": float(train_accs[-1]),
-                "final_test_accuracy": float(test_accs[-1]),
-                "final_train_loss": float(train_losses[-1]),
-                "final_test_loss": float(test_losses[-1]),
-                "dataset": config["dataset"],
-                "framework": "pytorch"
-            },
-            "model_configuration": config,
-            "training_metrics": {
-                "train_accuracies": train_accs,
-                "test_accuracies": test_accs,
-                "train_losses": train_losses,
-                "test_losses": test_losses,
-                "epoch_times": epoch_times
-            }
-        }
+        training_data = config.to_dict()
 
-        # Save TOML file
-        import toml
-        toml_path = training_dir / "training_info.toml"
-        with open(toml_path, 'w') as f:
-            toml.dump(training_data, f)
+
+
+        yaml_path = training_dir / "training_info.yaml"
+        with open(yaml_path, 'w') as f:
+            yaml.dump(training_data, f)
 
         # Save PyTorch model
         model_dir = training_dir / "model"
@@ -119,11 +102,11 @@ class TorchModelSaver:
 
         # Generate performance plots
         plotting.plot_performance(train_losses, train_accs, test_accs,
-                                  epoch_times, training_dir, config["dataset"])
+                                  epoch_times, training_dir, config.dataset_name)
 
         # Save configuration as JSON
         with open(training_dir / "config.json", 'w') as f:
-            json.dump(config, f, indent=2)
+            json.dump(config.to_dict(), f, indent=2)
 
         # Save detailed training log
         self._save_training_log(training_dir, train_accs, test_accs,

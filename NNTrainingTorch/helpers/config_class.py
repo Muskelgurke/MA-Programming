@@ -1,18 +1,18 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, asdict
 from typing import Optional
 import yaml
 
 @dataclass
 class Config:
-    dataset: str
-    randomSeed: int
-    learningRate: float
-    numEpochs: int
-    batchSize: int
+    random_seed: int
+    dataset_name: str
+    learning_rate: float
+    num_epochs: int
+    batch_size: int
     dataset_path: str
-    augmentData: bool = False
-    earlyStopping: bool = False
-    patience: Optional[int] = None
+    augment_data: bool = False
+    early_stopping: bool = False
+    early_stopping_patience: Optional[int] = None
 
     @classmethod
     def from_yaml(cls, yaml_path: str = "") -> "Config":
@@ -25,3 +25,7 @@ class Config:
     def from_dict(cls, config_dict: dict) -> "Config":
         """Create Config from dictionary"""
         return cls(**config_dict)
+
+    def to_dict(self) -> dict:
+        """Convert Config object to dictionary"""
+        return asdict(self)

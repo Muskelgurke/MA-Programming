@@ -5,10 +5,9 @@ from torch import nn
 import torch.nn.functional as F
 from tqdm import tqdm
 
-from NNTrainingJAX.helpers.TrainingData import TrainingData
-from NNTrainingTorch.helpers.Config import Config
-from NNTrainingTorch.helpers.saving import TorchModelSaver
-from NNTrainingJAX.helpers.TrainingResults import TrainingResults
+from NNTrainingTorch.helpers.config_class import Config
+from NNTrainingTorch.helpers.saver_class import TorchModelSaver
+from NNTrainingTorch.helpers.TrainingResults import TrainingResults
 import NNTrainingTorch.helpers.datasets as datasets_helper
 import NNTrainingTorch.helpers.model as model_helper
 
@@ -94,7 +93,7 @@ def start_NN(config: Config, train_loader: torch.utils.data.DataLoader, test_loa
     # Optimizers
     # ToDo: switch between different optimizers
     # ToDo: switch between different learning rates?
-    optimizer = torch.optim.SGD(model.parameters(), lr=config.learningRate)
+    optimizer = torch.optim.SGD(model.parameters(), lr=config.learning_rate)
 
     train_losses = []
     train_accs = []
@@ -106,29 +105,29 @@ def start_NN(config: Config, train_loader: torch.utils.data.DataLoader, test_loa
     print("-" * 60)
     print(" Schritt für Schritt ")
 
-    for epoch in range(config.numEpochs):
+    for epoch in range(config.num_epochs):
         start_time = time.time()
         train_loss_val, train_acc = train_epoch(model, train_loader, Verlustfunktion, optimizer, device)
 
-        test_loss_val, test_acc = test_epoch(model, test_loader, Verlustfunktion, device)
+        test_loss_val, test_acc_val = test_epoch(model, test_loader, Verlustfunktion, device)
 
         epoch_time = time.time() - start_time
         epoch_times.append(epoch_time)
 
         train_losses.append(train_loss_val)
         train_accs.append(train_acc)
-        test_losses.append(test_losses)
-        test_accs.append(test_acc)
+        test_losses.append(test_loss_val)
+        test_accs.append(test_acc_val)
 
-        if config.earlyStopping:
-            if epoch > config.patience and test_loss_val > min(test_losses[-config.patience:]):
+        if config.early_stopping:
+            if epoch > config.early_stopping_patience and test_loss_val > min(test_losses[-config.early_stopping_patience:]):
                 print(f"Early stopping at epoch {epoch + 1}")
                 break
 
-        print(f"Epoch {epoch + 1:2d}/{config.numEpochs} | "
+        print(f"Epoch {epoch + 1:2d}/{config.num_epochs} | "
               f"Zeit: {epoch_time:5.2f}s | "
               f"Train Acc: {train_acc:.4f} | "
-              f"Test Acc: {test_acc:.4f} | "
+              f"Test Acc: {test_acc_val:.4f} | "
               f"Train Loss: {train_loss_val:.4f} | "
               f"Test Loss: {test_loss_val:.4f}")
 
@@ -140,10 +139,10 @@ def start_NN(config: Config, train_loader: torch.utils.data.DataLoader, test_loa
     results = TrainingResults(
         train_accs=train_accs,
         test_accs=test_accs,
-        train_loss=train_losses,
-        test_loss=test_losses,
+        train_losses=train_losses,
+        test_losses=test_losses,
         final_params= '',
-        epoch_times=epoch_times
+        epoch_times= epoch_times
     )
     saver = TorchModelSaver()
     saver.save_training_session(training_result=results, config= config, model= model, save_full_model=True)
@@ -152,8 +151,7 @@ def start_NN(config: Config, train_loader: torch.utils.data.DataLoader, test_loa
 
 
 def load_config_File(config_path: str)->Config:
-    config = Config.from_yaml(config_path)
-    return config
+    return Config.from_yaml(config_path)
 
 if __name__ == "__main__":
     config_path = "_Configuration/config.yaml"
