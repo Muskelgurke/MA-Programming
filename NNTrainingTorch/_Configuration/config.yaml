@@ -14,3 +14,5 @@ early_stopping_patience: 3
 
 
 dataset_path: /home/muskelgurke/PycharmProjects/MA/_Dataset
+
+model_type: conv

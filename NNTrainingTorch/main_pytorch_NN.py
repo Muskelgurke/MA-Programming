@@ -78,7 +78,7 @@ def test_epoch(model: torch.nn.Module,
     total = 0
     pbar = tqdm(iterable=test_loader, desc=f'Test Epoch {epoch_num}/{total_epochs}',
                 bar_format='| {bar} | {desc} -> Batches{total} {postfix}')
-    with torch.no_grad():  # Disable gradient computation for efficiency
+    with torch.no_grad():  #Disable gradient computation for efficiency
         for data, targets in test_loader:
             data, targets = data.to(device), targets.to(device)
 
@@ -123,6 +123,7 @@ def start_NN(config: Config, train_loader: torch.utils.data.DataLoader, test_loa
     epoch_times = []
 
     print("Training gestartet...")
+    print(f"\tDataset:\t{config.dataset_name}\n\tModel:\t{config.model_type}")
     print("-" * 60)
     print(" Schritt für Schritt ")
 
