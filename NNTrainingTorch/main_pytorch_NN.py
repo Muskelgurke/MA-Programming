@@ -21,13 +21,16 @@ def train_epoch(model: torch.nn.Module,
                 epoch_num: int,
                 total_epochs: int
                 )->tuple[float, float]:
-
+    """
+            Train the model for one epoch. Visual Feedback in Terminal with tqdm progress bar.
+            Gives back Average Train Loss and Train Accuracy.
+    """
     model.train() # preparing model fo training
     train_losses = []
     running_loss = 0.0
     correct = 0
     total = 0
-    x = len(data_loader)
+
     #ToDo: Name ändern damit man weiß wie viele Batches man hat.
     pbar = tqdm(iterable =data_loader, desc=f'Training Epoch {epoch_num}/{total_epochs}',
                 bar_format='| {bar} | {desc} -> Batch {n}/{total} | Estimated Time: {remaining} | Time: {elapsed} {postfix}') #just a nice to have progress bar
@@ -54,6 +57,7 @@ def train_epoch(model: torch.nn.Module,
 
     avg_train_loss_of_epoch = running_loss / len(data_loader)
     avg_train_acc_of_epoch = 100. * correct / total
+
     return avg_train_loss_of_epoch, avg_train_acc_of_epoch
 
 
@@ -64,10 +68,10 @@ def test_epoch(model: torch.nn.Module,
                epoch_num: int,
                total_epochs:int) -> tuple[float, float]:
     """
-        Validate the model on test data.
+        Validate the model on test data for one epoch. Visual Feedback in Terminal with tqdm progress bar.
+        Gives back Average Test Loss and Test Accuracy.
 
-        Why needed: Separate validation prevents data leakage and monitors overfitting.
-        """
+    """
     model.eval()  # Set model to evaluation mode
     test_loss = 0
     correct = 0
