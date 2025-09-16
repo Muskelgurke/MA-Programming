@@ -14,21 +14,22 @@ import NNTrainingTorch.helpers.model as model_helper
 
 
 def train_epoch(model: torch.nn.Module,
-                train_loader: torch.utils.data.DataLoader,
-                loss_function: nn.Module,
-                optimizer,
+                data_loader: torch.utils.data.DataLoader,
+                criterion: nn.Module,
+                optimizer: torch.optim.Optimizer,
                 device: torch.device,
                 epoch_num: int,
                 total_epochs: int
                 )->tuple[float, float]:
+
     model.train() # preparing model fo training
     train_losses = []
     running_loss = 0.0
     correct = 0
     total = 0
-    x = len(train_loader)
+    x = len(data_loader)
     #ToDo: Name ändern damit man weiß wie viele Batches man hat.
-    pbar = tqdm(iterable =train_loader, desc=f'Training Epoch {epoch_num}/{total_epochs}',
+    pbar = tqdm(iterable =data_loader, desc=f'Training Epoch {epoch_num}/{total_epochs}',
                 bar_format='| {bar} | {desc} -> Batch {n}/{total} | Estimated Time: {remaining} | Time: {elapsed} {postfix}') #just a nice to have progress bar
     for batch_idx, (inputs,targets) in enumerate(pbar):
         
@@ -36,7 +37,7 @@ def train_epoch(model: torch.nn.Module,
         optimizer.zero_grad() # reset gradients from previous iteration
 
         outputs = model(inputs) # forward pass
-        loss = loss_function(outputs, targets)
+        loss = criterion(outputs, targets)
         loss.backward()
         optimizer.step()
         train_losses.append(loss.item())
@@ -51,12 +52,17 @@ def train_epoch(model: torch.nn.Module,
             'Train Acc': f' {100. * correct / total:.2f}%'
         })
 
-    avg_train_loss_of_epoch = running_loss / len(train_loader)
+    avg_train_loss_of_epoch = running_loss / len(data_loader)
     avg_train_acc_of_epoch = 100. * correct / total
     return avg_train_loss_of_epoch, avg_train_acc_of_epoch
 
 
-def test_epoch(model, test_loader, criterion, device, epoch_num: int, total_epochs:int) -> tuple[float, float]:
+def test_epoch(model: torch.nn.Module,
+               test_loader: torch.utils.data.DataLoader,
+               criterion: nn.Module,
+               device: torch.device,
+               epoch_num: int,
+               total_epochs:int) -> tuple[float, float]:
     """
         Validate the model on test data.
 
@@ -67,7 +73,7 @@ def test_epoch(model, test_loader, criterion, device, epoch_num: int, total_epoc
     correct = 0
     total = 0
     pbar = tqdm(iterable=test_loader, desc=f'Test Epoch {epoch_num}/{total_epochs}',
-                bar_format='| {bar} | {desc} -> Batch {n}/{total} {postfix}')
+                bar_format='| {bar} | {desc} -> Batches{total} {postfix}')
     with torch.no_grad():  # Disable gradient computation for efficiency
         for data, targets in test_loader:
             data, targets = data.to(device), targets.to(device)
