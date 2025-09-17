@@ -9,56 +9,12 @@ from tqdm import tqdm
 from NNTrainingTorch.helpers.config_class import Config
 from NNTrainingTorch.helpers.saver_class import TorchModelSaver
 from NNTrainingTorch.helpers.TrainingResults import TrainingResults
+from NNTrainingTorch.helpers.train import train_epoch
 import NNTrainingTorch.helpers.datasets as datasets_helper
 import NNTrainingTorch.helpers.model as model_helper
 
 
-def train_epoch(model: torch.nn.Module,
-                data_loader: torch.utils.data.DataLoader,
-                criterion: nn.Module,
-                optimizer: torch.optim.Optimizer,
-                device: torch.device,
-                epoch_num: int,
-                total_epochs: int
-                )->tuple[float, float]:
-    """
-            Train the model for one epoch. Visual Feedback in Terminal with tqdm progress bar.
-            Gives back Average Train Loss and Train Accuracy.
-    """
-    model.train() # preparing model fo training
-    train_losses = []
-    running_loss = 0.0
-    correct = 0
-    total = 0
 
-    #ToDo: Name ändern damit man weiß wie viele Batches man hat.
-    pbar = tqdm(iterable =data_loader, desc=f'Training Epoch {epoch_num}/{total_epochs}',
-                bar_format='| {bar} | {desc} -> Batch {n}/{total} | Estimated Time: {remaining} | Time: {elapsed} {postfix}') #just a nice to have progress bar
-    for batch_idx, (inputs,targets) in enumerate(pbar):
-        
-        inputs, targets = inputs.to(device), targets.to(device)
-        optimizer.zero_grad() # reset gradients from previous iteration
-
-        outputs = model(inputs) # forward pass
-        loss = criterion(outputs, targets)
-        loss.backward()
-        optimizer.step()
-        train_losses.append(loss.item())
-        # statistics
-        running_loss += loss.item()
-        _, predicted = torch.max(outputs.data, 1)
-        total += targets.size(0)
-        correct += (predicted == targets).sum().item()
-        # Update progress bar
-        pbar.set_postfix({
-            'Train Loss': f' {loss.item():.4f}',
-            'Train Acc': f' {100. * correct / total:.2f}%'
-        })
-
-    avg_train_loss_of_epoch = running_loss / len(data_loader)
-    avg_train_acc_of_epoch = 100. * correct / total
-
-    return avg_train_loss_of_epoch, avg_train_acc_of_epoch
 
 
 def test_epoch(model: torch.nn.Module,
@@ -190,8 +146,11 @@ def load_config_File(config_path: str)->Config:
 
 if __name__ == "__main__":
     config_path = "_Configuration/config.yaml"
+
     training_configurations = load_config_File(config_path)
+
     train_loader, test_loader = datasets_helper.get_dataloaders(training_configurations)
+
     start_NN(training_configurations, train_loader, test_loader)
 
 

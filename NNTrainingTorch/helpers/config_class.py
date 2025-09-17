@@ -10,7 +10,7 @@ class Config:
     num_epochs: int
     batch_size: int
     dataset_path: str
-    model_type: list[str]
+    model_type: str
     augment_data: bool = False
     early_stopping: bool = False
     early_stopping_patience: Optional[int] = None
