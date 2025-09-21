@@ -2,6 +2,31 @@ import torch.utils.data
 from torchvision import datasets, transforms
 from NNTrainingTorch.helpers.config_class import Config
 
+def get_linear_regression_dataloaders(config: Config) -> torch.utils.data.DataLoader:
+    """
+    Load a simple linear regression dataset and return training and test dataloaders.
+
+    Args:
+        config (Config): Configuration object containing dataset path and batch size.
+
+    Returns:
+        Tuple[DataLoader, DataLoader]: Training and test dataloaders.
+    """
+    x_data = torch.tensor([[1.0], [2.0], [-1.0], [1.0]], dtype=torch.float32)  # Shape: (4, 1)
+    y_data = torch.tensor([[2.0], [3.0], [-1.0], [1.0]], dtype=torch.float32)  # Shape: (4, 1)
+
+
+    dataset = torch.utils.data.TensorDataset(x_data, y_data)
+
+    train_size = len(dataset)
+    test_size = 0
+    train_dataset, test_dataset = torch.utils.data.random_split(dataset, [train_size, test_size])
+
+    # Create DataLoaders
+    train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=config.batch_size, shuffle=False)
+    test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=config.batch_size, shuffle=False)
+    return train_loader, None
+
 def get_mnist_dataloaders(config: Config)-> torch.utils.data.DataLoader:
     """
     Load MNIST dataset and return training and test dataloaders.
@@ -39,23 +64,12 @@ def get_dataloaders(config: Config):
     Returns:
         Tuple[DataLoader, DataLoader]: Training and test dataloaders.
     """
+    match config.dataset_name.lower():
+        case "mnist" | "fashionmnist":
+            return get_mnist_dataloaders(config)
 
-    # Select dataset class based on configuration
-    if config.dataset_name.lower() == "mnist":
-        return get_mnist_dataloaders(config)
-    #elif config.dataset.lower() == "fashionmnist":
+        case "linear_regression":
+            return get_linear_regression_dataloaders(config)
 
-    #elif config.dataset.lower() == "cifar10":
-
-    else:
-        raise ValueError(f"Unknown dataset: {config.dataset_name}")
-
-    # Load training dataset
-    train_dataset = DatasetClass(config.dataset_path, train=True, download=True, transform=flatten_and_cast)
-    train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=config.batch_size, shuffle=True, **dataloader_kwargs)
-
-    # Load test dataset
-    test_dataset = DatasetClass('../_Dataset/', train=False, download=True, transform=flatten_and_cast)
-    test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=config.batch_size, shuffle=False, **dataloader_kwargs)
-
-    return train_loader, test_loader
+        case _:
+            raise ValueError(f"Unknown dataset: {config.dataset_name}")

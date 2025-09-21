@@ -60,17 +60,26 @@ def start_NN(config: Config, train_loader: torch.utils.data.DataLoader, test_loa
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Using device: {device}")
+
+
+    # Loss function
+
     model = model_helper.get_model(config)
     model.to(device)
 
-    # Loss function
-    # ToDo: switch between different loss functions
-    loss_function = nn.CrossEntropyLoss()
-
     # Optimizers
-    # ToDo: switch between different optimizers
     # ToDo: switch between different learning rates?
-    optimizer = torch.optim.SGD(model.parameters(), lr=config.learning_rate)
+    if config.dataset_name == "demo_linear_regression":
+
+        optimizer = torch.optim.SGD(model.parameters(), lr=config.learning_rate)
+        loss_function = nn.MSELoss()
+
+    else:
+
+        optimizer = torch.optim.SGD(model.parameters(), lr=config.learning_rate)
+        loss_function = nn.CrossEntropyLoss()
+
+
 
     train_losses = []
     train_accs = []
@@ -93,13 +102,15 @@ def start_NN(config: Config, train_loader: torch.utils.data.DataLoader, test_loa
                                                               epoch+1,
                                                               config.num_epochs)
 
-        test_loss_of_Epoch, test_acc_of_Epoch = test_epoch(model,
+        if test_loader is not None:
+            test_loss_of_Epoch, test_acc_of_Epoch = test_epoch(model,
                                                            test_loader,
                                                            loss_function,
                                                            device,
                                                            epoch+1,
                                                            config.num_epochs)
-
+        else:
+            test_loss_of_Epoch, test_acc_of_Epoch = 0, 0
         epoch_time = time.time() - start_time
         epoch_times.append(epoch_time)
 
@@ -137,6 +148,14 @@ def start_NN(config: Config, train_loader: torch.utils.data.DataLoader, test_loa
     )
     saver = TorchModelSaver()
     saver.save_training_session(training_result=results, config= config, model= model, save_full_model=True)
+
+    ###########################################################################################
+    ###########################################################################################
+    # Linear Regresssion Demo
+    ###########################################################################################
+    print(model)
+    weights,bias = model.get_weights_and_bias()
+    print(f'Numpy - FG with Auto Grad Lib\t y = {weights} * X + {bias}\n')
     #ToDo: irgendwas falsch mit dem Saver- Printed nicht richtig und speicher es nicht ab.
 
 

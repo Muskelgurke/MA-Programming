@@ -1,10 +1,12 @@
-import statistics
-import time
 import torch
-from flax.linen import avg_pool
+import torch.func
+
+import numpy as np
+
 from torch import nn
-import torch.nn.functional as F
+
 from tqdm import tqdm
+
 
 def train_epoch(model: torch.nn.Module,
                 data_loader: torch.utils.data.DataLoader,
@@ -13,77 +15,110 @@ def train_epoch(model: torch.nn.Module,
                 device: torch.device,
                 epoch_num: int,
                 total_epochs: int
-                )->tuple[float, float]:
+                ) -> tuple[float, float]:
     """
             Train the model for one epoch. Visual Feedback in Terminal with tqdm progress bar.
             Gives back Average Train Loss and Train Accuracy.
     """
-    model.train() # preparing model fo training
+    model.train()  # preparing model fo training
 
     #ToDo: Name ändern damit man weiß wie viele Batches man hat.
-    running_loss, correct, total = backpropaggation(data_loader,
-                                                    criterion,
-                                                    device,
-                                                    model,
-                                                    optimizer,
-                                                    epoch_num,
-                                                    total_epochs)
+    #todo: switchcase für backpropagation and FGD
+    running_loss, correct, total = functional_forward_gradient_decent(data_loader,
+                                                                      criterion,
+                                                                      device,
+                                                                      model,
+                                                                      optimizer,
+                                                                      epoch_num,
+                                                                      total_epochs)
+
     avg_train_loss_of_epoch = running_loss / len(data_loader)
     avg_train_acc_of_epoch = 100. * correct / total
 
     return avg_train_loss_of_epoch, avg_train_acc_of_epoch
 
-def functional_backpropagation(data_loader: torch.utils.data.DataLoader,
-                              criterion: nn.Module,
-                              device: torch.device,
-                              model_function,
-                              optimizer: torch.optim.Optimizer,
-                              epoch_num: int,
-                                epoch_total: int) -> tuple[float, int, int]:
+
+
+
+
+def functional_loss(params: dict,
+                    buffers: dict,
+                    model: nn.Module,
+                    inputs: torch.Tensor,
+                    targets: torch.Tensor,
+                    criterion: nn.Module) -> torch.Tensor:
+
+    outputs = torch.func.functional_call(model, (params, buffers), inputs)
+
+    return criterion(outputs, targets)
+
+
+def functional_forward_gradient_decent(data_loader: torch.utils.data.DataLoader,
+                                       criterion: nn.Module,
+                                       device: torch.device,
+                                       model,
+                                       optimizer: torch.optim.Optimizer,
+                                       epoch_num: int,
+                                       epoch_total: int) -> tuple[float, int, int]:
     """
     berechnet die backpprogagation für ein funktionales model (ohne zustand)
     """
-    running_loss = 0.0
-    correct = 0
-    total = 0
+
+    acuumulated_running_loss_over_all_Batches = 0.0
+    n_correct_samples = 0
+    total_amount_of_samples = 0
     pbar = tqdm(data_loader, desc=f'Functional Training Epoch {epoch_num}/{epoch_total}')
 
-    def compute_loss(params, inputs, targets):
-        # model_function nimmt Parameter + Inputs, gibt Outputs zurück
-        outputs = model_function(params, inputs)
-        return criterion(outputs, targets)
+    params_dict = dict(model.named_parameters())
+    # Braucht man für die korrekte ausführen von BatchNorm und dropout. Wie genau ist noch ein Rätsel!!
+    buffers_dict = dict(model.named_buffers())
+    params_tuple = tuple(params_dict.values())
 
-    for batch_idx, (inputs, targets) in enumerate(pbar):
-        inputs, targets = inputs.to(device), targets.to(device)
+    # buffers =  named_buffers.keys()
+    print(f"Initial weight:{model.linear.weight}")
+    print(f"Initial bias:{model.linear.bias}")
 
-        # Funktionale Gradientenberechnung
-        grads = grad_fn(params, inputs, targets)
-        jvp * v
-        loss = compute_loss(params, inputs, targets)
+    for batch_idx, (inputs, targets) in enumerate(data_loader):
+        inputs, target = inputs.to(device), targets.to(device)
+        optimizer.zero_grad()  # Reset Gradients to zero
 
-        # Parameter funktional updaten
-        params = functional_optimizer_step(params, grads, optimizer.param_groups[0]['lr'])
+        # Pertubation Vekto initialisieren
+        v_params = tuple([torch.randn_like(p) for p in params_tuple])
 
-        # Statistiken
-        running_loss += loss.item()
-        outputs = model_function(params, inputs)
-        _, predicted = torch.max(outputs.data, 1)
-        total += targets.size(0)
-        correct += (predicted == targets).sum().item()
+        loss_fn = lambda params: functional_loss(dict(zip(params_dict.keys(), params)), buffers_dict, model, inputs,
+                                                 targets, criterion)
+        # Berechne Gradienten für jeden Parameter mit JVP
+
+
+        # JVP berechnen
+        loss, directional_derivatives = torch.func.jvp(loss_fn, (params_tuple,), (v_params,))
+
+        #print(loss)
+        #print(f'Dir Derivatives d   {directional_derivatives}')
+        #print(f'loss {loss}')
+        # directional_derivative ist bereits ∇f(x)·v (ein Skalar)
+        # Wir müssen die Gradienten entsprechend setzen
+        for i, param in enumerate(model.parameters()):
+            if param.grad is None:
+                param.grad = torch.zeros_like(param)
+            param.grad= directional_derivatives * v_params[i]
+
+        optimizer.step()
+
+        acuumulated_running_loss_over_all_Batches += loss.item()
+        with torch.no_grad():
+            outputs = model(inputs)
+            _, predicted = torch.max(outputs.data, 1)
+            total_amount_of_samples += target.size(0)
+            n_correct_samples += (predicted == target).sum().item()
 
         pbar.set_postfix({
             'Train Loss': f'{loss.item():.4f}',
-            'Train Acc': f'{100. * correct / total:.2f}%'
+            'Train Acc': f'{100. * n_correct_samples / total_amount_of_samples:.2f}%'
         })
 
-    return params, running_loss, correct, total
+    return acuumulated_running_loss_over_all_Batches, n_correct_samples, total_amount_of_samples
 
-def functional_optimizer_step(params: dict, grads: dict, lr: float) -> dict:
-    """Funktionales Parameter-Update (SGD)"""
-    new_params = {}
-    for name in params:
-        new_params[name] = params[name] - lr * grads[name]
-    return new_params
 
 def backpropaggation(data_loader: torch.utils.data.DataLoader,
                      criterion: nn.Module,
@@ -91,7 +126,7 @@ def backpropaggation(data_loader: torch.utils.data.DataLoader,
                      model: nn.Module,
                      optimizer: torch.optim.Optimizer,
                      epoch_num: int,
-                    epoch_total: int) -> tuple[float, int, int]:
+                     epoch_total: int) -> tuple[float, int, int]:
     train_losses = []
     acuumulated_running_loss_over_all_Batches = 0.0
     n_correct_samples = 0
@@ -119,4 +154,12 @@ def backpropaggation(data_loader: torch.utils.data.DataLoader,
             'Train Loss': f' {loss.item():.4f}',
             'Train Acc': f' {100. * n_correct_samples / total_amount_of_samples:.2f}%'
         })
-    return  acuumulated_running_loss_over_all_Batches, n_correct_samples, total_amount_of_samples
+    return acuumulated_running_loss_over_all_Batches, n_correct_samples, total_amount_of_samples
+
+
+def functional_optimizer_step(params: dict, grads: dict, lr: float) -> dict:
+    """Funktionales Parameter-Update (SGD)"""
+    new_params = {}
+    for name in params:
+        new_params[name] = params[name] - lr * grads[name]
+    return new_params

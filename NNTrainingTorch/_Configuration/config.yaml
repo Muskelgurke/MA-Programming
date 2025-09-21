@@ -1,11 +1,11 @@
 random_seed: 42
 learning_rate: 0.01
-num_epochs: 2
+num_epochs: 1
 
 
 # Dataset Configurations
-dataset_name: mnist #lowercase!!!
-batch_size: 256
+dataset_name: linear_regression #mnist #lowercase!!!
+batch_size: 4
 augment_data: False
 
 #Early Stopping Configurations
@@ -15,4 +15,4 @@ early_stopping_patience: 3
 
 dataset_path: /home/muskelgurke/PycharmProjects/MA/_Dataset
 
-model_type: fc
+model_type: demo_linear_regression

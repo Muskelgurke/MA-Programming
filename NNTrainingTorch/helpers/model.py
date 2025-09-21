@@ -5,20 +5,26 @@ import torch
 from NNTrainingTorch.helpers.config_class import Config
 
 def get_model(config: Config) -> nn.Module:
-    if config.dataset_name.lower() in ["mnist", "fashionmnist"]:
-        output_size = 10  # number of classes
+    match config.dataset_name.lower():
+        case "mnist" | "fashionmnist":
+            output_size = 10  # number of classes
 
-        model_builders = {
-            "fc":   lambda: _build_fc_model(output_size),
-            "conv": lambda: _build_conv_model(output_size)
-        }
+            match config.model_type:
+                case "fc":
+                    return _build_fc_model(output_size)
+                case "conv":
+                    return _build_conv_model(output_size)
+                case _:
+                    raise ValueError(f"Unknown model type: {config.model_type}")
 
-        if config.model_type in model_builders:
-            return model_builders[config.model_type]()
-        else:
-            raise ValueError(f"Unknown model type: {config.model_type}")
-    else:
-        raise ValueError(f"Unknown dataset: {config.dataset_name}")
+        case "linear_regression":
+            # Add implementation for linear regression model
+            input_size = 1  # Adjust based on your needs
+            output_size = 1
+            return demo_linear_Regression(input_size, output_size)
+
+        case _:
+            raise ValueError(f"Unknown dataset: {config.dataset_name}")
 
 def _build_fc_model(output_size: int) -> nn.Module:
     """Build fully connected model"""
@@ -49,6 +55,22 @@ class NeuralNetwork_for_MNIST(nn.Module):
         x = self.fc2(x)
         x = self.softmax(x)
         return x
+
+class demo_linear_Regression(nn.Module):
+    def __init__(self, input_size: int, output_size: int):
+        super(demo_linear_Regression,self).__init__()
+        self.linear = nn.Linear(input_size, output_size)
+        self.linear.weight.data.fill_(1)
+        self.linear.bias.data.fill_(2)
+
+    def forward(self,x:torch.Tensor)-> torch.Tensor:
+        x = self.linear(x)
+        return x
+
+    def get_weights_and_bias(self):
+        """Return the weights (a) and bias (b) of the linear layer"""
+        return self.linear.weight.data, self.linear.bias.data
+
 
 class ConvNet_for_MNIST(nn.Module):
     def __init__(self, input_size: int, output_size: int):
