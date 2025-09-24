@@ -3,6 +3,7 @@ import torch.func
 import torch.autograd.forward_ad as fwAD
 import torch.nn.functional as F
 import numpy as np
+from absl.testing.parameterized import named_parameters
 
 from torch import nn
 from tqdm import tqdm
@@ -30,6 +31,12 @@ class Trainer:
         self.epoch_num = 0
         self.total_epochs = total_epochs
         self.seed = seed
+
+        torch.manual_seed(seed)
+        np.random.seed(seed)
+        if torch.cuda.is_available():
+            torch.cuda.manual_seed(seed)
+            torch.cuda.manual_seed_all(seed)
 
     def train_epoch(self, epoch_num: int) -> tuple[float, float]:
         """
@@ -90,28 +97,58 @@ class Trainer:
         n_correct_samples = 0
         total_amount_of_samples = 0
 
-        self.model.train()
-        #ToDo: gibt es vielleicht auch ohne numpy einen RNG ?
 
+        initial_state_dict = self.model.state_dict().copy()
 
         for batch_idx, (inputs, targets) in enumerate(self.data_loader):
+            self.model.load_state_dict(initial_state_dict)
+            self.model.train()
             inputs,targets = inputs.to(self.device), targets.to(self.device)
             self.optimizer.zero_grad()
+            torch.manual_seed(self.seed + batch_idx)
+            np.random.seed(self.seed)
 
-            rng = np.random.default_rng(self.seed)
-            tangent_np = rng.normal(size=inputs.shape)
-            tangent = torch.from_numpy(tangent_np).float().to(self.device)
-            print(f' inputs:\n {inputs}\n tangents: \n {tangent}')
+            tangent = torch.randn_like(inputs, device=self.device)
+
+            print(f' inputs:\n {inputs}\n tangents: \n {tangent}\n')
             jvps = []
+
             with fwAD.dual_level():
                 dual_inputs = fwAD.make_dual(inputs, tangent)
-                print(f'dual_inputs: {dual_inputs}')
+                print(f'dual_inputs:\n {dual_inputs}\n')
                 output = self.model(dual_inputs)
                 loss = F.mse_loss(output, targets)
                 print(loss)
                 #print(fwAD.unpack_dual(loss).tangent)
                 jvps.append(fwAD.unpack_dual(loss).tangent)
-                print(f' jvps: {jvps}')
+                print(f' jvps: {jvps}\n')
+                torch.stack(jvps)
+                print(f' stacked jvps: {jvps}\n')
+
+                actual_parameters = {}
+                named_parameters = dict(self.model.named_parameters())
+                for name, param in named_parameters.items():
+                    print(f'name: {name}')
+                    print(f'param: {param}')
+                # compute gradients
+                forward_gradients = tangent.view(-1) * jvps[0].view(-1)
+                print(f' forward_gradients:\n {forward_gradients}\n')
+
+                print(f'model.parameters{self.model.parameters}\n')
+                for param in self.model.named_parameters():
+                    print(param)
+                    param.grad
+
+                for param, grad in zip(self.model.parameters, forward_gradients):
+                    param.grad = grad
+                    print(f'{param.grad=}')
+
+                # clip gradients
+
+
+
+
+
         return accumulated_running_loss_over_all_batches, total_amount_of_samples, n_correct_samples
 
 

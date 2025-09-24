@@ -55,7 +55,7 @@ def startTrain(plot=False):
             (theta_t,),
             (v_t,)
         )
-
+        print({f'Iter {i + 1}/{iterations}, Loss: {f_val.item():.6f}, Dir. Ableitung: {directional_derivative.item():.6f}'})
         g_theta = directional_derivative * v_t
         save_fg[:, i] = g_theta.detach().numpy()  # speichern als NumPy
 
