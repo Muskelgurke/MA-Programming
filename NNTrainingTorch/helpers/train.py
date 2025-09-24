@@ -21,6 +21,9 @@ def train_epoch(model: torch.nn.Module,
             Gives back Average Train Loss and Train Accuracy.
     """
 
+    """
+    # Beispiel von Leo wie man Gradienten zuordnen kann
+    
     model.train()  # preparing model fo training
     model.zero_grad()
 
@@ -36,6 +39,7 @@ def train_epoch(model: torch.nn.Module,
         param.grad = grad
 
     exit()
+    """
 
     #ToDo: Name ändern damit man weiß wie viele Batches man hat.
     running_loss, correct, total = functional_forward_gradient_decent(data_loader,
@@ -45,24 +49,20 @@ def train_epoch(model: torch.nn.Module,
                                                                       optimizer,
                                                                       epoch_num,
                                                                       total_epochs)
-
-  # running_loss, correct, total = backpropaggation(data_loader,
-    running_loss, correct, total = functional_backpropagation(data_loader,
-                                                     criterion,
-                                                     device,
-                                                     model,
-                                                     optimizer,
-                                                     epoch_num,
-                                                     total_epochs)
+    """
+    running_loss, correct, total = backpropagation(data_loader,
+                                                   criterion,
+                                                   device,
+                                                   model,
+                                                   optimizer,
+                                                   epoch_num,
+                                                   total_epochs)
+    """
 
     avg_train_loss_of_epoch = running_loss / len(data_loader)
     avg_train_acc_of_epoch = 100. * correct / total
 
     return avg_train_loss_of_epoch, avg_train_acc_of_epoch
-
-
-
-
 
 def functional_loss(params: dict,
                     buffers: dict,
@@ -136,22 +136,24 @@ def functional_forward_gradient_decent(
         return acuumulated_running_loss_over_all_Batches, n_correct_samples, total_amount_of_samples
 
 def functional_optimizer_step(params: dict, grads: dict, lr: float) -> dict:
-     """Funktionales Parameter-Update (SGD)"""
+     """Funktionales Parameter-Update (SGD)
+        mit Momentum
+     """
      new_params = {}
+     momentum = []
      for name in params:
         grads[name] += 0.9 * momentum[name]
-
         momentum[name] = grads[name]
         new_params[name] = params[name] - lr * grads[name]
      return new_params
 
-def backpropaggation(data_loader: torch.utils.data.DataLoader,
-                     criterion: nn.Module,
-                     device: torch.device,
-                     model: nn.Module,
-                     optimizer: torch.optim.Optimizer,
-                     epoch_num: int,
-                     epoch_total: int) -> tuple[float, int, int]:
+def backpropagation(data_loader: torch.utils.data.DataLoader,
+                    criterion: nn.Module,
+                    device: torch.device,
+                    model: nn.Module,
+                    optimizer: torch.optim.Optimizer,
+                    epoch_num: int,
+                    epoch_total: int) -> tuple[float, int, int]:
     train_losses = []
     acuumulated_running_loss_over_all_Batches = 0.0
     n_correct_samples = 0
@@ -181,11 +183,3 @@ def backpropaggation(data_loader: torch.utils.data.DataLoader,
             'Train Acc': f' {100. * n_correct_samples / total_amount_of_samples:.2f}%'
         })
     return acuumulated_running_loss_over_all_Batches, n_correct_samples, total_amount_of_samples
-
-
-def functional_optimizer_step(params: dict, grads: dict, lr: float) -> dict:
-    """Funktionales Parameter-Update (SGD)"""
-    new_params = {}
-    for name in params:
-        new_params[name] = params[name] - lr * grads[name]
-    return new_params
