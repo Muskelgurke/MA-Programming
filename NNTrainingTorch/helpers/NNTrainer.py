@@ -1,6 +1,8 @@
 import torch
 import torch.func
 import torch.autograd.forward_ad as fwAD
+import torch.nn.functional as F
+import numpy as np
 
 from torch import nn
 from tqdm import tqdm
@@ -59,6 +61,12 @@ class Trainer:
         self.model.train()
 
         #ToDo: hier muss noch eine switch case rein damit man zwischen backprop und FGD switchen kann
+        # Add deterministic
+        torch.manual_seed(self.seed)
+        np.random.seed(self.seed)
+        torch.backends.cudnn.deterministic = True
+        torch.backends.cudnn.benchmark = False
+
 
         #running_loss, correct, total = self._functional_forward_gradient_descent_1()
         running_loss, correct, total = self._train_epoch_forward_gradient()
@@ -68,8 +76,6 @@ class Trainer:
 
         return avg_train_loss_of_epoch, avg_train_acc_of_epoch
 
-    def _fn(self, x,y):
-        return x**2 + y**2
     def _functional_loss(self,
                          params: dict,
                          buffers: dict,
@@ -85,14 +91,27 @@ class Trainer:
         total_amount_of_samples = 0
 
         self.model.train()
+        #ToDo: gibt es vielleicht auch ohne numpy einen RNG ?
+
+
         for batch_idx, (inputs, targets) in enumerate(self.data_loader):
             inputs,targets = inputs.to(self.device), targets.to(self.device)
             self.optimizer.zero_grad()
-            print(inputs)
-            tangent = torch.randn_like(inputs)
-            print(f'{tangent=}')
+
+            rng = np.random.default_rng(self.seed)
+            tangent_np = rng.normal(size=inputs.shape)
+            tangent = torch.from_numpy(tangent_np).float().to(self.device)
+            print(f' inputs:\n {inputs}\n tangents: \n {tangent}')
             jvps = []
-            #with fwAD.dual_level():
+            with fwAD.dual_level():
+                dual_inputs = fwAD.make_dual(inputs, tangent)
+                print(f'dual_inputs: {dual_inputs}')
+                output = self.model(dual_inputs)
+                loss = F.mse_loss(output, targets)
+                print(loss)
+                #print(fwAD.unpack_dual(loss).tangent)
+                jvps.append(fwAD.unpack_dual(loss).tangent)
+                print(f' jvps: {jvps}')
         return accumulated_running_loss_over_all_batches, total_amount_of_samples, n_correct_samples
 
 
