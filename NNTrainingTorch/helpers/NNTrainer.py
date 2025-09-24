@@ -17,7 +17,8 @@ class Trainer:
                  criterion: nn.Module,
                  optimizer: torch.optim.Optimizer,
                  device: torch.device,
-                 total_epochs: int):
+                 total_epochs: int,
+                 seed: int):
         """Initialize the trainer with all required parameters."""
         self.model = model
         self.data_loader = data_loader
@@ -26,6 +27,7 @@ class Trainer:
         self.device = device
         self.epoch_num = 0
         self.total_epochs = total_epochs
+        self.seed = seed
 
     def train_epoch(self, epoch_num: int) -> tuple[float, float]:
         """
@@ -58,13 +60,16 @@ class Trainer:
 
         #ToDo: hier muss noch eine switch case rein damit man zwischen backprop und FGD switchen kann
 
-        running_loss, correct, total = self._functional_forward_gradient_descent()
+        #running_loss, correct, total = self._functional_forward_gradient_descent_1()
+        running_loss, correct, total = self._train_epoch_forward_gradient()
 
         avg_train_loss_of_epoch = running_loss / len(self.data_loader)
         avg_train_acc_of_epoch = 100. * correct / total
 
         return avg_train_loss_of_epoch, avg_train_acc_of_epoch
 
+    def _fn(self, x,y):
+        return x**2 + y**2
     def _functional_loss(self,
                          params: dict,
                          buffers: dict,
@@ -74,7 +79,24 @@ class Trainer:
         outputs = torch.func.functional_call(self.model, (params, buffers), inputs)
         return self.criterion(outputs, targets)
 
-    def _functional_forward_gradient_descent(self) -> tuple[float, int, int]:
+    def _train_epoch_forward_gradient(self) -> tuple[float, int, int]:
+        accumulated_running_loss_over_all_batches = 0.0
+        n_correct_samples = 0
+        total_amount_of_samples = 0
+
+        self.model.train()
+        for batch_idx, (inputs, targets) in enumerate(self.data_loader):
+            inputs,targets = inputs.to(self.device), targets.to(self.device)
+            self.optimizer.zero_grad()
+            print(inputs)
+            tangent = torch.randn_like(inputs)
+            print(f'{tangent=}')
+            jvps = []
+            #with fwAD.dual_level():
+        return accumulated_running_loss_over_all_batches, total_amount_of_samples, n_correct_samples
+
+
+    def _functional_forward_gradient_descent_1(self) -> tuple[float, int, int]:
         """
         Perform functional forward gradient descent using JVP.
         """

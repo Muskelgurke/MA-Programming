@@ -93,12 +93,7 @@ def start_NN(config: Config, train_loader: torch.utils.data.DataLoader, test_loa
     print("-" * 60)
     print(" Schritt für Schritt ")
 
-    trainer = Trainer(model,
-                                                              train_loader,
-                                                              loss_function,
-                                                              optimizer,
-                                                              device,
-                                                              config.num_epochs)
+    trainer = Trainer(model,train_loader,loss_function,optimizer,device,config.num_epochs)
     for epoch in range(config.num_epochs):
         start_time = time.time()
 
