@@ -2,3 +2,4 @@
 /_Dataset/
 /NNTrainingJAX/training_runs/
 /NNTrainingTorch/training_runs/
+__pycache__/

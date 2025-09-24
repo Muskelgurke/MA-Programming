@@ -20,10 +20,24 @@ def train_epoch(model: torch.nn.Module,
             Train the model for one epoch. Visual Feedback in Terminal with tqdm progress bar.
             Gives back Average Train Loss and Train Accuracy.
     """
+
     model.train()  # preparing model fo training
+    model.zero_grad()
+
+    for param in model.parameters():
+        param.grad = torch.ones_like(param)
+
+    for param in model.parameters():
+        print(f"{param=}")
+        print(f"{param.grad=}")
+    optimizer.step()
+    print("OPTIM STEP")
+    for param, grad in zip(model.parameters(), grads):
+        param.grad = grad
+
+    exit()
 
     #ToDo: Name ändern damit man weiß wie viele Batches man hat.
-    #todo: switchcase für backpropagation and FGD
     running_loss, correct, total = functional_forward_gradient_decent(data_loader,
                                                                       criterion,
                                                                       device,
@@ -31,6 +45,15 @@ def train_epoch(model: torch.nn.Module,
                                                                       optimizer,
                                                                       epoch_num,
                                                                       total_epochs)
+
+  # running_loss, correct, total = backpropaggation(data_loader,
+    running_loss, correct, total = functional_backpropagation(data_loader,
+                                                     criterion,
+                                                     device,
+                                                     model,
+                                                     optimizer,
+                                                     epoch_num,
+                                                     total_epochs)
 
     avg_train_loss_of_epoch = running_loss / len(data_loader)
     avg_train_acc_of_epoch = 100. * correct / total
@@ -112,6 +135,29 @@ def functional_forward_gradient_decent(data_loader: torch.utils.data.DataLoader,
             total_amount_of_samples += target.size(0)
             n_correct_samples += (predicted == target).sum().item()
 
+     def compute_loss(params, inputs, targets):
+         # model_function nimmt Parameter + Inputs, gibt Outputs zurück
+         outputs = model_function(params, inputs)
+         return criterion(outputs, targets)
+ 
+     for batch_idx, (inputs, targets) in enumerate(pbar):
+         inputs, targets = inputs.to(device), targets.to(device)
+ 
+         # Funktionale Gradientenberechnung
+         grads = grad_fn(params, inputs, targets)
+         jvp * v
+         loss = compute_loss(params, inputs, targets)
+ 
+         # Parameter funktional updaten
+         params = functional_optimizer_step(params, grads, optimizer.param_groups[0]['lr'])
+ 
+         # Statistiken
+         running_loss += loss.item()
+         outputs = model_function(params, inputs)
+         _, predicted = torch.max(outputs.data, 1)
+         total += targets.size(0)
+         correct += (predicted == targets).sum().item()
+
         pbar.set_postfix({
             'Train Loss': f'{loss.item():.4f}',
             'Train Acc': f'{100. * n_correct_samples / total_amount_of_samples:.2f}%'
@@ -119,6 +165,15 @@ def functional_forward_gradient_decent(data_loader: torch.utils.data.DataLoader,
 
     return acuumulated_running_loss_over_all_Batches, n_correct_samples, total_amount_of_samples
 
+def functional_optimizer_step(params: dict, grads: dict, lr: float) -> dict:
+     """Funktionales Parameter-Update (SGD)"""
+     new_params = {}
+     for name in params:
+        grads[name] += 0.9 * momentum[name]
+        print(grads)
+        momentum[name] = grads[name]
+        new_params[name] = params[name] - lr * grads[name]
+     return new_params
 
 def backpropaggation(data_loader: torch.utils.data.DataLoader,
                      criterion: nn.Module,
@@ -134,6 +189,7 @@ def backpropaggation(data_loader: torch.utils.data.DataLoader,
 
     pbar = tqdm(iterable=data_loader, desc=f'Training Epoch {epoch_num}/{epoch_total}',
                 bar_format='| {bar} | {desc} -> Batch {n}/{total} | Estimated Time: {remaining} | Time: {elapsed} {postfix}')  # just a nice to have progress bar
+
 
     for batch_idx, (inputs, targets) in enumerate(pbar):
         inputs, targets = inputs.to(device), targets.to(device)
