@@ -9,7 +9,7 @@ from tqdm import tqdm
 from NNTrainingTorch.helpers.config_class import Config
 from NNTrainingTorch.helpers.saver_class import TorchModelSaver
 from NNTrainingTorch.helpers.TrainingResults import TrainingResults
-from NNTrainingTorch.helpers.train import train_epoch
+
 from NNTrainingTorch.helpers.NNTrainer import Trainer
 import NNTrainingTorch.helpers.datasets as datasets_helper
 import NNTrainingTorch.helpers.model as model_helper
@@ -93,7 +93,7 @@ def start_NN(config: Config, train_loader: torch.utils.data.DataLoader, test_loa
     print("-" * 60)
     print(" Schritt für Schritt ")
 
-    trainer = Trainer(model,train_loader,loss_function,optimizer,device,config.num_epochs)
+    trainer = Trainer(model,train_loader,loss_function,optimizer,device,config.num_epochs,config.random_seed)
     for epoch in range(config.num_epochs):
         start_time = time.time()
 
