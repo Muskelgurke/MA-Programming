@@ -1,6 +1,7 @@
 import torch
 import torch.func
-import numpy as np
+import torch.autograd.forward_ad as fwAD
+
 from torch import nn
 from tqdm import tqdm
 
@@ -54,6 +55,8 @@ class Trainer:
         """
         self.epoch_num = epoch_num
         self.model.train()
+
+        #ToDo: hier muss noch eine switch case rein damit man zwischen backprop und FGD switchen kann
 
         running_loss, correct, total = self._functional_forward_gradient_descent()
 

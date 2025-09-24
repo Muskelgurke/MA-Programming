@@ -156,7 +156,7 @@ def start_NN(config: Config, train_loader: torch.utils.data.DataLoader, test_loa
     # Linear Regresssion Demo
     ###########################################################################################
     print(model)
-    weights,bias = model.get_weights_and_bias()
+    weights, bias = model.get_weights_and_bias()
     print(f'Numpy - FG with Auto Grad Lib\t y = {weights} * X + {bias}\n')
     #ToDo: irgendwas falsch mit dem Saver- Printed nicht richtig und speicher es nicht ab.
 
