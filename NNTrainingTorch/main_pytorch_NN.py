@@ -10,6 +10,7 @@ from NNTrainingTorch.helpers.config_class import Config
 from NNTrainingTorch.helpers.saver_class import TorchModelSaver
 from NNTrainingTorch.helpers.TrainingResults import TrainingResults
 from NNTrainingTorch.helpers.train import train_epoch
+from NNTrainingTorch.helpers.NNTrainer import Trainer
 import NNTrainingTorch.helpers.datasets as datasets_helper
 import NNTrainingTorch.helpers.model as model_helper
 
@@ -92,15 +93,16 @@ def start_NN(config: Config, train_loader: torch.utils.data.DataLoader, test_loa
     print("-" * 60)
     print(" Schritt für Schritt ")
 
-    for epoch in range(config.num_epochs):
-        start_time = time.time()
-        train_loss_of_Epoch, train_acc_of_Epoch = train_epoch(model,
+    trainer = Trainer(model,
                                                               train_loader,
                                                               loss_function,
                                                               optimizer,
                                                               device,
-                                                              epoch+1,
                                                               config.num_epochs)
+    for epoch in range(config.num_epochs):
+        start_time = time.time()
+
+        train_loss_of_Epoch, train_acc_of_Epoch = trainer.train_epoch(epoch+1)
 
         if test_loader is not None:
             test_loss_of_Epoch, test_acc_of_Epoch = test_epoch(model,

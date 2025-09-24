@@ -10,7 +10,7 @@ from tqdm import tqdm
 
 def train_epoch(model: torch.nn.Module,
                 data_loader: torch.utils.data.DataLoader,
-                criterion: nn.Module,
+                loss_function: nn.Module, # criterion
                 optimizer: torch.optim.Optimizer,
                 device: torch.device,
                 epoch_num: int,
@@ -21,29 +21,11 @@ def train_epoch(model: torch.nn.Module,
             Gives back Average Train Loss and Train Accuracy.
     """
 
-    """
-    # Beispiel von Leo wie man Gradienten zuordnen kann
-    
-    model.train()  # preparing model fo training
-    model.zero_grad()
 
-    for param in model.parameters():
-        param.grad = torch.ones_like(param)
-
-    for param in model.parameters():
-        print(f"{param=}")
-        print(f"{param.grad=}")
-    optimizer.step()
-    print("OPTIM STEP")
-    for param, grad in zip(model.parameters(), grads):
-        param.grad = grad
-
-    exit()
-    """
 
     #ToDo: Name ändern damit man weiß wie viele Batches man hat.
     running_loss, correct, total = functional_forward_gradient_decent(data_loader,
-                                                                      criterion,
+                                                                      loss_function,
                                                                       device,
                                                                       model,
                                                                       optimizer,
@@ -93,20 +75,25 @@ def functional_forward_gradient_decent(
         n_correct_samples = 0
         total_amount_of_samples = 0
         pbar = tqdm(data_loader, desc=f'Functional Training Epoch {epoch_num}/{epoch_total}')
-
+        """
         params_dict = dict(model.named_parameters())
         # Braucht man für die korrekte Ausführung von BatchNorm und Dropout. Wie genau ist noch ein Rätsel!!
         buffers_dict = dict(model.named_buffers())
         params_tuple = tuple(params_dict.values())
+       
+        
 
         # buffers = named_buffers.keys()
         # print(f"Initial weight:{model.linear.weight}")
         # print(f"Initial bias:{model.linear.bias}")
-
+        """
         for batch_idx, (inputs, targets) in enumerate(data_loader):
+
             inputs, targets = inputs.to(device), targets.to(device)
             optimizer.zero_grad()  # Reset Gradients to zero
 
+            for param in model.parameters():
+                pri
             # Pertubation Vektor initialisieren
             v_params = tuple([torch.randn_like(p) for p in params_tuple])
 
