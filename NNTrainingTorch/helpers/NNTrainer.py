@@ -6,6 +6,7 @@ import numpy as np
 from absl.testing.parameterized import named_parameters
 
 from torch import nn
+from torch.autograd.forward_ad import unpack_dual
 from tqdm import tqdm
 
 
@@ -108,43 +109,28 @@ class Trainer:
             torch.manual_seed(self.seed + batch_idx)
             np.random.seed(self.seed)
 
-            tangent = torch.randn_like(inputs, device=self.device)
-
-            print(f' inputs:\n {inputs}\n tangents: \n {tangent}\n')
-            jvps = []
-
             with fwAD.dual_level():
-                dual_inputs = fwAD.make_dual(inputs, tangent)
-                print(f'dual_inputs:\n {dual_inputs}\n')
-                output = self.model(dual_inputs)
+                for param in self.model.parameters():
+                    tangent = torch.randn_like(param, device=self.device)
+                    print(f' tangent:\n {tangent}\n')
+                    param.data = fwAD.make_dual(param.data,tangent)
+                    print(f' params_dual:\n {param.data}\n')
+                    print(f'---*30---')
+                output = self.model(inputs)
                 loss = F.mse_loss(output, targets)
-                print(loss)
+                print(f'My loss:\n {loss}\n')
                 #print(fwAD.unpack_dual(loss).tangent)
-                jvps.append(fwAD.unpack_dual(loss).tangent)
-                print(f' jvps: {jvps}\n')
-                torch.stack(jvps)
-                print(f' stacked jvps: {jvps}\n')
+                #y, jvp = unpack_dual(loss)
+                #print(f' y: {y}\n jvp: {jvp}\n')
+                loss_value, loss_jvp = fwAD.unpack_dual(loss)
 
-                actual_parameters = {}
-                named_parameters = dict(self.model.named_parameters())
-                for name, param in named_parameters.items():
-                    print(f'name: {name}')
-                    print(f'param: {param}')
-                # compute gradients
-                forward_gradients = tangent.view(-1) * jvps[0].view(-1)
-                print(f' forward_gradients:\n {forward_gradients}\n')
-
-                print(f'model.parameters{self.model.parameters}\n')
-                for param in self.model.named_parameters():
-                    print(param)
-                    param.grad
-
-                for param, grad in zip(self.model.parameters, forward_gradients):
-                    param.grad = grad
-                    print(f'{param.grad=}')
+                print(f' loss_value: {loss_value}\n loss_jvp: {loss_jvp}\n')
 
                 # clip gradients
-
+                for param in self.model.parameters():
+                    param_value, param_jvp = fwAD.unpack_dual(param.data)
+                    param.data = param_value
+                    param.grad = param_jvp
 
 
 

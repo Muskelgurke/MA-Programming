@@ -49,6 +49,10 @@ def startTrain(plot=False):
         v = rng.normal(size=theta_t.shape)
         v_t = torch.tensor(v, dtype=torch.float32)
 
+        def calculationMSE(theta, X, y):
+            Y_pred = X @ theta
+            return torch.mean((Y_pred - y) ** 2)
+
         #JVP berechnen
         f_val, directional_derivative = jvp(
             lambda th: calculationMSE(th, X_t, Y_t),
