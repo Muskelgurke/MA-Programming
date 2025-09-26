@@ -21,7 +21,7 @@ def get_model(config: Config) -> nn.Module:
             # Add implementation for linear regression model
             input_size = 1  # Adjust based on your needs
             output_size = 1
-            return demo_linear_Regression(input_size, output_size)
+            return demo_linear_Regression_Model(input_size, output_size)
 
         case _:
             raise ValueError(f"Unknown dataset: {config.dataset_name}")
@@ -56,9 +56,9 @@ class NeuralNetwork_for_MNIST(nn.Module):
         x = self.softmax(x)
         return x
 
-class demo_linear_Regression(nn.Module):
+class demo_linear_Regression_Model(nn.Module):
     def __init__(self, input_size: int, output_size: int):
-        super(demo_linear_Regression,self).__init__()
+        super(demo_linear_Regression_Model, self).__init__()
         self.linear = nn.Linear(input_size, output_size)
         self.linear.weight.data.fill_(1)
         self.linear.bias.data.fill_(2)

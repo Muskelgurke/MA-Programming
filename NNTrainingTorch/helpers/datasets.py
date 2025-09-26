@@ -21,7 +21,6 @@ def get_linear_regression_dataloaders(config: Config) -> torch.utils.data.DataLo
     train_size = len(dataset)
     test_size = 0
     train_dataset, test_dataset = torch.utils.data.random_split(dataset, [train_size, test_size])
-
     # Create DataLoaders
     train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=config.batch_size, shuffle=False)
     test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=config.batch_size, shuffle=False)

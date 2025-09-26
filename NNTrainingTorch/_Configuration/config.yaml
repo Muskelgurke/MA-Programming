@@ -1,11 +1,11 @@
-random_seed: 42
-learning_rate: 0.01
-num_epochs: 1
+random_seed: 43
+learning_rate: 0.1
+num_epochs: 2000
 
 
 # Dataset Configurations
 dataset_name: linear_regression #mnist #lowercase!!!
-batch_size: 4
+batch_size: 1
 augment_data: False
 
 #Early Stopping Configurations
