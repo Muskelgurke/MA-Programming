@@ -1,16 +1,19 @@
 random_seed: 43
-learning_rate: 0.1
+learning_rate: 0.15
 num_epochs: 2000
+training_method: fgd # [bp, fgd]
 
 
 # Dataset Configurations
-dataset_name: linear_regression #mnist #lowercase!!!
-batch_size: 1
+#dataset_name: mnist #linear_regression #[linear_regression, mnist, cifar10]
+dataset_name: linear_regression
+batch_size: 4
 augment_data: False
 
 #Early Stopping Configurations
 early_stopping: True
 early_stopping_patience: 3
+early_stopping_delta: 0.0001
 
 
 dataset_path: /home/muskelgurke/PycharmProjects/MA/_Dataset

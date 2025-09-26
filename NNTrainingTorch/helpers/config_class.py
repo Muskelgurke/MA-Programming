@@ -11,10 +11,11 @@ class Config:
     batch_size: int
     dataset_path: str
     model_type: str
-    augment_data: bool = False
+    training_method: str # e.g., "backpropagation", "forward_gradient"
+    early_stopping_delta: float
     early_stopping: bool = False
     early_stopping_patience: Optional[int] = None
-
+    augment_data: bool = False
 
     @classmethod
     def from_yaml(cls, yaml_path: str = "") -> "Config":
