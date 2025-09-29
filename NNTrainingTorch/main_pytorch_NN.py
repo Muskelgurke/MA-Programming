@@ -16,12 +16,8 @@ import NNTrainingTorch.helpers.datasets as datasets_helper
 import NNTrainingTorch.helpers.model as model_helper
 
 def start_NN(config: Config, train_loader: torch.utils.data.DataLoader, test_loader: torch.utils.data.DataLoader):
-
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Using device: {device}")
-
-
-    # Loss function
 
     model = model_helper.get_model(config)
     model.to(device)
@@ -32,12 +28,8 @@ def start_NN(config: Config, train_loader: torch.utils.data.DataLoader, test_loa
     # ToDo: switch between different learning rates?
 
     loss_function, optimizer = get_optimizer_and_lossfunction(config, model)
-
-
-
     early_stopping = EarlyStopping(patience=config.early_stopping_patience,
                                    delta=config.early_stopping_delta) if config.early_stopping else None
-
 
     train_losses = []
     train_accs = []
@@ -103,6 +95,8 @@ def start_NN(config: Config, train_loader: torch.utils.data.DataLoader, test_loa
 
 
 def get_optimizer_and_lossfunction(config: Config, model: torch.nn.Module) -> tuple[torch.nn.Module, torch.optim.Optimizer]:
+    loss_fucntion = None
+    optimizer = None
     match config.dataset_name:
         case "demo_linear_regression":
             optimizer = torch.optim.SGD(model.parameters(), lr=config.learning_rate)

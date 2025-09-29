@@ -71,6 +71,7 @@ class Trainer:
         Returns:
             tuple: (average_train_loss, average_train_accuracy)
         """
+
         self.epoch_num = epoch_num
         self.model.train()
 
@@ -78,7 +79,7 @@ class Trainer:
         # Add deterministic
         torch.manual_seed(self.seed)
         np.random.seed(self.seed)
-        torch.backends.cudnn.deterministic = True
+        torch.backends.cudnn.deterministic = False
         torch.backends.cudnn.benchmark = False
 
         #ToDo: Backpropagation als alternative Methode einbauen bzw. wechseln je nach Config
@@ -101,13 +102,18 @@ class Trainer:
 
 
     def _train_epoch_forward_gradient(self) -> tuple[float, int, int]:
+        """
+        Train the model for each epoch using functional forward gradient decent
+        :return:
+        """
         accumulated_running_loss_over_all_batches = 0.0
         n_correct_samples = 0
         total_amount_of_samples = 0
-        pbar = tqdm(self.data_loader, desc=f'Functional Training Epoch {self.epoch_num}/{self.total_epochs}')
+        pbar = tqdm(self.data_loader, desc=f'FGD Training Epoch {self.epoch_num}/{self.total_epochs}')
 
         def loss_fn(params_dict):
             return self._cross_entropy_loss(params_dict, inputs, targets)
+
         for batch_idx, (inputs, targets) in enumerate(self.data_loader):
             # initial_state_dict = self.model.state_dict().copy()
             # self.model.load_state_dict(initial_state_dict)
@@ -119,18 +125,20 @@ class Trainer:
             np.random.seed(self.seed)
 
             params = dict(self.model.named_parameters())
-            loss_value = self._mse_loss(params, inputs, targets)
+            loss_value = self._cross_entropy_loss(params, inputs, targets)
 
             for name, param in self.model.named_parameters():
                 #v_param = torch.randn_like(param)
                 #ToDo: anschauen weleche anderen Verteilungen es noch so gibt
-                v_param=torch.randn(param.shape, dtype=param.dtype, device=param.device,generator=torch.Generator().manual_seed(self.seed + batch_idx + hash(name) % 10000))
+                v_param=torch.randn(param.shape,
+                                    dtype=param.dtype,
+                                    device=param.device,
+                                    generator=torch.Generator().manual_seed(self.seed + batch_idx + hash(name) % 10000))
                 #sv_param = torch.randn(param.shape, dtype=param.dtype, device=param.device, generator=torch.Generator().manual_seed(self.seed+batch_idx))
                 #print(f' name: {name}\n v_param:\n {v_param}\n')
                 v_params_single = {n: torch.zeros_like(p) if n != name else v_param
                                    for n, p in params.items()}
                 #print(f' v_params_single for {name}:\n {v_params_single}\n')
-
                 _,directional_derivatives = torch.func.jvp(
                     loss_fn, (params,), (v_params_single,)
                 )

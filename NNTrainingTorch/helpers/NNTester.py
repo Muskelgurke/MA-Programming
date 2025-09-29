@@ -43,7 +43,19 @@ class Tester:
         return self.val_loss, self.test_acc
 
     def eval_classification(self):
-        pass
+        with torch.no_grad():  # Disable gradient computation for efficiency
+            for data, targets in self.test_loader:
+                data, targets = data.to(self.device), targets.to(self.device)
+                outputs = self.model(data)
+                test_loss = self.loss_function(outputs, targets)
+                self.val_loss += test_loss.item() * data.size(0)
+                _, predicted = torch.max(outputs, 1)
+                self.total += targets.size(0)
+                self.correct += (predicted == targets).sum().item()
+        self.val_loss /= self.total
+        self.test_acc = self.correct / self.total
+
+        return self.val_loss, self.test_acc
 
     def eval_linearRegression(self) -> tuple[float, float]:
         with torch.no_grad():  # Disable gradient computation for efficiency

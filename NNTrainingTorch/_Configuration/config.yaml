@@ -5,17 +5,17 @@ training_method: fgd # [bp, fgd]
 
 
 # Dataset Configurations
-#dataset_name: mnist #demo_linear_regression #[demo_linear_regression, mnist, cifar10]
-dataset_name: demo_linear_regression
-batch_size: 4
+#dataset_name: mnist # demo_linear_regression #[demo_linear_regression, mnist, cifar10]
+dataset_name: mnist
+batch_size: 32 # for demo_linear_regression 4
 augment_data: False
+model_type: fc # demo_linear_regression
 
 #Early Stopping Configurations
 early_stopping: True
-early_stopping_patience: 10
-early_stopping_delta: 0.001
+early_stopping_patience: 5
+early_stopping_delta: 0.01
 
 
 dataset_path: /home/muskelgurke/PycharmProjects/MA/_Dataset
 
-model_type: demo_linear_regression
