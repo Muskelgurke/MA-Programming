@@ -17,7 +17,7 @@ def get_model(config: Config) -> nn.Module:
                 case _:
                     raise ValueError(f"Unknown model type: {config.model_type} for that Dataset")
 
-        case "linear_regression":
+        case "demo_linear_regression":
             # Add implementation for linear regression model
             input_size = 1  # Adjust based on your needs
             output_size = 1

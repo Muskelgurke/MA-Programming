@@ -84,10 +84,12 @@ class Trainer:
         #ToDo: Backpropagation als alternative Methode einbauen bzw. wechseln je nach Config
         match self.config.training_method:
             case "fgd":
-                running_loss, correct, total = self._train_epoch_forward_gradient()
-
+                if self.config.dataset_name == "demo_linear_regression":
+                    running_loss, total, correct = self._train_epoch_forward_gradient_linearRegression()
+                else:
+                    running_loss, total, correct = self._train_epoch_forward_gradient()
             case "bp":
-                runnig_loss, correct, total = self._backpropaggation()
+                runnig_loss, total, correct = self._backpropaggation()
 
             case _:
                 raise ValueError(f"Unknown Training - Method: {self.config.training_method}")
@@ -105,9 +107,7 @@ class Trainer:
         pbar = tqdm(self.data_loader, desc=f'Functional Training Epoch {self.epoch_num}/{self.total_epochs}')
 
         def loss_fn(params_dict):
-            return self._mse_loss(params_dict, inputs, targets)
-
-
+            return self._cross_entropy_loss(params_dict, inputs, targets)
         for batch_idx, (inputs, targets) in enumerate(self.data_loader):
             # initial_state_dict = self.model.state_dict().copy()
             # self.model.load_state_dict(initial_state_dict)
@@ -124,8 +124,8 @@ class Trainer:
             for name, param in self.model.named_parameters():
                 #v_param = torch.randn_like(param)
                 #ToDo: anschauen weleche anderen Verteilungen es noch so gibt
-                v_param=torch.randn(param.shape, dtype=param.dtype, device=param.device,
-                     generator=torch.Generator().manual_seed(self.seed + batch_idx + hash(name) % 10000))
+                v_param=torch.randn(param.shape, dtype=param.dtype, device=param.device,generator=torch.Generator().manual_seed(self.seed + batch_idx + hash(name) % 10000))
+                #sv_param = torch.randn(param.shape, dtype=param.dtype, device=param.device, generator=torch.Generator().manual_seed(self.seed+batch_idx))
                 #print(f' name: {name}\n v_param:\n {v_param}\n')
                 v_params_single = {n: torch.zeros_like(p) if n != name else v_param
                                    for n, p in params.items()}
@@ -150,63 +150,55 @@ class Trainer:
 
         return accumulated_running_loss_over_all_batches, total_amount_of_samples, n_correct_samples
 
-    def _functional_forward_gradient_descent_1(self) -> tuple[float, int, int]:
-        """
-        Perform functional forward gradient descent using JVP.
-        """
-        def _functional_loss(params: dict,
-                             buffers: dict,
-                             inputs: torch.Tensor,
-                             targets: torch.Tensor) -> torch.Tensor:
-            """Compute functional loss using torch.func.functional_call."""
-            outputs = torch.func.functional_call(self.model, (params, buffers), inputs)
-            return self.loss_function(outputs, targets)
-
+    def _train_epoch_forward_gradient_linearRegression(self) -> tuple[float, int, int]:
         accumulated_running_loss_over_all_batches = 0.0
         n_correct_samples = 0
         total_amount_of_samples = 0
         pbar = tqdm(self.data_loader, desc=f'Functional Training Epoch {self.epoch_num}/{self.total_epochs}')
 
-        params_dict = dict(self.model.named_parameters())
-        buffers_dict = dict(self.model.named_buffers())
-        params_tuple = tuple(params_dict.values())
+        def loss_fn(params_dict):
+            return self._mse_loss(params_dict, inputs, targets)
 
         for batch_idx, (inputs, targets) in enumerate(self.data_loader):
+            # initial_state_dict = self.model.state_dict().copy()
+            # self.model.load_state_dict(initial_state_dict)
+            self.model.train()
             inputs, targets = inputs.to(self.device), targets.to(self.device)
+
             self.optimizer.zero_grad()
+            torch.manual_seed(self.seed + batch_idx)
+            np.random.seed(self.seed)
 
-            # Initialize perturbation vector
-            v_params = tuple([torch.randn_like(p) for p in params_tuple])
+            params = dict(self.model.named_parameters())
+            loss_value = self._mse_loss(params, inputs, targets)
 
-            loss_fn = lambda params: _functional_loss(
-                dict(zip(params_dict.keys(), params)), buffers_dict, inputs, targets
-            )
+            for name, param in self.model.named_parameters():
+                # v_param = torch.randn_like(param)
+                # ToDo: anschauen weleche anderen Verteilungen es noch so gibt
+                v_param = torch.randn(param.shape, dtype=param.dtype, device=param.device,
+                                      generator=torch.Generator().manual_seed(
+                                          self.seed + batch_idx + hash(name) % 10000))
+                # print(f' name: {name}\n v_param:\n {v_param}\n')
+                v_params_single = {n: torch.zeros_like(p) if n != name else v_param
+                                   for n, p in params.items()}
+                # print(f' v_params_single for {name}:\n {v_params_single}\n')
 
-            # Compute JVP
-            loss, directional_derivatives = torch.func.jvp(loss_fn, (params_tuple,), (v_params,))
+                _, directional_derivatives = torch.func.jvp(
+                    loss_fn, (params,), (v_params_single,)
+                )
+                gradient = directional_derivatives * v_param
+                param.grad = gradient
 
-            # Set gradients using directional derivatives
-            for i, param in enumerate(self.model.parameters()):
-                if param.grad is None:
-                    param.grad = torch.zeros_like(param)
-                param.grad = directional_derivatives * v_params[i]
-
+            # print(self.model.parameters())
             self.optimizer.step()
-
-            accumulated_running_loss_over_all_batches += loss.item()
-
-            with torch.no_grad():
-                outputs = self.model(inputs)
-                _, predicted = torch.max(outputs.data, 1)
-                total_amount_of_samples += targets.size(0)
-                n_correct_samples += (predicted == targets).sum().item()
+            accumulated_running_loss_over_all_batches += loss_value.item()
+            total_amount_of_samples += targets.size(0)
 
             pbar.set_postfix({
-                'Train Loss': f'{loss.item():.4f}',
-                'Train Acc': f'{100. * n_correct_samples / total_amount_of_samples:.2f}%'
+                'Train Loss': f'{loss_value.item():.4f}'
             })
 
-        return accumulated_running_loss_over_all_batches, n_correct_samples, total_amount_of_samples
+        return accumulated_running_loss_over_all_batches, total_amount_of_samples, n_correct_samples
 
     def _backpropaggation(self) -> tuple[float, int, int]:
 
@@ -227,6 +219,7 @@ class Trainer:
             loss.backward()
             self.optimizer.step()
             train_losses.append(loss.item())
+
             # statistics
             acuumulated_running_loss_over_all_Batches += loss.item()
             _, predicted = torch.max(outputs.data, 1)
@@ -237,4 +230,4 @@ class Trainer:
                 'Train Loss': f' {loss.item():.4f}',
                 'Train Acc': f' {100. * n_correct_samples / total_amount_of_samples:.2f}%'
             })
-        return  acuumulated_running_loss_over_all_Batches, n_correct_samples, total_amount_of_samples
+        return  acuumulated_running_loss_over_all_Batches, total_amount_of_samples, n_correct_samples

@@ -2,7 +2,7 @@ import torch.utils.data
 from torchvision import datasets, transforms
 from NNTrainingTorch.helpers.config_class import Config
 
-def get_linear_regression_dataloaders(config: Config) -> torch.utils.data.DataLoader:
+def get_linear_regression_dataloaders(config: Config) -> tuple[torch.utils.data.DataLoader, torch.utils.data.DataLoader]:
     """
     Load a simple linear regression dataset and return training and test dataloaders.
 
@@ -20,13 +20,14 @@ def get_linear_regression_dataloaders(config: Config) -> torch.utils.data.DataLo
 
     train_size = len(dataset)
     test_size = 0
-    train_dataset, test_dataset = torch.utils.data.random_split(dataset, [train_size, test_size])
+    train_dataset = torch.utils.data.TensorDataset(x_data, y_data)
+    test_dataset = torch.utils.data.TensorDataset(x_data, y_data)
     # Create DataLoaders
     train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=config.batch_size, shuffle=False)
     test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=config.batch_size, shuffle=False)
-    return train_loader, None
+    return train_loader, test_loader
 
-def get_mnist_dataloaders(config: Config)-> torch.utils.data.DataLoader:
+def get_mnist_dataloaders(config: Config)-> tuple[torch.utils.data.DataLoader, torch.utils.data.DataLoader]:
     """
     Load MNIST dataset and return training and test dataloaders.
 
@@ -67,7 +68,7 @@ def get_dataloaders(config: Config):
         case "mnist" | "fashionmnist":
             return get_mnist_dataloaders(config)
 
-        case "linear_regression":
+        case "demo_linear_regression":
             return get_linear_regression_dataloaders(config)
 
         case _:
