@@ -1,15 +1,16 @@
 random_seed: 43
 learning_rate: 0.1
-epoch_num: 2000
+epoch_num: 1
 training_method: fgd # [bp, fgd]
 
 
 # Dataset Configurations
 #dataset_name: mnist # demo_linear_regression #[demo_linear_regression, mnist, cifar10]
+#dataset_name: mnist
 dataset_name: mnist
-batch_size: 32 # for demo_linear_regression 4
+batch_size: 64 #2 # for demo_linear_regression 4
 augment_data: False
-model_type: fc # demo_linear_regression
+model_type: fc #fc_manual_calculation # demo_linear_regression
 
 #Early Stopping Configurations
 early_stopping: True

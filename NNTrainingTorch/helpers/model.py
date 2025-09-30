@@ -22,13 +22,21 @@ def get_model(config: Config) -> nn.Module:
             input_size = 1  # Adjust based on your needs
             output_size = 1
             return linear_regression_model(input_size, output_size)
-
+        case "small_mnist_for_manual_calculation":
+            input_size = 4
+            output_size = 2
+            return _fc_manual_calculation(input_size, output_size)
         case _:
             raise ValueError(f"Unknown dataset: {config.dataset_name}")
 
+def _fc_manual_calculation(input_size: int, output_size: int) -> nn.Module:
+    """Build fully connected model for manual calculation"""
+    return fc_manual_calculation_model(input_size, output_size)
+
+
 def _build_fc_model(output_size: int) -> nn.Module:
     """Build fully connected model"""
-    input_size = 28 * 28  # picture size only relevant for fully connected NN
+    input_size = 28 * 28  # picture size of MNIST only relevant for fully connected NN
     hidden_size = 128     # number of neurons in hidden layer
     return NeuralNetwork_for_MNIST(input_size, hidden_size, output_size)
 
@@ -37,23 +45,50 @@ def _build_conv_model(output_size: int) -> nn.Module:
     input_channels = 1    # number of channels (1 for grayscale)
     return ConvNet_for_MNIST(input_channels, output_size)
 
+class fc_manual_calculation_model(nn.Module):
+    def __init__(self, input_size: int, output_size: int):
+        super(fc_manual_calculation_model, self).__init__()
+        self.flatten = nn.Flatten()
+        self.fc1 = nn.Linear(input_size, output_size)
+        self.fc1.weight.data = torch.tensor([[0.1, 0.2, 0.3, 0.4],
+                                             [0.5, 0.6, 0.7, 0.8]], dtype=torch.float32)
+        self.fc1.bias.data = torch.tensor([0.5, -0.5], dtype=torch.float32)
 
+    def forward(self, x):
+        x = self.flatten(x)
+        x = self.fc1(x)
+        return x
 class NeuralNetwork_for_MNIST(nn.Module):
     def __init__(self, input_size: int, hidden_size: int, output_size: int):
         super(NeuralNetwork_for_MNIST, self).__init__()
+        self.flatten = nn.Flatten()
+        self.fc1 = nn.Linear(input_size, output_size)
+        self.relu = nn.ReLU()
+        self.softmax = nn.Softmax(dim=1)
+
+        # Original NN structure
+        """
         self.flatten = nn.Flatten()
         self.fc1 = nn.Linear(input_size, hidden_size)
         self.relu = nn.ReLU()
         self.fc2 = nn.Linear(hidden_size, output_size)
         self.softmax = nn.Softmax(dim=1)
-
+"""
 
     def forward(self, x):
         x = self.flatten(x)
         x = self.fc1(x)
         x = self.relu(x)
+        x = self.softmax(x)
+
+        # Original NN structure
+        """
+        x = self.flatten(x)
+        x = self.fc1(x)
+        x = self.relu(x)
         x = self.fc2(x)
         x = self.softmax(x)
+        """
         return x
 
 class linear_regression_model(nn.Module):

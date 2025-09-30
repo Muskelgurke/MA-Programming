@@ -54,6 +54,34 @@ def get_mnist_dataloaders(config: Config)-> tuple[torch.utils.data.DataLoader, t
 
     return train_loader, test_loader
 
+def get_small_mnist_for_manual_calculation(config:Config):
+    # Very simple 2x2 "images" flattened to 4 features
+    # These represent tiny 2x2 pixel images flattened
+    train_images = torch.tensor([
+        [0.0, 0.0, 1.0, 1.0],  # Simple pattern 1
+        [1.0, 1.0, 0.0, 0.0],  # Simple pattern 2
+        [1.0, 0.0, 1.0, 0.0],  # Simple pattern 3
+        [0.0, 1.0, 0.0, 1.0]  # Simple pattern 4
+    ], dtype=torch.float32)
+
+
+    # Labels (0 or 1 for binary classification)
+    train_labels = torch.tensor([0, 1, 1, 0], dtype=torch.long)
+
+    # Same data for test (in real scenario you'd want different data)
+    test_images = train_images.clone()
+    test_labels = train_labels.clone()
+
+    # Create datasets
+    train_dataset = torch.utils.data.TensorDataset(train_images, train_labels)
+    test_dataset = torch.utils.data.TensorDataset(test_images, test_labels)
+
+    # Create DataLoaders
+    train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=config.batch_size, shuffle=False)
+    test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=config.batch_size, shuffle=False)
+
+    return train_loader, test_loader
+
 def get_dataloaders(config: Config):
     """
     Load dataset and return training and test dataloaders.
@@ -70,6 +98,7 @@ def get_dataloaders(config: Config):
 
         case "demo_linear_regression":
             return get_linear_regression_dataloaders(config)
-
+        case "small_mnist_for_manual_calculation":
+            return get_small_mnist_for_manual_calculation(config)
         case _:
             raise ValueError(f"Unknown dataset: {config.dataset_name}")

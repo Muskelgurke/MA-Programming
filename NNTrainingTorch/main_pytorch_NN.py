@@ -101,7 +101,7 @@ def get_optimizer_and_lossfunction(config: Config, model: torch.nn.Module) -> tu
         case "demo_linear_regression":
             optimizer = torch.optim.SGD(model.parameters(), lr=config.learning_rate)
             loss_function = nn.MSELoss()
-        case "mnist" | "fashionmnist":
+        case "mnist" | "fashionmnist" | "small_mnist_for_manual_calculation":
             optimizer = torch.optim.SGD(model.parameters(), lr=config.learning_rate)
             loss_function = nn.CrossEntropyLoss()
         case _:

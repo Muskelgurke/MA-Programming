@@ -5,6 +5,7 @@ import torch.nn.functional as F
 import numpy as np
 from absl.testing.parameterized import named_parameters
 from fontTools.misc.timeTools import epoch_diff
+from sympy.vector import directional_derivative
 from tensorflow import switch_case
 
 from torch import nn
@@ -79,7 +80,7 @@ class Trainer:
         # Add deterministic
         torch.manual_seed(self.seed)
         np.random.seed(self.seed)
-        torch.backends.cudnn.deterministic = False
+        torch.backends.cudnn.deterministic = True
         torch.backends.cudnn.benchmark = False
 
         #ToDo: Backpropagation als alternative Methode einbauen bzw. wechseln je nach Config
@@ -100,8 +101,120 @@ class Trainer:
 
         return avg_train_loss_of_epoch, avg_train_acc_of_epoch
 
-
     def _train_epoch_forward_gradient(self) -> tuple[float, int, int]:
+        accumulated_running_loss_over_all_batches = 0.0
+        n_correct_samples = 0
+        total_amount_of_samples = 0
+        pbar = tqdm(self.data_loader, desc=f'FGD Training Epoch {self.epoch_num}/{self.total_epochs}')
+
+        for batch_idx, (inputs, targets) in enumerate(self.data_loader):
+            self.model.train()
+            inputs, targets = inputs.to(self.device), targets.to(self.device)
+
+            self.optimizer.zero_grad()
+            torch.manual_seed(self.seed + batch_idx)
+            np.random.seed(self.seed)
+
+            named_parameters = dict(self.model.named_parameters())
+            actual_parameters = {}
+            for name, param in named_parameters.items():
+                actual_parameters[name] = param.detach()
+                #print(f' actual_parameters:\n {actual_parameters}\n')
+                submodule_name, parameter_name = name.rsplit(".",1)
+                #print(f' submodule_name: {submodule_name}\n parameter_name: {parameter_name}\n')
+                submodule = self.model.get_submodule(submodule_name)
+                #print(f' submodule:\n {submodule}\n')
+                delattr(submodule, parameter_name)
+                #print(f' del_submodule:\n {submodule.parameters()}\n')
+                setattr(submodule, parameter_name, actual_parameters[name])
+                #print(f' new_submodule:\n {submodule.parameters()}\n')
+
+            #print(f'actual Parameters:\t\t\t{actual_parameters}')
+            #param_names_and_shapes = {name: param.shape for name, param in actual_parameters.items()}
+            #print(f' param_names_and_shapes:\n {param_names_and_shapes}\n')
+            #print(f'param_names_and_shapes Values: {list(param_names_and_shapes.values())}\n')
+            pertubation_vectors = {}
+            for name, param in actual_parameters.items():
+               # print(f' name: {name}\n param:\n {param}\n')
+                pertubation_vectors[name] = torch.randn(param.shape,
+                                      dtype=param.dtype,
+                                      device=param.device,
+                                      generator=torch.Generator().manual_seed(self.seed))
+                #print(f' pertubation_vectors:\n {pertubation_vectors}\n')
+
+            # Connect the parameters and tangents as an dualTensor for JVP
+
+            estimated_gradients={}
+            for param_name in actual_parameters.keys():
+                # Reset alle Parameter zu originalen Werten
+                for name, param_value in actual_parameters.items():
+                    submodule_name, parameter_name = name.rsplit(".", 1)
+                    submodule = self.model.get_submodule(submodule_name)
+                    delattr(submodule, parameter_name)
+                    setattr(submodule, parameter_name, param_value)
+
+                # Schritt 4: Nur für DIESEN Parameter Dual-Tensor erstellen
+                with fwAD.dual_level():
+                    # Für aktuellen Parameter: Dual-Tensor mit Perturbation
+                    submodule_name, parameter_name = param_name.rsplit(".", 1)
+                    submodule = self.model.get_submodule(submodule_name)
+
+                    current_perturbation = pertubation_vectors[param_name]
+                    dual_param = fwAD.make_dual(actual_parameters[param_name], current_perturbation)
+                    delattr(submodule, parameter_name)
+                    setattr(submodule, parameter_name, dual_param)
+
+                    # Forward Pass
+                    output = self.model(inputs)
+                    loss = torch.nn.functional.cross_entropy(output, targets)
+
+                    # Schritt 5: Richtungsableitung für diesen Parameter extrahieren
+                    directional_derivative = fwAD.unpack_dual(loss).tangent
+                    #print(f' Richtungsableitung für {param_name}:\n {directional_derivative}\n')
+                    # Schritt 6: Geschätzten Gradienten berechnen
+                    # g_estimated = (directional_derivative) * perturbation_vector
+                    estimated_gradient = directional_derivative * pertubation_vectors[param_name]
+                    estimated_gradients[param_name] = estimated_gradient
+
+            # Schritt 7: Geschätzten Gradienten dem Parameter zuweisen
+            with torch.no_grad():
+                # set Model parameters to actual values
+                for name, param_value in actual_parameters.items():
+                    submodule_name, parameter_name = name.rsplit(".", 1)
+                    submodule = self.model.get_submodule(submodule_name)
+                    if hasattr(submodule, parameter_name):
+                        delattr(submodule, parameter_name)
+                    # Use nn.Parameter to properly register the parameter
+                    setattr(submodule, parameter_name, nn.Parameter(param_value))
+
+                for name, param in self.model.named_parameters():
+                    #print(name)
+                    if name in estimated_gradients:
+                        #gradient zuweisen
+                        #print(f'Gradienten zuweisung von: {estimated_gradients[name]}')
+                        param.grad = estimated_gradients[name]
+            #print(f'Parameter mit Gradienten:\n {list(self.model.named_parameters())}\n')
+            #print(f'Parameter Gradients:\n {[param.grad for param in self.model.parameters()]}\n')
+            self.optimizer.step()
+            accumulated_running_loss_over_all_batches += loss.item()
+
+            # Accuracy berechnen
+            _, predicted = output.max(1)
+            total_amount_of_samples += targets.size(0)
+            n_correct_samples += predicted.eq(targets).sum().item()
+
+            pbar.update(1)
+            pbar.set_postfix({
+                'Loss': f'{loss.item():.4f}',
+                'Acc': f'{100. * n_correct_samples / total_amount_of_samples:.2f}%'
+            })
+
+        pbar.close()
+        return (accumulated_running_loss_over_all_batches / len(self.data_loader),
+                n_correct_samples,
+                total_amount_of_samples)
+
+    def _train_epoch_forward_gradient_2(self) -> tuple[float, int, int]:
         """
         Train the model for each epoch using functional forward gradient decent
         :return:
@@ -111,6 +224,99 @@ class Trainer:
         total_amount_of_samples = 0
         pbar = tqdm(self.data_loader, desc=f'FGD Training Epoch {self.epoch_num}/{self.total_epochs}')
 
+        for batch_idx, (inputs, targets) in enumerate(self.data_loader):
+            self.model.train()
+            inputs, targets = inputs.to(self.device), targets.to(self.device)
+
+            self.optimizer.zero_grad()
+            torch.manual_seed(self.seed + batch_idx)
+            np.random.seed(self.seed)
+
+            # Get current parameters as a dictionary
+            current_params = dict(self.model.named_parameters())
+
+
+            # Define loss function using functional_call to avoid in-place operations
+            def loss_fn(params_dict):
+                return self._cross_entropy_loss(params_dict, inputs, targets)
+
+            # Create random perturbation vectors for each parameter
+            param_vectors = {}
+            for name, param in self.model.named_parameters():
+                v_param = torch.randn(
+                    param.shape,
+                    dtype=param.dtype,
+                    device=param.device,
+                    generator=torch.Generator().manual_seed(
+                        self.seed + hash(name) % 10000 + batch_idx
+                    )
+                )
+                param_vectors[name] = v_param
+            print(f'batch_idx: {batch_idx}\n')
+            print(f' param_vectors:\n \t{param_vectors}\n')
+            # Compute directional derivative using JVP
+            try:
+                # JVP returns (primal_out, tangent_out)
+                loss, directional_derivative = torch.func.jvp(
+                    loss_fn,
+                    (current_params,),
+                    (param_vectors,)
+                )
+                print(f' loss: {loss}\n directional_derivative: {directional_derivative}\n')
+                # Store accumulated loss
+                loss_value = loss
+                accumulated_running_loss_over_all_batches += loss_value.item()
+
+                # Compute forward gradient: directional_derivative * v_param
+                # Note: directional_derivative is a scalar for the entire loss
+                # We need to distribute it to each parameter
+                for name, param in self.model.named_parameters():
+                    if param.requires_grad:
+                        # Forward gradient approximation
+                        gradient_approx = directional_derivative * param_vectors[name]
+                        if param.grad is None:
+                            param.grad = gradient_approx
+                        else:
+                            param.grad += gradient_approx
+
+                # Update parameters
+                self.optimizer.step()
+
+                # Calculate accuracy
+                with torch.no_grad():
+                    outputs = self.model(inputs)
+                    _, predicted = torch.max(outputs.data, 1)
+                    batch_total = targets.size(0)
+                    total_amount_of_samples += batch_total
+                    n_correct_samples += (predicted == targets).sum().item()
+
+                # Update progress bar
+                current_loss = loss_value.item()
+                current_acc = 100. * n_correct_samples / total_amount_of_samples
+                pbar.set_postfix({
+                    'Train Loss': f'{current_loss:.4f}',
+                    'Train Acc': f'{current_acc:.2f}%'
+                })
+                pbar.update()
+
+            except Exception as e:
+                print(f"Error in JVP computation: {e}")
+                continue
+
+        pbar.close()
+        return accumulated_running_loss_over_all_batches / len(
+            self.data_loader), total_amount_of_samples, n_correct_samples
+
+    def _train_epoch_forward_gradient_1_0(self) -> tuple[float, int, int]:
+        """
+        Train the model for each epoch using functional forward gradient decent
+        :return:
+        """
+        accumulated_running_loss_over_all_batches = 0.0
+        n_correct_samples = 0
+        total_amount_of_samples = 0
+        pbar = tqdm(self.data_loader, desc=f'FGD Training Epoch {self.epoch_num}/{self.total_epochs}')
+        """s
         def loss_fn(params_dict):
             return self._cross_entropy_loss(params_dict, inputs, targets)
 
@@ -124,23 +330,43 @@ class Trainer:
             torch.manual_seed(self.seed + batch_idx)
             np.random.seed(self.seed)
 
-            params = dict(self.model.named_parameters())
-            loss_value = self._cross_entropy_loss(params, inputs, targets)
+            param_vectors = {}
+            print(f'self.model.named_parameters():\n {list(self.model.named_parameters())}\n')
+            for name, param in self.model.named_parameters():
+                # Create random vector with same shape as parameter
+                v_param = torch.randn(
+                    param.shape,
+                    dtype=param.dtype,
+                    device=param.device,
+                    generator=torch.Generator().manual_seed(
+                        self.seed + hash(name) % 10000
+                    )
+                )
+                param_vectors[name] = v_param
+
+            print(f' param_vectors:\n {param_vectors}\n')
 
             for name, param in self.model.named_parameters():
-                #v_param = torch.randn_like(param)
-                #ToDo: anschauen weleche anderen Verteilungen es noch so gibt
-                v_param=torch.randn(param.shape,
-                                    dtype=param.dtype,
-                                    device=param.device,
-                                    generator=torch.Generator().manual_seed(self.seed + batch_idx + hash(name) % 10000))
+                _,directional_derivatives = torch.func.jvp(
+                    loss_fn, (dict(self.model.named_parameters()),), (param_vectors,)
+                directional_derivatives = torch.func.jvp(
+                    loss_fn, (dict(self.model.named_parameters()),), (param_vectors,)
+                )[1])
+
+
+            exit()
+           
+            v_param = torch.randn(self.model.named_parameters,
+                                    dtype=params.dtype,
+                                    device=params.device,
+                                    generator=torch.Generator().manual_seed(self.seed + batch_idx))
                 #sv_param = torch.randn(param.shape, dtype=param.dtype, device=param.device, generator=torch.Generator().manual_seed(self.seed+batch_idx))
                 #print(f' name: {name}\n v_param:\n {v_param}\n')
-                v_params_single = {n: torch.zeros_like(p) if n != name else v_param
-                                   for n, p in params.items()}
+
+
                 #print(f' v_params_single for {name}:\n {v_params_single}\n')
                 _,directional_derivatives = torch.func.jvp(
-                    loss_fn, (params,), (v_params_single,)
+                    loss_fn, (self.model.parameters(),), (v_param,)
                 )
                 gradient = directional_derivatives * v_param
                 param.grad = gradient
@@ -155,7 +381,7 @@ class Trainer:
                 'Train Loss': f'{loss_value.item():.4f}',
                 'Train Acc': f'{100. * n_correct_samples / total_amount_of_samples:.2f}%'
             })
-
+"""
         return accumulated_running_loss_over_all_batches, total_amount_of_samples, n_correct_samples
 
     def _train_epoch_forward_gradient_linearRegression(self) -> tuple[float, int, int]:
