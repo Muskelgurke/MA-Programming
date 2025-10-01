@@ -1,6 +1,6 @@
 random_seed: 43
-learning_rate: 0.1
-epoch_num: 1
+learning_rate: 0.001
+epoch_num: 10
 training_method: fgd # [bp, fgd]
 
 
@@ -8,7 +8,7 @@ training_method: fgd # [bp, fgd]
 #dataset_name: mnist # demo_linear_regression #[demo_linear_regression, mnist, cifar10]
 #dataset_name: mnist
 dataset_name: mnist
-batch_size: 64 #2 # for demo_linear_regression 4
+batch_size: 64 #Mnist 64 # Cifar10->128 # for demo_linear_regression 4
 augment_data: False
 model_type: fc #fc_manual_calculation # demo_linear_regression
 

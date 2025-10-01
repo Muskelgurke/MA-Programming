@@ -37,7 +37,9 @@ def _fc_manual_calculation(input_size: int, output_size: int) -> nn.Module:
 def _build_fc_model(output_size: int) -> nn.Module:
     """Build fully connected model"""
     input_size = 28 * 28  # picture size of MNIST only relevant for fully connected NN
-    hidden_size = 128     # number of neurons in hidden layer
+    # number of neurons in hidden layer
+    # Flügel nimmt -> hidden_size= [256,1024,4096]
+    hidden_size = 256
     return NeuralNetwork_for_MNIST(input_size, hidden_size, output_size)
 
 def _build_conv_model(output_size: int) -> nn.Module:
@@ -58,37 +60,28 @@ class fc_manual_calculation_model(nn.Module):
         x = self.flatten(x)
         x = self.fc1(x)
         return x
+
 class NeuralNetwork_for_MNIST(nn.Module):
     def __init__(self, input_size: int, hidden_size: int, output_size: int):
         super(NeuralNetwork_for_MNIST, self).__init__()
-        self.flatten = nn.Flatten()
-        self.fc1 = nn.Linear(input_size, output_size)
-        self.relu = nn.ReLU()
-        self.softmax = nn.Softmax(dim=1)
-
         # Original NN structure
-        """
         self.flatten = nn.Flatten()
-        self.fc1 = nn.Linear(input_size, hidden_size)
-        self.relu = nn.ReLU()
-        self.fc2 = nn.Linear(hidden_size, output_size)
-        self.softmax = nn.Softmax(dim=1)
-"""
+        self.fc1 = nn.Linear(input_size, hidden_size)  # First hidden layer
+        self.relu1 = nn.ReLU()
+        self.fc2 = nn.Linear(hidden_size, hidden_size)  # Second hidden layer
+        self.relu2 = nn.ReLU()
+        self.fc3 = nn.Linear(hidden_size, output_size)  # Output layer
+
 
     def forward(self, x):
-        x = self.flatten(x)
-        x = self.fc1(x)
-        x = self.relu(x)
-        x = self.softmax(x)
-
         # Original NN structure
-        """
         x = self.flatten(x)
         x = self.fc1(x)
-        x = self.relu(x)
+        x = self.relu1(x)
         x = self.fc2(x)
-        x = self.softmax(x)
-        """
+        x = self.relu2(x)
+        x = self.fc3(x)
+
         return x
 
 class linear_regression_model(nn.Module):

@@ -28,6 +28,7 @@ def start_NN(config: Config, train_loader: torch.utils.data.DataLoader, test_loa
     # ToDo: switch between different learning rates?
 
     loss_function, optimizer = get_optimizer_and_lossfunction(config, model)
+
     early_stopping = EarlyStopping(patience=config.early_stopping_patience,
                                    delta=config.early_stopping_delta) if config.early_stopping else None
 
@@ -48,7 +49,9 @@ def start_NN(config: Config, train_loader: torch.utils.data.DataLoader, test_loa
         start_time = time.time()
 
         train_loss_of_epoch, train_acc_of_epoch = trainer.train_epoch(epoch+1)
-        test_loss_of_epoch, test_acc_of_epoch = tester.test_epoch()
+        test_loss_of_epoch, test_acc_of_epoch = tester.test_epoch(epoch+1)
+        #print(train_loss_of_epoch)
+        #print(test_loss_of_epoch)
 
         epoch_time = time.time() - start_time
         epoch_times.append(epoch_time)
@@ -95,14 +98,15 @@ def start_NN(config: Config, train_loader: torch.utils.data.DataLoader, test_loa
 
 
 def get_optimizer_and_lossfunction(config: Config, model: torch.nn.Module) -> tuple[torch.nn.Module, torch.optim.Optimizer]:
-    loss_fucntion = None
+    loss_function = None
     optimizer = None
     match config.dataset_name:
         case "demo_linear_regression":
             optimizer = torch.optim.SGD(model.parameters(), lr=config.learning_rate)
             loss_function = nn.MSELoss()
         case "mnist" | "fashionmnist" | "small_mnist_for_manual_calculation":
-            optimizer = torch.optim.SGD(model.parameters(), lr=config.learning_rate)
+            optimizer = torch.optim.Adam(model.parameters(), lr=config.learning_rate)
+            #optimizer = torch.optim.SGD(model.parameters(), lr=config.learning_rate)
             loss_function = nn.CrossEntropyLoss()
         case _:
             raise ValueError(f"Unknown dataset_name. Can´t load optimizer and loss_function: {config.dataset_name}")
