@@ -36,6 +36,7 @@ class Tester:
         self.val_loss = 0
         self.test_acc = 0
 
+
         if self.config.model_type == "demo_linear_regression":
             self.eval_linearRegression()
 

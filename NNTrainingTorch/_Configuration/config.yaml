@@ -6,11 +6,12 @@ training_method: fgd # [bp, fgd]
 
 # Dataset Configurations
 #dataset_name: mnist # demo_linear_regression #[demo_linear_regression, mnist, cifar10]
-#dataset_name: mnist
 dataset_name: mnist
 batch_size: 64 #Mnist 64 # Cifar10->128 # for demo_linear_regression 4
 augment_data: False
-model_type: fc #fc_manual_calculation # demo_linear_regression
+model_type: fc # demo_linear_regression
+#Todo: add Optimizer Configurations, learninrate, Momentum, etc.
+optimizer:
 
 #Early Stopping Configurations
 early_stopping: True

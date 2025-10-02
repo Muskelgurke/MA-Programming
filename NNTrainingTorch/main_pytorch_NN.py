@@ -24,8 +24,6 @@ def start_NN(config: Config, train_loader: torch.utils.data.DataLoader, test_loa
     print("-" * 60)
     print(model)
     print("-" * 60)
-    # Optimizers
-    # ToDo: switch between different learning rates?
 
     loss_function, optimizer = get_optimizer_and_lossfunction(config, model)
 
@@ -45,13 +43,14 @@ def start_NN(config: Config, train_loader: torch.utils.data.DataLoader, test_loa
 
     trainer = Trainer(config, model, train_loader, loss_function, optimizer, device, config.epoch_num, config.random_seed)
     tester = Tester(config, model, test_loader, loss_function, device, config.epoch_num, config.random_seed)
+
     for epoch in range(config.epoch_num):
         start_time = time.time()
 
         train_loss_of_epoch, train_acc_of_epoch = trainer.train_epoch(epoch+1)
+
         test_loss_of_epoch, test_acc_of_epoch = tester.test_epoch(epoch+1)
-        #print(train_loss_of_epoch)
-        #print(test_loss_of_epoch)
+
 
         epoch_time = time.time() - start_time
         epoch_times.append(epoch_time)
@@ -105,8 +104,8 @@ def get_optimizer_and_lossfunction(config: Config, model: torch.nn.Module) -> tu
             optimizer = torch.optim.SGD(model.parameters(), lr=config.learning_rate)
             loss_function = nn.MSELoss()
         case "mnist" | "fashionmnist" | "small_mnist_for_manual_calculation":
-            optimizer = torch.optim.Adam(model.parameters(), lr=config.learning_rate)
-            #optimizer = torch.optim.SGD(model.parameters(), lr=config.learning_rate)
+            #optimizer = torch.optim.Adam(model.parameters(), lr=config.learning_rate)
+            optimizer = torch.optim.SGD(model.parameters(), lr=config.learning_rate)
             loss_function = nn.CrossEntropyLoss()
         case _:
             raise ValueError(f"Unknown dataset_name. Can´t load optimizer and loss_function: {config.dataset_name}")

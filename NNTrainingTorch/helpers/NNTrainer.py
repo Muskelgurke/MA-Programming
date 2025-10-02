@@ -54,6 +54,7 @@ class Trainer:
                 print("Using Backpropagation Method ")
             case _:
                 raise ValueError(f"Unknown Training - Method: {self.config.training_method}")
+    def _init_csv_files(self):
 
     def _mse_loss(self, params: dict, x: torch.Tensor, targets: torch.Tensor):
         model = lambda p, x: torch.func.functional_call(self.model, (p, {}), x)
@@ -72,26 +73,25 @@ class Trainer:
     def train_epoch(self, epoch_num: int) -> tuple[float, float]:
         """
         Train the model for one epoch using functional forward gradient descent.
-
         Returns:
-            tuple: (average_train_loss, average_train_accuracy)
+            tuple: (average_train_loss_of_epoch, average_train_accuracy_epoch)
         """
         self.epoch_num = epoch_num
         self.model.train()
         #ToDo: hier muss noch eine switch case rein damit man zwischen backprop und FGD switchen kann
         # Add deterministic
+        """
         torch.manual_seed(self.seed)
         np.random.seed(self.seed)
         torch.backends.cudnn.deterministic = False
         torch.backends.cudnn.benchmark = False
-
-        #ToDo: Backpropagation als alternative Methode einbauen bzw. wechseln je nach Config
+        """
         match self.config.training_method:
             case "fgd":
                 if self.config.dataset_name == "demo_linear_regression":
                     running_loss, total, correct = self._train_epoch_forward_gradient_linearRegression()
                 else:
-                    running_loss, total, correct = self._train_epoch_forward_gradient()
+                    running_loss, correct, total = self._train_epoch_forward_gradient()
             case "bp":
                 running_loss, total, correct = self._backpropaggation()
 
@@ -124,21 +124,30 @@ class Trainer:
             v_params = tuple([torch.randn_like(p) for p in params])
 
             # Define loss function for functional call
-            def loss_fn(params_tuple):
+            def loss_fn(params_tuple, inputs, targets):
                 # Reconstruct parameter dict from tuple
                 params_dict = dict(zip(names, params_tuple))
-                return self._cross_entropy_loss(params_dict, inputs, targets)
+                output = torch.func.functional_call(self.model, params_dict, inputs)
+                return  nn.functional.cross_entropy(output, targets)
+
             try:
                 # Compute JVP (Forward AD)
-                loss, dir_der = torch.func.jvp(loss_fn, (params,), (v_params,))
+                loss, dir_der = torch.func.jvp(
+                    lambda params: loss_fn(params, inputs, targets),
+                    (params,),
+                    (v_params,)
+                )
 
+                print(f'{dir_der=}, {loss=}')
                 # Set gradients: gradient = v * jvp (scalar multiplication)
                 with torch.no_grad():
                     for j, param in enumerate(self.model.parameters()):
+                        print(f'{self.model.named_parameters()}')
                         print(f'{v_params[j]=}, {dir_der=}')
                         param.grad =  dir_der * v_params[j]
-                        print(param.grad.values())
+                        print(param.grad)
                         exit()
+
                 #torch.nn.utils.clip_grad_norm_(self.model.parameters(), max_norm=5.0)
 
                 # Optimizer step
@@ -153,10 +162,14 @@ class Trainer:
 
             # Calculate metrics
             accumulated_running_loss_over_all_batches += loss.item()
+
             outputs = self.model(inputs)
             _, predicted = torch.max(outputs.data, 1)
             total_amount_of_samples += targets.size(0)
             n_correct_samples += (predicted == targets).sum().item()
+            #print(predicted.shape)
+            #print(targets.size(0))
+
             # Update progress bar
             pbar.update(1)
             pbar.set_postfix({
@@ -165,7 +178,7 @@ class Trainer:
             })
 
         pbar.close()
-        return (accumulated_running_loss_over_all_batches / len(self.data_loader),
+        return (accumulated_running_loss_over_all_batches,
                 n_correct_samples,
                 total_amount_of_samples)
 
