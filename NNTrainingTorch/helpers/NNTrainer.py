@@ -1,18 +1,11 @@
 import torch
 import torch.autograd.forward_ad as fwAD
-import torch.nn.functional as F
-
 import numpy as np
-from absl.testing.parameterized import named_parameters
-from fontTools.misc.timeTools import epoch_diff
-from sympy.vector import directional_derivative
-from tensorflow import switch_case
-
+import csv
+import os
+from pathlib import Path
 from torch import nn
-from torch.autograd.forward_ad import unpack_dual
 from tqdm import tqdm
-from torch.func import functional_call
-
 from NNTrainingTorch.helpers.config_class import Config
 
 
@@ -54,7 +47,28 @@ class Trainer:
                 print("Using Backpropagation Method ")
             case _:
                 raise ValueError(f"Unknown Training - Method: {self.config.training_method}")
+
+                # Initialize CSV logging
+        self.log_dir = Path("training_logs")
+        self.log_dir.mkdir(exist_ok=True)
+
+        # Create CSV files with headers
+        self.batch_log_file = self.log_dir / f"batch_stats_{config.training_method}_{seed}.csv"
+        self.epoch_log_file = self.log_dir / f"epoch_stats_{config.training_method}_{seed}.csv"
+
+        self._init_csv_files()
+
     def _init_csv_files(self):
+        """Initialize CSV files with headers"""
+        # Batch statistics CSV
+        with open(self.batch_log_file, 'w', newline='') as f:
+            writer = csv.writer(f)
+            writer.writerow(['epoch', 'batch_idx', 'loss', 'accuracy', 'learning_rate'])
+
+        # Epoch statistics CSV
+        with open(self.epoch_log_file, 'w', newline='') as f:
+            writer = csv.writer(f)
+            writer.writerow(['epoch', 'avg_loss', 'avg_accuracy', 'total_samples', 'learning_rate'])
 
     def _mse_loss(self, params: dict, x: torch.Tensor, targets: torch.Tensor):
         model = lambda p, x: torch.func.functional_call(self.model, (p, {}), x)
