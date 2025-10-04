@@ -1,3 +1,4 @@
+import datetime
 import statistics
 import time
 import torch
@@ -21,18 +22,20 @@ def start_NN(config: Config, train_loader: torch.utils.data.DataLoader, test_loa
     print("-" * 60)
     print(model)
     print("-" * 60)
-    print(f"\tDataset:\t{config.dataset_name}\n\tModel:\t{config.model_type}")
+    print(f"\t Dataset:\t{config.dataset_name}\n\tModel:\t{config.model_type}")
     print("-" * 60)
-    print("\tSchritt für Schritt ")
+    print("\t Schritt für Schritt ")
+
     loss_function, optimizer = get_optimizer_and_lossfunction(config=config,
                                                               model=model)
 
     early_stopping = EarlyStopping(patience=config.early_stopping_patience,
                                    delta=config.early_stopping_delta) if config.early_stopping else None
 
-    writer = SummaryWriter(log_dir=f'runs/{config.dataset_name}_{config.model_type}_{config.training_method}_{int(time.time())}')
-
-    saver = TorchModelSaver() # eigener Saver gebaut. Plotting etc.
+    timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+    run_path = f'runs/{config.dataset_name}_{config.model_type}_{config.training_method}_{timestamp}'
+    writer = SummaryWriter(log_dir=run_path)
+    saver = TorchModelSaver(writer.log_dir) # eigener Saver gebaut. Plotting etc.
     trainer = Trainer(config_file=config,
                       model=model,
                       data_loader=train_loader,
@@ -43,7 +46,7 @@ def start_NN(config: Config, train_loader: torch.utils.data.DataLoader, test_loa
                       seed=config.random_seed,
                       tensorboard_writer=writer)
 
-    tester = Tester(configFile=config,
+    tester = Tester(config_file=config,
                     model=model,
                     test_loader=test_loader,
                     loss_function=loss_function,
@@ -51,6 +54,8 @@ def start_NN(config: Config, train_loader: torch.utils.data.DataLoader, test_loa
                     total_epochs=config.epoch_num,
                     seed=config.random_seed,
                     tensorboard_writer=writer)
+
+
     train_losses_per_epoch = []
     train_accs_per_epoch = []
     test_losses_per_epoch = []
@@ -64,28 +69,30 @@ def start_NN(config: Config, train_loader: torch.utils.data.DataLoader, test_loa
 
         trainer.train_epoch(epoch_num=epoch)
 
-        test_loss_of_epoch, test_acc_of_epoch = tester.validate_epoch(epoch_num=epoch)
+        tester.validate_epoch(epoch_num=epoch)
 
         epoch_time = time.time() - start_time
         epoch_times_per_epoch.append(epoch_time)
 
+        print(f'avg_train_loss_of_epoch: {trainer.avg_train_loss_of_epoch:.4f} | ')
+        print(f'avg_train_acc_of_epoch: {trainer.avg_train_acc_of_epoch:.4f} | ')
+        print(f'train ACC: {trainer.train_acc:.4f} | ')
+
+        print(f'avg_validation_loss_of_epoch: {tester.avg_validation_loss_of_epoch:.4f} | ')
+        print(f'avg_validation_acc_of_epoch: {tester.avg_validation_acc_of_epoch:.4f} | ')
+        print(f'validation ACC: {tester.test_acc:.4f} | ')
+
+
         train_losses_per_epoch.append(trainer.avg_train_loss_of_epoch)
         train_accs_per_epoch.append(trainer.avg_train_acc_of_epoch)
-        test_losses_per_epoch.append(test_loss_of_epoch)
-        test_accs_per_epoch.append(test_acc_of_epoch)
+        test_losses_per_epoch.append(tester.avg_validation_loss_of_epoch)
+        test_accs_per_epoch.append(tester.avg_validation_acc_of_epoch)
 
-        early_stopping(test_loss_of_epoch, model)
+        early_stopping(tester.avg_validation_loss_of_epoch, model)
         if early_stopping.early_stop:
             print(f"Stopping early at Epoch {epoch + 1}")
             break
-        '''
-        print(f"Epoch {epoch + 1:2d}/{config.num_epochs} | "
-              f"Zeit: {epoch_time:5.2f}s | "
-              f"Train Acc: {train_acc_of_Epoch:.4f} | "
-              f"Test Acc: {test_acc_of_Epoch:.4f} | "
-              f"Train Loss: {train_loss_of_Epoch:.4f} | "
-              f"Test Loss: {test_loss_of_Epoch:.4f}")
-        '''
+
     print("-"* 60)
     print("\nTraining and Testing completed")
     print(f"Durchschnittliche Zeit pro Epoch: {statistics.mean(epoch_times_per_epoch):.2f}s")

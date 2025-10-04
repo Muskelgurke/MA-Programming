@@ -16,16 +16,11 @@ from NNTrainingTorch.helpers.config_class import Config
 class TorchModelSaver:
     """Class for saving and loading PyTorch model training sessions"""
 
-    def __init__(self, base_dir: str = "../NNTrainingTorch/training_runs"):
-        self.base_dir = Path(base_dir)
+    def __init__(self, base_dir: str):
+        self.run_dir = Path(base_dir)
         # Create timestamp-based directory
-        timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-        self.run_dir = self.base_dir / timestamp
-        self.run_dir.mkdir(parents=True, exist_ok=True)
+        #timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
 
-    def get_training_dir(self) -> Path:
-        """Get the path to the training directory"""
-        return self.run_dir
     def save_torch_model(self, model: torch.nn.Module, filepath: Path,
                          save_state_dict: bool = True) -> None:
         """Save PyTorch model with state dict or full model"""
