@@ -1,7 +1,7 @@
 import torch
 from torch.nn import MSELoss
 from tqdm import tqdm
-
+from torch.utils.tensorboard import SummaryWriter
 from NNTrainingTorch.helpers.config_class import Config
 
 
@@ -13,7 +13,8 @@ class Tester:
                  loss_function: torch.nn.Module,
                  device: torch.device,
                  total_epochs: int,
-                 random_seed: int):
+                 seed: int,
+                 tensorboard_writer: torch.utils.tensorboard.SummaryWriter):
 
         self.config = configFile
         self.model = model
@@ -21,7 +22,7 @@ class Tester:
         self.loss_function = loss_function
         self.device = device
         self.total_epochs = total_epochs
-        self.random_seed = random_seed
+        self.random_seed = seed
         self.val_loss = 0
         self.test_acc = 0
         self.correct = 0
@@ -29,8 +30,8 @@ class Tester:
 
          # Set model to evaluation mode
 
-    def test_epoch(self, epoch: int) -> tuple[float, float]:
-        self.num_epochs=epoch
+    def validate_epoch(self, epoch_num: int) -> tuple[float, float]:
+        self.num_epochs = epoch_num
         # print("Evaluation of Epoch on Test Dataset")
         self.model.eval()
         self.val_loss = 0
@@ -54,7 +55,6 @@ class Tester:
 
                 test_loss = self.loss_function(outputs, targets)
 
-
                 self.val_loss += test_loss.item() * data.size(0)
                 _, predicted = torch.max(outputs.data, 1)
                 self.total += targets.size(0)
@@ -70,8 +70,6 @@ class Tester:
         self.val_loss /= self.total
         self.test_acc = self.correct / self.total
 
-        return self.val_loss, self.test_acc
-
     def eval_linearRegression(self) -> tuple[float, float]:
         with torch.no_grad():  # Disable gradient computation for efficiency
             for data, targets in self.test_loader:
@@ -84,6 +82,5 @@ class Tester:
         self.val_loss /= self.total
         self.test_acc = 0 # Vielleicht R^2 Score implementieren?
 
-        return self.val_loss, self.test_acc
 
 

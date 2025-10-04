@@ -7,6 +7,7 @@ from pathlib import Path
 from torch import nn
 from tqdm import tqdm
 from NNTrainingTorch.helpers.config_class import Config
+from torch.utils.tensorboard import SummaryWriter
 
 
 class Trainer:
@@ -15,14 +16,15 @@ class Trainer:
     """
 
     def __init__(self,
-                 config: Config,
+                 config_file: Config,
                  model: torch.nn.Module,
                  data_loader: torch.utils.data.DataLoader,
                  loss_function: nn.Module,
                  optimizer: torch.optim.Optimizer,
                  device: torch.device,
                  total_epochs: int,
-                 seed: int):
+                 seed: int,
+                 tensorboard_writer: torch.utils.tensorboard.SummaryWriter):
         """Initialize the trainer with all required parameters."""
         self.model = model
         self.data_loader = data_loader
@@ -32,7 +34,12 @@ class Trainer:
         self.epoch_num = 0
         self.total_epochs = total_epochs
         self.seed = seed
-        self.config = config
+        self.config = config_file
+        self.training_dir = tensorboard_writer.log_dir
+        self.writer = tensorboard_writer
+
+        self.avg_train_loss_of_epoch = 0.0
+        self.avg_train_acc_of_epoch = 0.0
 
         torch.manual_seed(seed)
         np.random.seed(seed)
@@ -48,27 +55,57 @@ class Trainer:
             case _:
                 raise ValueError(f"Unknown Training - Method: {self.config.training_method}")
 
-                # Initialize CSV logging
-        self.log_dir = Path("training_logs")
+        """   # Initialize CSV logging
+        self.log_dir = self.training_dir / "log"
         self.log_dir.mkdir(exist_ok=True)
 
         # Create CSV files with headers
-        self.batch_log_file = self.log_dir / f"batch_stats_{config.training_method}_{seed}.csv"
-        self.epoch_log_file = self.log_dir / f"epoch_stats_{config.training_method}_{seed}.csv"
+        self.batch_log_file = self.log_dir / f"batch_stats_{config_file.training_method}_{seed}.csv"
+        self.epoch_log_file = self.log_dir / f"epoch_stats_{config_file.training_method}_{seed}.csv"
 
         self._init_csv_files()
-
+        """
     def _init_csv_files(self):
         """Initialize CSV files with headers"""
         # Batch statistics CSV
         with open(self.batch_log_file, 'w', newline='') as f:
             writer = csv.writer(f)
-            writer.writerow(['epoch', 'batch_idx', 'loss', 'accuracy', 'learning_rate'])
+            writer.writerow(['epoch',
+                             'batch_idx',
+                             'loss',
+                             'accuracy',
+                             'learning_rate',
+                             'momentum',
+                             'weight_decay'
+                             ])
 
         # Epoch statistics CSV
         with open(self.epoch_log_file, 'w', newline='') as f:
             writer = csv.writer(f)
-            writer.writerow(['epoch', 'avg_loss', 'avg_accuracy', 'total_samples', 'learning_rate'])
+            writer.writerow(['epoch',
+                             'batch_size',
+                             'avg_loss',
+                             'avg_accuracy',
+                             'total_samples',
+                             'learning_rate',
+                             'momentum',
+                             'weight_decay'
+                             ])
+
+    def _log_batch_stats(self, epoch, batch_idx, loss, accuracy):
+        """Log batch statistics to CSV"""
+        lr = self.optimizer.param_groups[0]['lr']
+        with open(self.batch_log_file, 'a', newline='') as f:
+            writer = csv.writer(f)
+            writer.writerow([epoch, batch_idx, f"{loss:.6f}", f"{accuracy:.4f}", f"{lr:.8f}"])
+
+    def _log_epoch_stats(self, epoch, avg_loss, avg_accuracy, total_samples):
+        """Log epoch statistics to CSV"""
+        lr = self.optimizer.param_groups[0]['lr']
+        with open(self.epoch_log_file, 'a', newline='') as f:
+            writer = csv.writer(f)
+            writer.writerow([epoch, f"{avg_loss:.6f}", f"{avg_accuracy:.4f}", total_samples, f"{lr:.8f}"])
+
 
     def _mse_loss(self, params: dict, x: torch.Tensor, targets: torch.Tensor):
         model = lambda p, x: torch.func.functional_call(self.model, (p, {}), x)
@@ -84,14 +121,29 @@ class Trainer:
         y = model(params, x)
         return nn.functional.cross_entropy(y, targets)
 
+    def _calculation_acc_of_batch(self, inputs , targets) -> float:
+        n_correct_samples = 0
+        total_amount_of_samples = 0
+        with torch.no_grad():
+            outputs = self.model(inputs)
+            _, predicted = torch.max(outputs.data, 1)
+            total_amount_of_samples += targets.size(0)
+            n_correct_samples += (predicted == targets).sum().item()
+            running_train_acc = 100. * n_correct_samples / total_amount_of_samples
+        return running_train_acc
+
     def train_epoch(self, epoch_num: int) -> tuple[float, float]:
         """
         Train the model for one epoch using functional forward gradient descent.
         Returns:
             tuple: (average_train_loss_of_epoch, average_train_accuracy_epoch)
         """
-        self.epoch_num = epoch_num
+        self.epoch_num = epoch_num + 1
         self.model.train()
+        self.avg_train_loss_of_epoch = 0.0
+        accumulated_running_loss_over_all_batches = 0
+        correct = 0
+        total = 0
         #ToDo: hier muss noch eine switch case rein damit man zwischen backprop und FGD switchen kann
         # Add deterministic
         """
@@ -103,33 +155,35 @@ class Trainer:
         match self.config.training_method:
             case "fgd":
                 if self.config.dataset_name == "demo_linear_regression":
-                    running_loss, total, correct = self._train_epoch_forward_gradient_linearRegression()
+                    (accumulated_running_loss_over_all_batches,
+                     total,
+                     correct) = self._train_epoch_forward_gradient_linearRegression()
                 else:
-                    running_loss, correct, total = self._train_epoch_forward_gradient()
+                    self._train_epoch_forward_gradient()
             case "bp":
-                running_loss, total, correct = self._backpropaggation()
-
+                self._backpropaggation()
             case _:
                 raise ValueError(f"Unknown Training - Method: {self.config.training_method}")
 
-        avg_train_loss_of_epoch = running_loss / len(self.data_loader)
-        avg_train_acc_of_epoch = 100. * correct / total
 
-        return avg_train_loss_of_epoch, avg_train_acc_of_epoch
 
-    def _train_epoch_forward_gradient(self) -> tuple[float, int, int]:
+
+    def _train_epoch_forward_gradient(self) -> None:
         accumulated_running_loss_over_all_batches = 0
+        acc_of_all_batches = []
         n_correct_samples = 0
         total_amount_of_samples = 0
         pbar = tqdm(self.data_loader, desc=f'FGD Training Epoch {self.epoch_num}/{self.total_epochs}')
 
         for batch_idx, (inputs, targets) in enumerate(self.data_loader):
+            # data loading
             self.model.train()
             inputs, targets = inputs.to(self.device), targets.to(self.device)
-
             self.optimizer.zero_grad()
 
-            # Get parameters as tuple (like in the example)
+            # Forward
+
+            #Get parameters as tuple (like in the example)
             named_params = dict(self.model.named_parameters())
             params = tuple(named_params.values())
             names = tuple(named_params.keys())
@@ -152,15 +206,13 @@ class Trainer:
                     (v_params,)
                 )
 
-                print(f'{dir_der=}, {loss=}')
                 # Set gradients: gradient = v * jvp (scalar multiplication)
                 with torch.no_grad():
                     for j, param in enumerate(self.model.parameters()):
-                        print(f'{self.model.named_parameters()}')
-                        print(f'{v_params[j]=}, {dir_der=}')
+                        #print(f'{self.model.named_parameters()}')
+                        #print(f'{v_params[j]=}, {dir_der=}')
                         param.grad =  dir_der * v_params[j]
-                        print(param.grad)
-                        exit()
+                        #print(param.grad)
 
                 #torch.nn.utils.clip_grad_norm_(self.model.parameters(), max_norm=5.0)
 
@@ -177,24 +229,27 @@ class Trainer:
             # Calculate metrics
             accumulated_running_loss_over_all_batches += loss.item()
 
-            outputs = self.model(inputs)
-            _, predicted = torch.max(outputs.data, 1)
-            total_amount_of_samples += targets.size(0)
-            n_correct_samples += (predicted == targets).sum().item()
-            #print(predicted.shape)
-            #print(targets.size(0))
+            acc_of_batch = self._calculation_acc_of_batch(inputs,targets)
+            acc_of_all_batches.append(acc_of_batch)
+
+            # Tensorboard Logging
+            unique_increasing_counter = (self.epoch_num - 1) * len(self.data_loader) + batch_idx
+            if self.writer is not None:
+                self.writer.add_scalar('Train/Loss', loss.item(), unique_increasing_counter)
+                self.writer.add_scalar('Train/Accuracy', acc_of_batch, unique_increasing_counter)
+
 
             # Update progress bar
             pbar.update(1)
             pbar.set_postfix({
-                'Train Loss': f' {loss.item():.4f}',
-                'Train Acc': f' {100. * n_correct_samples / total_amount_of_samples:.2f}%'
+                'Train Loss': f' {loss.item():.4f}'
             })
 
+        self.avg_train_acc_of_epoch = np.mean(acc_of_all_batches)
+        self.avg_train_loss_of_epoch = accumulated_running_loss_over_all_batches / len(self.data_loader)
         pbar.close()
-        return (accumulated_running_loss_over_all_batches,
-                n_correct_samples,
-                total_amount_of_samples)
+
+
 
     def _train_epoch_forward_gradient_4(self) -> tuple[float, int, int]:
         accumulated_running_loss_over_all_batches = 0.0
@@ -596,15 +651,12 @@ class Trainer:
 
         return accumulated_running_loss_over_all_batches, total_amount_of_samples, n_correct_samples
 
-    def _backpropaggation(self) -> tuple[float, int, int]:
+    def _backpropaggation(self) -> None:
+        accumulated_running_loss_over_all_batches = 0
+        acc_of_all_batches = []
 
-        train_losses = []
-        accumulated_running_loss_over_all_batches = 0.0
-        n_correct_samples = 0
-        total_amount_of_samples = 0
 
-        pbar = tqdm(iterable=self.data_loader, desc=f'Training Epoch {self.epoch_num}/{self.total_epochs}',
-                    bar_format='| {bar} | {desc} -> Batch {n}/{total} | Estimated Time: {remaining} | Time: {elapsed} {postfix}')  # just a nice to have progress bar
+        pbar = tqdm(self.data_loader, desc=f'BP - Training Epoch {self.epoch_num}/{self.total_epochs}') # just a nice to have progress bar
 
         for batch_idx, (inputs, targets) in enumerate(pbar):
             inputs, targets = inputs.to(self.device), targets.to(self.device)
@@ -614,16 +666,23 @@ class Trainer:
             loss = self.loss_function(outputs, targets)
             loss.backward()
             self.optimizer.step()
-            train_losses.append(loss.item())
+            accumulated_running_loss_over_all_batches += loss.item()
 
             # statistics
-            accumulated_running_loss_over_all_batches += loss.item()
-            _, predicted = torch.max(outputs.data, 1)
-            total_amount_of_samples += targets.size(0)
-            n_correct_samples += (predicted == targets).sum().item()
+            acc_of_batch = self._calculation_acc_of_batch(inputs, targets)
+            acc_of_all_batches.append(acc_of_batch)
+
+            # Tensorboard Logging
+            unique_increasing_counter = (self.epoch_num - 1) * len(self.data_loader) + batch_idx
+            if self.writer is not None:
+                self.writer.add_scalar('Train/Loss', loss.item(), unique_increasing_counter)
+                self.writer.add_scalar('Train/Accuracy', acc_of_batch, unique_increasing_counter)
+
             # Update progress bar
             pbar.set_postfix({
                 'Train Loss': f' {loss.item():.4f}',
-                'Train Acc': f' {100. * n_correct_samples / total_amount_of_samples:.2f}%'
+                'Train Acc': f' {acc_of_batch:.2f}%'
             })
-        return  accumulated_running_loss_over_all_batches, total_amount_of_samples, n_correct_samples
+
+        self.avg_train_acc_of_epoch = np.mean(acc_of_all_batches)
+        self.avg_train_loss_of_epoch = accumulated_running_loss_over_all_batches / len(self.data_loader)

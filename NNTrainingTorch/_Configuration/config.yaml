@@ -1,7 +1,7 @@
 random_seed: 43
 learning_rate: 0.001
-epoch_num: 10
-training_method: fgd # [bp, fgd]
+epoch_num: 1
+training_method: bp # [bp, fgd]
 
 
 # Dataset Configurations
@@ -11,7 +11,7 @@ batch_size: 64 #Mnist 64 # Cifar10->128 # for demo_linear_regression 4
 augment_data: False
 model_type: fc # demo_linear_regression
 #Todo: add Optimizer Configurations, learninrate, Momentum, etc.
-optimizer:
+#optimizer:
 
 #Early Stopping Configurations
 early_stopping: True

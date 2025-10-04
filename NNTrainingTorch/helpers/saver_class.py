@@ -18,7 +18,14 @@ class TorchModelSaver:
 
     def __init__(self, base_dir: str = "../NNTrainingTorch/training_runs"):
         self.base_dir = Path(base_dir)
+        # Create timestamp-based directory
+        timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+        self.run_dir = self.base_dir / timestamp
+        self.run_dir.mkdir(parents=True, exist_ok=True)
 
+    def get_training_dir(self) -> Path:
+        """Get the path to the training directory"""
+        return self.run_dir
     def save_torch_model(self, model: torch.nn.Module, filepath: Path,
                          save_state_dict: bool = True) -> None:
         """Save PyTorch model with state dict or full model"""
@@ -62,22 +69,19 @@ class TorchModelSaver:
         test_losses = training_result.test_losses
         epoch_times = training_result.epoch_times
 
-        # Create timestamp-based directory
-        timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-        training_dir = self.base_dir / timestamp
-        training_dir.mkdir(parents=True, exist_ok=True)
 
-        # Prepare training data for TOML
+
+        # Prepare training data for yaml
         training_data = config.to_dict()
 
 
 
-        yaml_path = training_dir / "training_info.yaml"
+        yaml_path = self.run_dir / "training_info.yaml"
         with open(yaml_path, 'w') as f:
             yaml.dump(training_data, f)
 
         # Save PyTorch model
-        model_dir = training_dir / "model"
+        model_dir = self.run_dir / "model"
         model_dir.mkdir(exist_ok=True)
 
         if save_full_model:
@@ -101,18 +105,18 @@ class TorchModelSaver:
             torch.save(training_result.optimizer_state, model_dir / "optimizer_state.pth")
 
         # Generate plots
-        plotting.plot_performance(train_losses, test_losses,train_accs, test_accs,
-                                  epoch_times, training_dir, config.dataset_name)
+        plotting.plot_performance(train_losses, test_losses, train_accs, test_accs,
+                                  epoch_times, self.run_dir, config.dataset_name)
 
         # Save configuration as JSON
-        with open(training_dir / "config.json", 'w') as f:
+        with open(self.run_dir / "config.json", 'w') as f:
             json.dump(config.to_dict(), f, indent=2)
 
         # Save detailed training log
-        self._save_training_log(training_dir, train_accs, test_accs,
+        self._save_training_log(self.run_dir, train_accs, test_accs,
                                 train_losses, test_losses, epoch_times)
 
-        return training_dir
+        return self.run_dir
 
     def _save_training_log(self, training_dir: Path, train_accs: list,
                            test_accs: list, train_losses: list,

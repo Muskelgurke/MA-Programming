@@ -1,10 +1,8 @@
 import statistics
 import time
 import torch
-from flax.linen import avg_pool
 from torch import nn
-import torch.nn.functional as F
-from tqdm import tqdm
+from torch.utils.tensorboard import SummaryWriter
 
 from NNTrainingTorch.helpers.config_class import Config
 from NNTrainingTorch.helpers.saver_class import TorchModelSaver
@@ -18,47 +16,63 @@ import NNTrainingTorch.helpers.model as model_helper
 def start_NN(config: Config, train_loader: torch.utils.data.DataLoader, test_loader: torch.utils.data.DataLoader):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Using device: {device}")
-
     model = model_helper.get_model(config)
     model.to(device)
     print("-" * 60)
     print(model)
     print("-" * 60)
-
-    loss_function, optimizer = get_optimizer_and_lossfunction(config, model)
+    print(f"\tDataset:\t{config.dataset_name}\n\tModel:\t{config.model_type}")
+    print("-" * 60)
+    print("\tSchritt für Schritt ")
+    loss_function, optimizer = get_optimizer_and_lossfunction(config=config,
+                                                              model=model)
 
     early_stopping = EarlyStopping(patience=config.early_stopping_patience,
                                    delta=config.early_stopping_delta) if config.early_stopping else None
 
-    train_losses = []
-    train_accs = []
-    test_losses = []
-    test_accs = []
-    epoch_times = []
+    writer = SummaryWriter(log_dir=f'runs/{config.dataset_name}_{config.model_type}_{config.training_method}_{int(time.time())}')
 
-    print("Training gestartet...")
-    print(f"\tDataset:\t{config.dataset_name}\n\tModel:\t{config.model_type}")
-    print("-" * 60)
-    print(" Schritt für Schritt ")
+    saver = TorchModelSaver() # eigener Saver gebaut. Plotting etc.
+    trainer = Trainer(config_file=config,
+                      model=model,
+                      data_loader=train_loader,
+                      loss_function=loss_function,
+                      optimizer=optimizer,
+                      device=device,
+                      total_epochs=config.epoch_num,
+                      seed=config.random_seed,
+                      tensorboard_writer=writer)
 
-    trainer = Trainer(config, model, train_loader, loss_function, optimizer, device, config.epoch_num, config.random_seed)
-    tester = Tester(config, model, test_loader, loss_function, device, config.epoch_num, config.random_seed)
+    tester = Tester(configFile=config,
+                    model=model,
+                    test_loader=test_loader,
+                    loss_function=loss_function,
+                    device=device,
+                    total_epochs=config.epoch_num,
+                    seed=config.random_seed,
+                    tensorboard_writer=writer)
+    train_losses_per_epoch = []
+    train_accs_per_epoch = []
+    test_losses_per_epoch = []
+    test_accs_per_epoch = []
+    epoch_times_per_epoch = []
+
+
 
     for epoch in range(config.epoch_num):
         start_time = time.time()
 
-        train_loss_of_epoch, train_acc_of_epoch = trainer.train_epoch(epoch+1)
+        trainer.train_epoch(epoch_num=epoch)
 
-        test_loss_of_epoch, test_acc_of_epoch = tester.test_epoch(epoch+1)
-
+        test_loss_of_epoch, test_acc_of_epoch = tester.validate_epoch(epoch_num=epoch)
 
         epoch_time = time.time() - start_time
-        epoch_times.append(epoch_time)
+        epoch_times_per_epoch.append(epoch_time)
 
-        train_losses.append(train_loss_of_epoch)
-        train_accs.append(train_acc_of_epoch)
-        test_losses.append(test_loss_of_epoch)
-        test_accs.append(test_acc_of_epoch)
+        train_losses_per_epoch.append(trainer.avg_train_loss_of_epoch)
+        train_accs_per_epoch.append(trainer.avg_train_acc_of_epoch)
+        test_losses_per_epoch.append(test_loss_of_epoch)
+        test_accs_per_epoch.append(test_acc_of_epoch)
 
         early_stopping(test_loss_of_epoch, model)
         if early_stopping.early_stop:
@@ -74,19 +88,22 @@ def start_NN(config: Config, train_loader: torch.utils.data.DataLoader, test_loa
         '''
     print("-"* 60)
     print("\nTraining and Testing completed")
-    print(f"Durchschnittliche Zeit pro Epoch: {statistics.mean(epoch_times):.2f}s")
+    print(f"Durchschnittliche Zeit pro Epoch: {statistics.mean(epoch_times_per_epoch):.2f}s")
     print("-" * 60)
 
     results = TrainingResults(
-        train_accs  =     train_accs,
-        test_accs   =      test_accs,
-        train_losses=   train_losses,
-        test_losses =    test_losses,
+        train_accs  =     train_accs_per_epoch,
+        test_accs   =      test_accs_per_epoch,
+        train_losses=   train_losses_per_epoch,
+        test_losses =    test_losses_per_epoch,
         final_params=   '',
-        epoch_times =    epoch_times
+        epoch_times =    epoch_times_per_epoch
     )
-    saver = TorchModelSaver()
-    saver.save_training_session(training_result=results, config= config, model= model, save_full_model=True)
+
+    saver.save_training_session(training_result=results,
+                                config= config,
+                                model= model,
+                                save_full_model=True)
 
 
     ###########################################################################################
