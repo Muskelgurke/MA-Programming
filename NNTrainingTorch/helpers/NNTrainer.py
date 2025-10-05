@@ -8,7 +8,7 @@ from torch import nn
 from tqdm import tqdm
 from NNTrainingTorch.helpers.config_class import Config
 from torch.utils.tensorboard import SummaryWriter
-
+from NNTrainingTorch.helpers.Training_Metriken import TrainingMetrics
 
 class Trainer:
     """
@@ -40,16 +40,9 @@ class Trainer:
         self.writer = tensorboard_writer
         self.training_dir = self.writer.log_dir
 
-        # Metrics
-        self.avg_train_loss_of_epoch = 0.0
-        self.avg_train_acc_of_epoch = 0.0
-        self.train_acc = 0.0
-        self.accumulated_correct_samples_of_all_batches = 0
-        self.accumulated_total_samples_of_all_batches = 0
-        self.cosine_similarities_of_estgrad_gradient_for_each_batch = []
-        self.avg_cosine_similarity_of_epoch = 0
-        self.estimated_gradients = []
-
+        self.metrics = TrainingMetrics()
+        self.metrics.cosine_similarities_of_estgrad_gradient_for_each_batch = []
+        self.metrics.estimated_gradients = []
 
         torch.manual_seed(seed)
         np.random.seed(seed)
@@ -65,129 +58,48 @@ class Trainer:
             case _:
                 raise ValueError(f"Unknown Training - Method: {self.config.training_method}")
 
-        """   # Initialize CSV logging
-        self.log_dir = self.training_dir / "log"
-        self.log_dir.mkdir(exist_ok=True)
-
-        # Create CSV files with headers
-        self.batch_log_file = self.log_dir / f"batch_stats_{config_file.training_method}_{seed}.csv"
-        self.epoch_log_file = self.log_dir / f"epoch_stats_{config_file.training_method}_{seed}.csv"
-
-        self._init_csv_files()
-        """
-    def _init_csv_files(self):
-        """Initialize CSV files with headers"""
-        # Batch statistics CSV
-        with open(self.batch_log_file, 'w', newline='') as f:
-            writer = csv.writer(f)
-            writer.writerow(['epoch',
-                             'batch_idx',
-                             'loss',
-                             'accuracy',
-                             'learning_rate',
-                             'momentum',
-                             'weight_decay'
-                             ])
-
-        # Epoch statistics CSV
-        with open(self.epoch_log_file, 'w', newline='') as f:
-            writer = csv.writer(f)
-            writer.writerow(['epoch',
-                             'batch_size',
-                             'avg_loss',
-                             'avg_accuracy',
-                             'total_samples',
-                             'learning_rate',
-                             'momentum',
-                             'weight_decay'
-                             ])
-
-    def _log_batch_stats(self, epoch, batch_idx, loss, accuracy):
-        """Log batch statistics to CSV"""
-        lr = self.optimizer.param_groups[0]['lr']
-        with open(self.batch_log_file, 'a', newline='') as f:
-            writer = csv.writer(f)
-            writer.writerow([epoch, batch_idx, f"{loss:.6f}", f"{accuracy:.4f}", f"{lr:.8f}"])
-
-    def _log_epoch_stats(self, epoch, avg_loss, avg_accuracy, total_samples):
-        """Log epoch statistics to CSV"""
-        lr = self.optimizer.param_groups[0]['lr']
-        with open(self.epoch_log_file, 'a', newline='') as f:
-            writer = csv.writer(f)
-            writer.writerow([epoch, f"{avg_loss:.6f}", f"{avg_accuracy:.4f}", total_samples, f"{lr:.8f}"])
-
-
-    def _mse_loss(self, params: dict, x: torch.Tensor, targets: torch.Tensor):
-        model = lambda p, x: torch.func.functional_call(self.model, (p, {}), x)
-        y = model(params, x)
-        return nn.functional.mse_loss(y, targets)
 
     def _cross_entropy_loss(self, params: dict, x: torch.Tensor, targets: torch.Tensor):
         y = torch.func.functional_call(self.model, (params, {}), (x,))
         return nn.functional.cross_entropy(y, targets)
 
-    def _calculation_acc_of_batch(self, inputs , targets) -> float:
-        n_correct_samples = 0
-        total_amount_of_samples = 0
-        running_train_acc = 0.0
-        with torch.no_grad():
-            outputs = self.model(inputs)
-            _, predicted = torch.max(outputs.data, 1)
-            total_amount_of_samples += targets.size(0)
-            n_correct_samples += (predicted == targets).sum().item()
-            running_train_acc = 100. * n_correct_samples / total_amount_of_samples
-            self.accumulated_correct_samples_of_all_batches += n_correct_samples
-            self.accumulated_total_samples_of_all_batches += total_amount_of_samples
 
-        return running_train_acc
     def _calculate_gradient_metrics(self,
                                     estimated_grads_flat: torch.Tensor,
                                     true_grads_flat: torch.Tensor) -> None:
         # Distance-based metrics
-        mse = nn.MSELoss()(estimated_grads_flat, true_grads_flat).item()
-        mae = nn.L1Loss()(estimated_grads_flat, true_grads_flat).item()
+        self.metrics.mse_true_esti_grads = nn.MSELoss()(estimated_grads_flat, true_grads_flat).item()
+        self.metrics.mae_true_esti_grad = nn.L1Loss()(estimated_grads_flat, true_grads_flat).item()
 
-        # Standard Abweichung
+        # Standard deviation metrics
         gradient_diff = estimated_grads_flat - true_grads_flat
-        std_of_difference = torch.std(gradient_diff).item()
-        std_of_estimated = torch.std(estimated_grads_flat).item()
-        std_of_true = torch.std(true_grads_flat).item()
+        self.metrics.std_of_difference_true_esti_grads = torch.std(gradient_diff).item()
 
+        self.metrics.std_of_esti_grads = torch.std(estimated_grads_flat).item()
+        self.metrics.std_of_true_grads = torch.std(true_grads_flat).item()
 
-
-        # Cosine similarity between true gradient and estimated gradient
-        cosine_sim = torch.nn.functional.cosine_similarity(
+        # Cosine similarity
+        self.metrics.cosine_sim_for_batch = torch.nn.functional.cosine_similarity(
             true_grads_flat.unsqueeze(0),
             estimated_grads_flat.unsqueeze(0),
             dim=1
         ).item()
 
-        self.cosine_similarities_of_estgrad_gradient_for_each_batch.append(cosine_sim)
-        self.avg_cosine_similarity_of_epoch = np.mean(self.cosine_similarities_of_estgrad_gradient_for_each_batch)
-        pass
+
+        self.metrics.cosine_similarities_of_estgrad_gradient_for_each_batch.append(
+            self.metrics.cosine_sim_for_batch
+        )
+
+
 
     def train_epoch(self, epoch_num: int):
         """
         Train the model for one epoch using functional forward gradient descent.
-        Returns:
-            None, but calculates and stores metrics:
-            - avg_train_loss_of_epoch
-            - avg_train_acc_of_epoch
-            - train_acc (all accumulated correct samples / all accumulated samples * 100)
         """
+
         self.epoch_num = epoch_num + 1
         self.model.train()
-        self.avg_train_loss_of_epoch = 0.0
-        self.cosine_similarities_of_estgrad_gradient_for_each_batch = []
 
-        #ToDo: hier muss noch eine switch case rein damit man zwischen backprop und FGD switchen kann
-        # Add deterministic
-        """
-        torch.manual_seed(self.seed)
-        np.random.seed(self.seed)
-        torch.backends.cudnn.deterministic = False
-        torch.backends.cudnn.benchmark = False
-        """
         match self.config.training_method:
             case "fgd":
                 if self.config.dataset_name == "demo_linear_regression":
@@ -200,9 +112,16 @@ class Trainer:
             case _:
                 raise ValueError(f"Unknown Training - Method: {self.config.training_method}")
 
+        return self.metrics
+
     def _train_epoch_forward_gradient_and_true_gradient(self) -> None:
         accumulated_running_loss_over_all_batches = 0
         acc_of_all_batches = []
+        accumulated_correct_samples = 0
+        accumulated_total_samples = 0
+        n_correct_samples = 0
+        total_amount_of_samples = 0
+
         pbar = tqdm(self.data_loader, desc=f'FGD Training Epoch {self.epoch_num}/{self.total_epochs}')
 
         for batch_idx, (inputs, targets) in enumerate(self.data_loader):
@@ -247,17 +166,15 @@ class Trainer:
                     (params,),
                     (v_params,)
                 )
-                self.estimated_gradients
-
-
+                estimated_gradients = []
                 # Set gradients: gradient = v * jvp (scalar multiplication)
                 with torch.no_grad():
                     for j, param in enumerate(self.model.parameters()):
                         estimated_grad = dir_der * v_params[j]
                         param.grad = estimated_grad
-                        self.estimated_gradients.append(estimated_grad)
+                        estimated_gradients.append(estimated_grad)
 
-                estimated_grads_flat = torch.cat([g.view(-1) for g in self.estimated_gradients])
+                estimated_grads_flat = torch.cat([g.view(-1) for g in estimated_gradients])
 
 
                 self._calculate_gradient_metrics(estimated_grads_flat, true_grads_flat)
@@ -267,28 +184,41 @@ class Trainer:
 
                 if torch.isnan(loss):
                     print(f"NaN loss detected in batch {batch_idx}")
-                    continue
+
             except Exception as e:
                 print(f'Error in batch {batch_idx}: {e}')
-                continue
 
             # Calculate metrics
             accumulated_running_loss_over_all_batches += loss.item()
 
-            acc_of_batch = self._calculation_acc_of_batch(inputs, targets)
+            with torch.no_grad():
+                outputs = self.model(inputs)
+                _, predicted = torch.max(outputs.data, 1)
+                total_amount_of_samples += targets.size(0)
+                n_correct_samples += (predicted == targets).sum().item()
+                acc_of_batch = 100. * n_correct_samples / total_amount_of_samples
+
             acc_of_all_batches.append(acc_of_batch)
+            accumulated_correct_samples += n_correct_samples
+            accumulated_total_samples += total_amount_of_samples
 
-
-
-            self.mse_of_gradient = nn.MSELoss()(estimated_grads_flat, true_grads_flat).item()
             # Tensorboard Logging
             unique_increasing_counter = (self.epoch_num - 1) * len(self.data_loader) + batch_idx
             if self.writer is not None:
                 self.writer.add_scalar('Train/Loss', loss.item(), unique_increasing_counter)
                 self.writer.add_scalar('Train/Accuracy', acc_of_batch, unique_increasing_counter)
-                self.writer.add_scalar('Train/Cosine_Similarity_EstGrad_TrueGrad', cosine_sim, unique_increasing_counter)
-
-
+                self.writer.add_scalar('Train/Cosine_Similarity_EstGrad_TrueGrad',
+                                       self.metrics.cosine_sim_for_batch,
+                                       unique_increasing_counter)
+                self.writer.add_scalar('GradientMetrics/STD_Difference',
+                                       self.metrics.std_of_difference_true_esti_grads,
+                                       unique_increasing_counter)
+                self.writer.add_scalar('GradientMetrics/STD_Estimated',
+                                       self.metrics.std_of_esti_grads,
+                                       unique_increasing_counter)
+                self.writer.add_scalar('GradientMetrics/STD_True',
+                                       self.metrics.std_of_true_grads,
+                                       unique_increasing_counter)
             # Update progress bar
             pbar.update(1)
             pbar.set_postfix({
@@ -296,13 +226,22 @@ class Trainer:
             })
 
         # Calculate Train Metrics
+        self.metrics.accumulated_total_samples_of_all_batches = accumulated_total_samples
+        self.metrics.accumulated_correct_samples_of_all_batches = accumulated_correct_samples
 
-        self.avg_train_acc_of_epoch = np.mean(acc_of_all_batches)
+        self.metrics.avg_train_acc_of_epoch = float(np.mean(acc_of_all_batches))
 
-        self.train_acc = self.accumulated_correct_samples_of_all_batches / self.accumulated_total_samples_of_all_batches * 100
+        self.metrics.train_acc = (
+                accumulated_correct_samples / accumulated_total_samples * 100
+        )
 
-        self.avg_train_loss_of_epoch = accumulated_running_loss_over_all_batches / len(self.data_loader)
+        self.metrics.avg_train_loss_of_epoch = (
+                accumulated_running_loss_over_all_batches / len(self.data_loader)
+        )
 
+        self.metrics.avg_cosine_similarity_of_epoch = float(np.mean(
+            self.metrics.cosine_similarities_of_estgrad_gradient_for_each_batch
+        ))
 
 
         pbar.close()

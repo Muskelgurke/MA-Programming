@@ -36,6 +36,7 @@ def start_NN(config: Config, train_loader: torch.utils.data.DataLoader, test_loa
     run_path = f'runs/{config.dataset_name}_{config.model_type}_{config.training_method}_{timestamp}'
     writer = SummaryWriter(log_dir=run_path)
     saver = TorchModelSaver(writer.log_dir) # eigener Saver gebaut. Plotting etc.
+
     trainer = Trainer(config_file=config,
                       model=model,
                       data_loader=train_loader,
@@ -62,31 +63,45 @@ def start_NN(config: Config, train_loader: torch.utils.data.DataLoader, test_loa
     test_accs_per_epoch = []
     epoch_times_per_epoch = []
 
-
+    training_results = None
 
     for epoch in range(config.epoch_num):
         start_time = time.time()
 
-        trainer.train_epoch(epoch_num=epoch)
+        training_results = trainer.train_epoch(epoch_num=epoch)
 
         tester.validate_epoch(epoch_num=epoch)
 
         epoch_time = time.time() - start_time
         epoch_times_per_epoch.append(epoch_time)
 
-        print(f'avg_train_loss_of_epoch: {trainer.avg_train_loss_of_epoch:.4f} | ')
-        print(f'avg_train_acc_of_epoch: {trainer.avg_train_acc_of_epoch:.4f} | ')
-        print(f'train ACC: {trainer.train_acc:.4f} | ')
+        print(f'avg_train_loss_of_epoch: {training_results.avg_train_loss_of_epoch:.4f} | ')
+        print(f'avg_train_acc_of_epoch: {training_results.avg_train_acc_of_epoch:.4f} | ')
+        print(f'train ACC: {training_results.train_acc:.4f} | ')
 
         print(f'avg_validation_loss_of_epoch: {tester.avg_validation_loss_of_epoch:.4f} | ')
         print(f'avg_validation_acc_of_epoch: {tester.avg_validation_acc_of_epoch:.4f} | ')
         print(f'validation ACC: {tester.test_acc:.4f} | ')
 
 
-        train_losses_per_epoch.append(trainer.avg_train_loss_of_epoch)
-        train_accs_per_epoch.append(trainer.avg_train_acc_of_epoch)
+        train_losses_per_epoch.append(training_results.avg_train_loss_of_epoch)
+        train_accs_per_epoch.append(training_results.avg_train_acc_of_epoch)
         test_losses_per_epoch.append(tester.avg_validation_loss_of_epoch)
         test_accs_per_epoch.append(tester.avg_validation_acc_of_epoch)
+
+        if writer is not None:
+            writer.add_scalar('Train/Loss - Epoch',
+                             training_results.avg_train_loss_of_epoch,
+                             epoch)
+            writer.add_scalar('Train/Accuracy - Epoch',
+                              training_results.avg_train_acc_of_epoch,
+                              epoch)
+            writer.add_scalar('Test/Loss - Epoch',
+                              tester.avg_validation_loss_of_epoch,
+                              epoch)
+            writer.add_scalar('Test/Accuracy - Epoch',
+                              tester.avg_validation_acc_of_epoch,
+                              epoch)
 
         early_stopping(tester.avg_validation_loss_of_epoch, model)
         if early_stopping.early_stop:
