@@ -43,6 +43,7 @@ class Trainer:
         self.metrics = TrainingMetrics()
         self.metrics.cosine_similarities_of_estgrad_gradient_for_each_batch = []
         self.metrics.estimated_gradients = []
+        self.mse_of_true_esti_grads_over_all_batches = []
 
         torch.manual_seed(seed)
         np.random.seed(seed)
@@ -68,6 +69,8 @@ class Trainer:
                                     estimated_grads_flat: torch.Tensor,
                                     true_grads_flat: torch.Tensor) -> None:
         # Distance-based metrics
+        self.mse_of_true_esti_grads_over_all_batches.append(nn.MSELoss()(estimated_grads_flat, true_grads_flat).item()
+                                                       )
         self.metrics.mse_true_esti_grads = nn.MSELoss()(estimated_grads_flat, true_grads_flat).item()
         self.metrics.mae_true_esti_grad = nn.L1Loss()(estimated_grads_flat, true_grads_flat).item()
 
@@ -117,6 +120,7 @@ class Trainer:
     def _train_epoch_forward_gradient_and_true_gradient(self) -> None:
         accumulated_running_loss_over_all_batches = 0
         acc_of_all_batches = []
+        self.mse_of_true_esti_grads_over_all_batches = []
         accumulated_correct_samples = 0
         accumulated_total_samples = 0
         n_correct_samples = 0

@@ -1,11 +1,14 @@
 from dataclasses import dataclass
 from typing import List, Any
 
+from NNTrainingTorch.helpers.Training_Metriken import TrainingMetrics
+
+
 @dataclass
-class TrainingResults:
+class results_of_epochs:
     train_accs: List[float]
     test_accs: List[float]
     train_losses: List[float]
     test_losses: List[float]
-    final_params: Any
     epoch_times: List[float]
+    training_results: List[TrainingMetrics]

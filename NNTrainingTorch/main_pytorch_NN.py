@@ -5,9 +5,10 @@ import torch
 from torch import nn
 from torch.utils.tensorboard import SummaryWriter
 
+from NNTrainingTorch.helpers.Training_Metriken import TrainingMetrics
 from NNTrainingTorch.helpers.config_class import Config
 from NNTrainingTorch.helpers.saver_class import TorchModelSaver
-from NNTrainingTorch.helpers.TrainingResults import TrainingResults
+from NNTrainingTorch.helpers.results_of_epochs import results_of_epochs
 from NNTrainingTorch.helpers.EarlyStopping import EarlyStopping
 from NNTrainingTorch.helpers.NNTrainer import Trainer
 from NNTrainingTorch.helpers.NNTester import Tester
@@ -62,8 +63,8 @@ def start_NN(config: Config, train_loader: torch.utils.data.DataLoader, test_loa
     test_losses_per_epoch = []
     test_accs_per_epoch = []
     epoch_times_per_epoch = []
-
-    training_results = None
+    training_results_per_epoch = []
+    training_results = TrainingMetrics()
 
     for epoch in range(config.epoch_num):
         start_time = time.time()
@@ -75,19 +76,12 @@ def start_NN(config: Config, train_loader: torch.utils.data.DataLoader, test_loa
         epoch_time = time.time() - start_time
         epoch_times_per_epoch.append(epoch_time)
 
-        print(f'avg_train_loss_of_epoch: {training_results.avg_train_loss_of_epoch:.4f} | ')
-        print(f'avg_train_acc_of_epoch: {training_results.avg_train_acc_of_epoch:.4f} | ')
-        print(f'train ACC: {training_results.train_acc:.4f} | ')
-
-        print(f'avg_validation_loss_of_epoch: {tester.avg_validation_loss_of_epoch:.4f} | ')
-        print(f'avg_validation_acc_of_epoch: {tester.avg_validation_acc_of_epoch:.4f} | ')
-        print(f'validation ACC: {tester.test_acc:.4f} | ')
-
 
         train_losses_per_epoch.append(training_results.avg_train_loss_of_epoch)
         train_accs_per_epoch.append(training_results.avg_train_acc_of_epoch)
         test_losses_per_epoch.append(tester.avg_validation_loss_of_epoch)
         test_accs_per_epoch.append(tester.avg_validation_acc_of_epoch)
+        training_results_per_epoch.append(training_results)
 
         if writer is not None:
             writer.add_scalar('Train/Loss - Epoch',
@@ -103,6 +97,7 @@ def start_NN(config: Config, train_loader: torch.utils.data.DataLoader, test_loa
                               tester.avg_validation_acc_of_epoch,
                               epoch)
 
+        saver.save_training_metrics_to_csv(training_results,config,epoch)
         early_stopping(tester.avg_validation_loss_of_epoch, model)
         if early_stopping.early_stop:
             print(f"Stopping early at Epoch {epoch + 1}")
@@ -113,13 +108,13 @@ def start_NN(config: Config, train_loader: torch.utils.data.DataLoader, test_loa
     print(f"Durchschnittliche Zeit pro Epoch: {statistics.mean(epoch_times_per_epoch):.2f}s")
     print("-" * 60)
 
-    results = TrainingResults(
+    results = results_of_epochs(
         train_accs  =     train_accs_per_epoch,
         test_accs   =      test_accs_per_epoch,
         train_losses=   train_losses_per_epoch,
         test_losses =    test_losses_per_epoch,
-        final_params=   '',
-        epoch_times =    epoch_times_per_epoch
+        epoch_times =    epoch_times_per_epoch,
+        training_results = training_results_per_epoch
     )
 
     saver.save_training_session(training_result=results,
@@ -160,7 +155,6 @@ if __name__ == "__main__":
     training_configurations = load_config_File(config_path)
 
     train_loader, test_loader = datasets_helper.get_dataloaders(training_configurations)
-
     start_NN(training_configurations, train_loader, test_loader)
 
 

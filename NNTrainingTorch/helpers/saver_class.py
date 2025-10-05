@@ -1,3 +1,4 @@
+import csv
 import datetime
 import pickle
 import json
@@ -9,7 +10,7 @@ from typing import Dict, Any, Union
 import numpy as np
 
 from NNTrainingTorch.helpers import plotting
-from NNTrainingTorch.helpers.TrainingResults import (TrainingResults)
+from NNTrainingTorch.helpers.results_of_epochs import (results_of_epochs)
 from NNTrainingTorch.helpers.config_class import Config
 
 
@@ -18,8 +19,6 @@ class TorchModelSaver:
 
     def __init__(self, base_dir: str):
         self.run_dir = Path(base_dir)
-        # Create timestamp-based directory
-        #timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
 
     def save_torch_model(self, model: torch.nn.Module, filepath: Path,
                          save_state_dict: bool = True) -> None:
@@ -43,7 +42,7 @@ class TorchModelSaver:
             # Loading full model
             return torch.load(filepath, map_location='cpu')
 
-    def save_training_session(self, training_result: TrainingResults,
+    def save_training_session(self, training_result: results_of_epochs,
                               config: Config, model: torch.nn.Module,
                               save_full_model: bool = False) -> Path:
         """
@@ -64,16 +63,12 @@ class TorchModelSaver:
         test_losses = training_result.test_losses
         epoch_times = training_result.epoch_times
 
-
-
         # Prepare training data for yaml
-        training_data = config.to_dict()
-
-
+        training_config = config.to_dict()
 
         yaml_path = self.run_dir / "training_info.yaml"
         with open(yaml_path, 'w') as f:
-            yaml.dump(training_data, f)
+            yaml.dump(training_config, f)
 
         # Save PyTorch model
         model_dir = self.run_dir / "model"
@@ -113,6 +108,61 @@ class TorchModelSaver:
 
         return self.run_dir
 
+    def save_training_metrics_to_csv(self, training_metrics, config: Config, epoch: int) -> None:
+        """Save training metrics to CSV file, with config written only once at the top"""
+        csv_file_path = self.run_dir / "training_metrics.csv"
+        file_exists = csv_file_path.exists()
+
+        # Define fieldnames for metrics only
+        metric_fieldnames = [
+            'epoch',
+            'avg_train_loss_of_epoch',
+            'avg_train_acc_of_epoch',
+            'train_acc',
+            'accumulated_correct_samples_of_all_batches',
+            'accumulated_total_samples_of_all_batches',
+            'avg_cosine_similarity_of_epoch',
+            'cosine_sim_for_batch',
+            'std_of_difference_true_esti_grads',
+            'std_of_esti_grads',
+            'std_of_true_grads',
+            'mse_true_esti_grads',
+            'mae_true_esti_grad'
+        ]
+
+        with open(csv_file_path, 'a', newline='') as csvfile:
+            writer = csv.DictWriter(csvfile, fieldnames=metric_fieldnames)
+
+            if not file_exists:
+                # Write config parameters as comments at the top
+                csvfile.write("# Configuration Parameters:\n")
+                config_dict = config.to_dict()
+                for key, value in config_dict.items():
+                    csvfile.write(f"# {key}: {value}\n")
+                csvfile.write("# \n")
+                csvfile.write("# Training Metrics:\n")
+
+                # Write header for metrics
+                writer.writeheader()
+
+            # Write only metrics data
+            metrics_dict = {
+                'epoch': epoch,
+                'avg_train_loss_of_epoch': training_metrics.avg_train_loss_of_epoch,
+                'avg_train_acc_of_epoch': training_metrics.avg_train_acc_of_epoch,
+                'train_acc': training_metrics.train_acc,
+                'accumulated_correct_samples_of_all_batches': training_metrics.accumulated_correct_samples_of_all_batches,
+                'accumulated_total_samples_of_all_batches': training_metrics.accumulated_total_samples_of_all_batches,
+                'avg_cosine_similarity_of_epoch': training_metrics.avg_cosine_similarity_of_epoch,
+                'cosine_sim_for_batch': training_metrics.cosine_sim_for_batch,
+                'std_of_difference_true_esti_grads': training_metrics.std_of_difference_true_esti_grads,
+                'std_of_esti_grads': training_metrics.std_of_esti_grads,
+                'std_of_true_grads': training_metrics.std_of_true_grads,
+                'mse_true_esti_grads': training_metrics.mse_true_esti_grads,
+                'mae_true_esti_grad': training_metrics.mae_true_esti_grad
+            }
+
+            writer.writerow(metrics_dict)
     def _save_training_log(self, training_dir: Path, train_accs: list,
                            test_accs: list, train_losses: list,
                            test_losses: list, epoch_times: list) -> None:
@@ -132,6 +182,7 @@ class TorchModelSaver:
                     f"Test Acc: {test_acc:.4f} | "
                     f"Train Loss: {train_loss:.4f} | "
                     f"Test Loss: {test_loss:.4f}\n"
+                    f"std Diff"
                 )
             log_file.write(f"Training abgeschlossen! Durchschnittliche Zeit pro Epoch: {np.mean(epoch_times):.2f}s")
 
