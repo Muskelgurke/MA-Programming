@@ -1,9 +1,7 @@
 import torch
 import torch.autograd.forward_ad as fwAD
 import numpy as np
-import csv
-import os
-from pathlib import Path
+
 from torch import nn
 from tqdm import tqdm
 from NNTrainingTorch.helpers.config_class import Config
@@ -41,9 +39,10 @@ class Trainer:
         self.training_dir = self.writer.log_dir
 
         self.metrics = TrainingMetrics()
-        self.metrics.cosine_similarities_of_estgrad_gradient_for_each_batch = []
+        self.metrics.cosine_of_esti_true_grads_for_each_batch = []
         self.metrics.estimated_gradients = []
         self.mse_of_true_esti_grads_over_all_batches = []
+
 
         torch.manual_seed(seed)
         np.random.seed(seed)
@@ -63,37 +62,6 @@ class Trainer:
     def _cross_entropy_loss(self, params: dict, x: torch.Tensor, targets: torch.Tensor):
         y = torch.func.functional_call(self.model, (params, {}), (x,))
         return nn.functional.cross_entropy(y, targets)
-
-
-    def _calculate_gradient_metrics(self,
-                                    estimated_grads_flat: torch.Tensor,
-                                    true_grads_flat: torch.Tensor) -> None:
-        # Distance-based metrics
-        self.mse_of_true_esti_grads_over_all_batches.append(nn.MSELoss()(estimated_grads_flat, true_grads_flat).item()
-                                                       )
-        self.metrics.mse_true_esti_grads = nn.MSELoss()(estimated_grads_flat, true_grads_flat).item()
-        self.metrics.mae_true_esti_grad = nn.L1Loss()(estimated_grads_flat, true_grads_flat).item()
-
-        # Standard deviation metrics
-        gradient_diff = estimated_grads_flat - true_grads_flat
-        self.metrics.std_of_difference_true_esti_grads = torch.std(gradient_diff).item()
-
-        self.metrics.std_of_esti_grads = torch.std(estimated_grads_flat).item()
-        self.metrics.std_of_true_grads = torch.std(true_grads_flat).item()
-
-        # Cosine similarity
-        self.metrics.cosine_sim_for_batch = torch.nn.functional.cosine_similarity(
-            true_grads_flat.unsqueeze(0),
-            estimated_grads_flat.unsqueeze(0),
-            dim=1
-        ).item()
-
-
-        self.metrics.cosine_similarities_of_estgrad_gradient_for_each_batch.append(
-            self.metrics.cosine_sim_for_batch
-        )
-
-
 
     def train_epoch(self, epoch_num: int):
         """
@@ -118,13 +86,18 @@ class Trainer:
         return self.metrics
 
     def _train_epoch_forward_gradient_and_true_gradient(self) -> None:
-        accumulated_running_loss_over_all_batches = 0
-        acc_of_all_batches = []
-        self.mse_of_true_esti_grads_over_all_batches = []
-        accumulated_correct_samples = 0
-        accumulated_total_samples = 0
+        sum_loss = 0
+        acc_per_batch = []
+        sum_correct_samples = 0
+        sum_total_samples = 0
         n_correct_samples = 0
         total_amount_of_samples = 0
+        std_of_difference_true_esti_grads = 0
+        cosine_sim_esti_true_grads = 0
+        std_of_esti_grad = 0
+        std_of_true_grad = 0
+        mse_grads = 0
+        mae_grads = 0
 
         pbar = tqdm(self.data_loader, desc=f'FGD Training Epoch {self.epoch_num}/{self.total_epochs}')
 
@@ -157,7 +130,6 @@ class Trainer:
                 with torch.enable_grad():
                     outputs_true = self.model(inputs)
                     loss_true = nn.functional.cross_entropy(outputs_true, targets)
-
                     true_grads = torch.autograd.grad(outputs=loss_true,
                                                      inputs= self.model.parameters(),
                                                      create_graph=False,
@@ -180,8 +152,35 @@ class Trainer:
 
                 estimated_grads_flat = torch.cat([g.view(-1) for g in estimated_gradients])
 
+                # Distance-based metrics
+                mse_grads=  nn.MSELoss()(estimated_grads_flat, true_grads_flat).item()
+                mae_grads= nn.L1Loss()(estimated_grads_flat, true_grads_flat).item()
+                self.metrics.mse_true_esti_grads = mse_grads
+                self.metrics.mae_true_esti_grad = mae_grads
 
-                self._calculate_gradient_metrics(estimated_grads_flat, true_grads_flat)
+                # Absolute Differenz
+                gradient_diff = estimated_grads_flat - true_grads_flat
+                self.metrics.abs_of_diff_true_esti_grads.append(torch.abs(gradient_diff))
+
+                #Standardabweichung der Differenz
+                std_of_difference_true_esti_grads = torch.std(gradient_diff).item()
+                self.metrics.std_of_difference_true_esti_grads.append(std_of_difference_true_esti_grads)
+                std_of_true_grad = torch.std(true_grads_flat).item()
+                std_of_esti_grad = torch.std(estimated_grads_flat).item()
+                self.metrics.std_of_true_grads.append(std_of_true_grad)
+                self.metrics.std_of_esti_grads.append(std_of_esti_grad)
+
+                self.metrics.std_of_esti_grads.append(torch.std(estimated_grads_flat).item())
+                self.metrics.std_of_true_grads.append(torch.std(true_grads_flat).item())
+                # Cosine similarity
+                cosine_sim_esti_true_grads = torch.nn.functional.cosine_similarity(
+                    true_grads_flat.unsqueeze(0),
+                    estimated_grads_flat.unsqueeze(0),
+                    dim=1
+                ).item()
+                self.metrics.cosine_of_esti_true_grads_for_each_batch.append(cosine_sim_esti_true_grads)
+
+
                 # torch.nn.utils.clip_grad_norm_(self.model.parameters(), max_norm=5.0)
 
                 self.optimizer.step()
@@ -193,7 +192,7 @@ class Trainer:
                 print(f'Error in batch {batch_idx}: {e}')
 
             # Calculate metrics
-            accumulated_running_loss_over_all_batches += loss.item()
+            sum_loss += loss.item()
 
             with torch.no_grad():
                 outputs = self.model(inputs)
@@ -202,26 +201,32 @@ class Trainer:
                 n_correct_samples += (predicted == targets).sum().item()
                 acc_of_batch = 100. * n_correct_samples / total_amount_of_samples
 
-            acc_of_all_batches.append(acc_of_batch)
-            accumulated_correct_samples += n_correct_samples
-            accumulated_total_samples += total_amount_of_samples
+            acc_per_batch.append(acc_of_batch)
+            sum_correct_samples += n_correct_samples
+            sum_total_samples += total_amount_of_samples
 
             # Tensorboard Logging
             unique_increasing_counter = (self.epoch_num - 1) * len(self.data_loader) + batch_idx
             if self.writer is not None:
-                self.writer.add_scalar('Train/Loss', loss.item(), unique_increasing_counter)
-                self.writer.add_scalar('Train/Accuracy', acc_of_batch, unique_increasing_counter)
-                self.writer.add_scalar('Train/Cosine_Similarity_EstGrad_TrueGrad',
-                                       self.metrics.cosine_sim_for_batch,
+                self.writer.add_scalar('Train/Loss - Batch', loss.item(), unique_increasing_counter)
+                self.writer.add_scalar('Train/Accuracy - Batch', acc_of_batch, unique_increasing_counter)
+                self.writer.add_scalar('Train/Cosine_Similarity_EstGrad_TrueGrad - Batch',
+                                       cosine_sim_esti_true_grads,
                                        unique_increasing_counter)
-                self.writer.add_scalar('GradientMetrics/STD_Difference',
-                                       self.metrics.std_of_difference_true_esti_grads,
+                self.writer.add_scalar('GradientMetrics/STD_Difference - Batch',
+                                       std_of_difference_true_esti_grads,
                                        unique_increasing_counter)
-                self.writer.add_scalar('GradientMetrics/STD_Estimated',
-                                       self.metrics.std_of_esti_grads,
+                self.writer.add_scalar('GradientMetrics/STD_Estimated - Batch',
+                                       std_of_esti_grad,
                                        unique_increasing_counter)
                 self.writer.add_scalar('GradientMetrics/STD_True',
-                                       self.metrics.std_of_true_grads,
+                                       std_of_true_grad,
+                                       unique_increasing_counter)
+                self.writer.add_scalar('GradientMetrics/MSE_Estimated_True - Batch',
+                                       mse_grads,
+                                       unique_increasing_counter)
+                self.writer.add_scalar('GradientMetrics/MAE_Estimated_True - Batch',
+                                       mae_grads,
                                        unique_increasing_counter)
             # Update progress bar
             pbar.update(1)
@@ -229,22 +234,16 @@ class Trainer:
                 'Train Loss': f' {loss.item():.4f}'
             })
 
-        # Calculate Train Metrics
-        self.metrics.accumulated_total_samples_of_all_batches = accumulated_total_samples
-        self.metrics.accumulated_correct_samples_of_all_batches = accumulated_correct_samples
-
-        self.metrics.avg_train_acc_of_epoch = float(np.mean(acc_of_all_batches))
-
-        self.metrics.train_acc = (
-                accumulated_correct_samples / accumulated_total_samples * 100
+        self.metrics.train_acc_of_epoch = (
+                sum_correct_samples / sum_total_samples * 100
         )
 
-        self.metrics.avg_train_loss_of_epoch = (
-                accumulated_running_loss_over_all_batches / len(self.data_loader)
+        self.metrics.epoch_avg_train_loss = (
+                sum_loss / len(self.data_loader)
         )
 
         self.metrics.avg_cosine_similarity_of_epoch = float(np.mean(
-            self.metrics.cosine_similarities_of_estgrad_gradient_for_each_batch
+            self.metrics.cosine_of_esti_true_grads_for_each_batch
         ))
 
 

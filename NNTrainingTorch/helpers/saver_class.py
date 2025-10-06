@@ -42,14 +42,14 @@ class TorchModelSaver:
             # Loading full model
             return torch.load(filepath, map_location='cpu')
 
-    def save_training_session(self, training_result: results_of_epochs,
+    def save_training_session(self, results_of_epoch: results_of_epochs,
                               config: Config, model: torch.nn.Module,
                               save_full_model: bool = False) -> Path:
         """
         Save complete PyTorch training session including model, metrics, and configuration.
 
         Args:
-            training_result: TrainingResults Dataclass containing metrics and times
+            results_of_epoch: TrainingResults Dataclass containing metrics and times
             config: Training configuration dictionary
             model: Trained PyTorch model
             save_full_model: If True, saves full model; otherwise saves state_dict
@@ -57,11 +57,11 @@ class TorchModelSaver:
         Returns:
             Path to the created training directory
         """
-        train_accs = training_result.train_accs
-        test_accs = training_result.test_accs
-        train_losses = training_result.train_losses
-        test_losses = training_result.test_losses
-        epoch_times = training_result.epoch_times
+        train_accs = results_of_epoch.train_accs
+        test_accs = results_of_epoch.test_accs
+        train_losses = results_of_epoch.train_losses
+        test_losses = results_of_epoch.test_losses
+        epoch_times = results_of_epoch.epoch_times
 
         # Prepare training data for yaml
         training_config = config.to_dict()
@@ -91,8 +91,8 @@ class TorchModelSaver:
                 json.dump(model_info, f, indent=2)
 
         # Save optimizer state if available in training_result
-        if hasattr(training_result, 'optimizer_state') and training_result.optimizer_state:
-            torch.save(training_result.optimizer_state, model_dir / "optimizer_state.pth")
+        if hasattr(results_of_epoch, 'optimizer_state') and results_of_epoch.optimizer_state:
+            torch.save(results_of_epoch.optimizer_state, model_dir / "optimizer_state.pth")
 
         # Generate plots
         plotting.plot_performance(train_losses, test_losses, train_accs, test_accs,
@@ -148,11 +148,8 @@ class TorchModelSaver:
             # Write only metrics data
             metrics_dict = {
                 'epoch': epoch,
-                'avg_train_loss_of_epoch': training_metrics.avg_train_loss_of_epoch,
-                'avg_train_acc_of_epoch': training_metrics.avg_train_acc_of_epoch,
-                'train_acc': training_metrics.train_acc,
-                'accumulated_correct_samples_of_all_batches': training_metrics.accumulated_correct_samples_of_all_batches,
-                'accumulated_total_samples_of_all_batches': training_metrics.accumulated_total_samples_of_all_batches,
+                'avg_train_loss_of_epoch': training_metrics.epoch_avg_train_loss,
+                'train_acc': training_metrics.train_acc_of_epoch,
                 'avg_cosine_similarity_of_epoch': training_metrics.avg_cosine_similarity_of_epoch,
                 'cosine_sim_for_batch': training_metrics.cosine_sim_for_batch,
                 'std_of_difference_true_esti_grads': training_metrics.std_of_difference_true_esti_grads,

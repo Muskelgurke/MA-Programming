@@ -77,19 +77,18 @@ def start_NN(config: Config, train_loader: torch.utils.data.DataLoader, test_loa
         epoch_times_per_epoch.append(epoch_time)
 
 
-        train_losses_per_epoch.append(training_results.avg_train_loss_of_epoch)
-        train_accs_per_epoch.append(training_results.avg_train_acc_of_epoch)
+        train_losses_per_epoch.append(training_results.epoch_avg_train_loss)
+        train_accs_per_epoch.append(training_results.train_acc_of_epoch)
         test_losses_per_epoch.append(tester.avg_validation_loss_of_epoch)
         test_accs_per_epoch.append(tester.avg_validation_acc_of_epoch)
         training_results_per_epoch.append(training_results)
 
         if writer is not None:
             writer.add_scalar('Train/Loss - Epoch',
-                             training_results.avg_train_loss_of_epoch,
-                             epoch)
-            writer.add_scalar('Train/Accuracy - Epoch',
-                              training_results.avg_train_acc_of_epoch,
+                              training_results.epoch_avg_train_loss,
                               epoch)
+            writer.add_scalar('Train/Accuracy - Epoch',
+                              training_results.train_acc_of_epoch)
             writer.add_scalar('Test/Loss - Epoch',
                               tester.avg_validation_loss_of_epoch,
                               epoch)
@@ -117,7 +116,7 @@ def start_NN(config: Config, train_loader: torch.utils.data.DataLoader, test_loa
         training_results = training_results_per_epoch
     )
 
-    saver.save_training_session(training_result=results,
+    saver.save_training_session(results_of_epoch=results,
                                 config= config,
                                 model= model,
                                 save_full_model=True)
