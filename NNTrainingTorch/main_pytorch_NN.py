@@ -57,31 +57,32 @@ def start_NN(config: Config, train_loader: torch.utils.data.DataLoader, test_loa
                     seed=config.random_seed,
                     tensorboard_writer=writer)
 
-
     train_losses_per_epoch = []
     train_accs_per_epoch = []
     test_losses_per_epoch = []
     test_accs_per_epoch = []
     epoch_times_per_epoch = []
-    training_results_per_epoch = []
-    training_results = TrainingMetrics()
 
     for epoch in range(config.epoch_num):
         start_time = time.time()
 
         training_results = trainer.train_epoch(epoch_num=epoch)
 
-        tester.validate_epoch(epoch_num=epoch)
+        tester_results = tester.validate_epoch(epoch_num=epoch)
 
         epoch_time = time.time() - start_time
         epoch_times_per_epoch.append(epoch_time)
 
+        saver.save_plotting_csv(training_metrics=training_results,
+                                test_loss=tester.avg_validation_loss,
+                                test_accuracy=tester.avg_validation_acc_of_epoch,
+                                epoch=epoch)
 
         train_losses_per_epoch.append(training_results.epoch_avg_train_loss)
         train_accs_per_epoch.append(training_results.train_acc_of_epoch)
-        test_losses_per_epoch.append(tester.avg_validation_loss_of_epoch)
-        test_accs_per_epoch.append(tester.avg_validation_acc_of_epoch)
-        training_results_per_epoch.append(training_results)
+
+        test_losses_per_epoch.append(tester_results.test_loss_per_epoch)
+        test_accs_per_epoch.append(tester_results.test_acc_per_epoch)
 
         if writer is not None:
             writer.add_scalar('Train/Loss - Epoch',
@@ -90,14 +91,13 @@ def start_NN(config: Config, train_loader: torch.utils.data.DataLoader, test_loa
             writer.add_scalar('Train/Accuracy - Epoch',
                               training_results.train_acc_of_epoch)
             writer.add_scalar('Test/Loss - Epoch',
-                              tester.avg_validation_loss_of_epoch,
+                              tester.avg_validation_loss,
                               epoch)
             writer.add_scalar('Test/Accuracy - Epoch',
                               tester.avg_validation_acc_of_epoch,
                               epoch)
 
-        saver.save_training_metrics_to_csv(training_results,config,epoch)
-        early_stopping(tester.avg_validation_loss_of_epoch, model)
+        early_stopping(tester.avg_validation_loss, model)
         if early_stopping.early_stop:
             print(f"Stopping early at Epoch {epoch + 1}")
             break
@@ -112,14 +112,13 @@ def start_NN(config: Config, train_loader: torch.utils.data.DataLoader, test_loa
         test_accs   =      test_accs_per_epoch,
         train_losses=   train_losses_per_epoch,
         test_losses =    test_losses_per_epoch,
-        epoch_times =    epoch_times_per_epoch,
-        training_results = training_results_per_epoch
+        epoch_times =    epoch_times_per_epoch
     )
 
-    saver.save_training_session(results_of_epoch=results,
-                                config= config,
-                                model= model,
-                                save_full_model=True)
+    saver.save_session(results_of_epoch=results,
+                       config= config,
+                       model= model,
+                       save_full_model=True)
 
 
     ###########################################################################################

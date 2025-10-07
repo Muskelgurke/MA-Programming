@@ -11,4 +11,3 @@ class results_of_epochs:
     train_losses: List[float]
     test_losses: List[float]
     epoch_times: List[float]
-    training_results: List[TrainingMetrics]

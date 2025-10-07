@@ -43,9 +43,9 @@ class TorchModelSaver:
             # Loading full model
             return torch.load(filepath, map_location='cpu')
 
-    def save_training_session(self, results_of_epoch: results_of_epochs,
-                              config: Config, model: torch.nn.Module,
-                              save_full_model: bool = False) -> Path:
+    def save_session(self, results_of_epoch: results_of_epochs,
+                     config: Config, model: torch.nn.Module,
+                     save_full_model: bool = False) -> Path:
         """
         Save complete PyTorch training session including model, metrics, and configuration.
 
@@ -88,76 +88,152 @@ class TorchModelSaver:
                 "model_module": model.__class__.__module__,
                 "state_dict_keys": list(model.state_dict().keys())
             }
-            with open(model_dir / "model_info.json", 'w') as f:
-                json.dump(model_info, f, indent=2)
-
-        # Save optimizer state if available in training_result
-        if hasattr(results_of_epoch, 'optimizer_state') and results_of_epoch.optimizer_state:
-            torch.save(results_of_epoch.optimizer_state, model_dir / "optimizer_state.pth")
-
-        # Generate plots
-        plotting.plot_performance(train_losses, test_losses, train_accs, test_accs,
-                                  epoch_times, self.run_dir, config.dataset_name)
-
-        # Save configuration as JSON
-        with open(self.run_dir / "config.json", 'w') as f:
-            json.dump(config.to_dict(), f, indent=2)
-
-        # Save detailed training log
-        self._save_training_log(self.run_dir, train_accs, test_accs,
-                                train_losses, test_losses, epoch_times)
 
         return self.run_dir
+
+    def save_plotting_csv(self, training_metrics: TrainingMetrics, test_loss: float = None, test_accuracy: float = None,
+                          epoch: int = 0) -> None:
+        """Save metrics in a plotting-friendly CSV format with one row per epoch"""
+        csv_file_path = self.run_dir / "plotting_metrics.csv"
+        file_exists = csv_file_path.exists()
+
+        # Define fieldnames optimized for plotting
+        fieldnames = [
+            'epoch',
+            'avg_train_loss',
+            'train_accuracy',
+            'avg_test_loss',
+            'test_accuracy',
+            'avg_cosine_similarity',
+            'avg_mse_grads',
+            'avg_mae_grads',
+            'avg_std_difference',
+            'avg_std_estimated',
+            'avg_std_true',
+            'num_batches'
+        ]
+
+        with open(csv_file_path, 'a', newline='') as csvfile:
+            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+
+            # Write header only once
+            if not file_exists:
+                writer.writeheader()
+
+            # Calculate averages from batch metrics
+            metrics_dict = training_metrics.to_dict()
+
+            avg_mse = np.mean(training_metrics.mse_true_esti_grads_batch)
+            avg_mae = np.mean(training_metrics.mae_true_esti_grad_batch)
+            avg_std_diff = np.mean(training_metrics.std_of_difference_true_esti_grads_batch)
+            avg_std_esti = np.mean(training_metrics.std_of_esti_grads_batch)
+            avg_std_true = np.mean(training_metrics.std_of_true_grads_batch)
+
+            # Write one row per epoch with all relevant metrics
+            row_data = {
+                'epoch': epoch + 1,
+                'avg_train_loss': training_metrics.epoch_avg_train_loss,
+                'train_accuracy': training_metrics.train_acc_of_epoch,
+                'avg_test_loss': test_loss if test_loss is not None else 'csv_save=None',
+                'test_accuracy': test_accuracy if test_accuracy is not None else 'csv_save=None',
+                'avg_cosine_similarity': training_metrics.avg_cosine_similarity_of_epoch,
+                'avg_mse_grads': avg_mse,
+                'avg_mae_grads': avg_mae,
+                'avg_std_difference': avg_std_diff,
+                'avg_std_estimated': avg_std_esti,
+                'avg_std_true': avg_std_true,
+                'num_batches': len(metrics_dict['cosine_of_esti_true_grads_batch'])
+            }
+
+            writer.writerow(row_data)
 
     def save_training_metrics_to_csv(self, training_metrics: TrainingMetrics, config: Config, epoch: int) -> None:
         """Save training metrics to CSV file, with config written only once at the top"""
         csv_file_path = self.run_dir / "training_metrics.csv"
         file_exists = csv_file_path.exists()
 
-        # Define fieldnames for metrics only
-        metric_fieldnames = training_metrics.get_csv_fieldnames()
+        # Define all possible fieldnames
+        fieldnames = [
+            'epoch',
+            'metric_type',  # 'epoch_start', 'batch', 'epoch_summary', 'test_summary'
+            'batch_id',
+            'train_loss',
+            'mse_loss',
+            'mae_loss',
+            'std_difference_true_esti',
+            'std_estimated_grads',
+            'std_true_grads',
+            'cosine_similarity_true_esti',
+            'avg_train_loss',
+            'train_accuracy',
+            'avg_test_loss',
+            'test_accuracy',
+            'avg_cosine_similarity'
+        ]
 
         with open(csv_file_path, 'a', newline='') as csvfile:
-            writer = csv.DictWriter(csvfile, fieldnames=metric_fieldnames)
+            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
 
+            # Write header and config only once
             if not file_exists:
-                # Write config parameters as comments at the top
+                # Write config as comments
                 csvfile.write("# Configuration Parameters:\n")
                 config_dict = config.to_dict()
                 for key, value in config_dict.items():
                     csvfile.write(f"# {key}: {value}\n")
                 csvfile.write("# \n")
-                csvfile.write("# Training Metrics:\n")
-
-                # Write header for metrics
                 writer.writeheader()
 
-            # Write only metrics data
-            metrics_dict = training_metrics.to_dict()
+            # Write epoch start marker
+            writer.writerow({
+                'epoch': epoch + 1,
+                'metric_type': 'epoch_start',
+                'batch_id': '',
+                'train_loss': '',
+                'mse_loss': '',
+                'mae_loss': '',
+                'std_difference_true_esti': '',
+                'std_estimated_grads': '',
+                'std_true_grads': '',
+                'cosine_similarity_true_esti': '',
+                'avg_train_loss': '',
+                'train_accuracy': '',
+                'avg_test_loss': '',
+                'test_accuracy': '',
+                'avg_cosine_similarity': ''
+            })
 
-            writer.writerow(metrics_dict)
-    def _save_training_log(self, training_dir: Path, train_accs: list,
-                           test_accs: list, train_losses: list,
-                           test_losses: list, epoch_times: list) -> None:
-        """Save detailed training log"""
-        with open(training_dir / "training_log.txt", 'w') as log_file:
-            total_epochs = len(train_accs)
-            for epoch in range(len(train_accs)):
-                epoch_time = epoch_times[epoch]
-                train_acc = train_accs[epoch]
-                test_acc = test_accs[epoch]
-                train_loss = train_losses[epoch]
-                test_loss = test_losses[epoch]
-                log_file.write(
-                    f"Epoch {epoch + 1:2d}/{total_epochs} | "
-                    f"Zeit: {epoch_time:5.2f}s | "
-                    f"Train Acc: {train_acc:.4f} | "
-                    f"Test Acc: {test_acc:.4f} | "
-                    f"Train Loss: {train_loss:.4f} | "
-                    f"Test Loss: {test_loss:.4f}\n"
-                    f"std Diff"
-                )
-            log_file.write(f"Training abgeschlossen! Durchschnittliche Zeit pro Epoch: {np.mean(epoch_times):.2f}s")
+            # Write batch metrics
+            batch_metrics = training_metrics.to_dict()
+            max_batches = len(batch_metrics.get('cosine_of_esti_true_grads_batch', []))
+
+            for batch_id in range(max_batches):
+                batch_row = {
+                    'epoch': epoch + 1,
+                    'metric_type': 'batch',
+                    'batch_id': batch_id + 1,
+                    'train_loss': '',  # Individual batch loss not stored in metrics
+                    'mse_loss': batch_metrics['mse_true_esti_grads_batch'][batch_id] if batch_id < len(
+                        batch_metrics.get('mse_true_esti_grads_batch', [])) else '',
+                    'mae_loss': batch_metrics['mae_true_esti_grad_batch'][batch_id] if batch_id < len(
+                        batch_metrics.get('mae_true_esti_grad_batch', [])) else '',
+                    'std_difference_true_esti': batch_metrics['std_of_difference_true_esti_grads_batch'][
+                        batch_id] if batch_id < len(
+                        batch_metrics.get('std_of_difference_true_esti_grads_batch', [])) else '',
+                    'std_estimated_grads': batch_metrics['std_of_esti_grads_batch'][batch_id] if batch_id < len(
+                        batch_metrics.get('std_of_esti_grads_batch', [])) else '',
+                    'std_true_grads': batch_metrics['std_of_true_grads_batch'][batch_id] if batch_id < len(
+                        batch_metrics.get('std_of_true_grads_batch', [])) else '',
+                    'cosine_similarity_true_esti': batch_metrics['cosine_of_esti_true_grads_batch'][
+                        batch_id] if batch_id < len(batch_metrics.get('cosine_of_esti_true_grads_batch', [])) else '',
+                    'avg_train_loss': '',
+                    'train_accuracy': '',
+                    'avg_test_loss': '',
+                    'test_accuracy': '',
+                    'avg_cosine_similarity': ''
+                }
+                writer.writerow(batch_row)
+
 
     def load_training_session(self, training_dir: Path,
                               model_class=None, model_kwargs: Dict = None) -> Dict[str, Any]:

@@ -39,9 +39,7 @@ class Trainer:
         self.training_dir = self.writer.log_dir
 
         self.metrics = TrainingMetrics()
-        self.metrics.cosine_of_esti_true_grads_batch = []
-        self.metrics.estimated_gradients_batch = []
-        self.mse_of_true_esti_grads_over_all_batches = []
+
 
 
         torch.manual_seed(seed)
@@ -170,8 +168,6 @@ class Trainer:
                 self.metrics.std_of_true_grads_batch.append(std_of_true_grad)
                 self.metrics.std_of_esti_grads_batch.append(std_of_esti_grad)
 
-                self.metrics.std_of_esti_grads_batch.append(torch.std(estimated_grads_flat).item())
-                self.metrics.std_of_true_grads_batch.append(torch.std(true_grads_flat).item())
                 # Cosine similarity
                 cosine_sim_esti_true_grads = torch.nn.functional.cosine_similarity(
                     true_grads_flat.unsqueeze(0),
@@ -179,7 +175,6 @@ class Trainer:
                     dim=1
                 ).item()
                 self.metrics.cosine_of_esti_true_grads_batch.append(cosine_sim_esti_true_grads)
-
 
                 # torch.nn.utils.clip_grad_norm_(self.model.parameters(), max_norm=5.0)
 
@@ -234,6 +229,7 @@ class Trainer:
                 'Train Loss': f' {loss.item():.4f}'
             })
 
+
         self.metrics.train_acc_of_epoch = (
                 sum_correct_samples / sum_total_samples * 100
         )
@@ -246,6 +242,18 @@ class Trainer:
             self.metrics.cosine_of_esti_true_grads_batch
         ))
 
+        # Writer Logging per Epoch
+        self.writer.add_scalar('Training Accuracy - Epoch',
+                               self.metrics.train_acc_of_epoch,
+                               self.epoch_num)
+        self.writer.add_scalar('Training Cosine_Similarity - Epoch',
+                               float(np.mean(
+                                   self.metrics.cosine_of_esti_true_grads_batch
+                               )),
+                               self.epoch_num)
+        self.writer.add_scalar('Training Loss - Epoch',
+                               self.metrics.epoch_avg_train_loss,
+                               self.epoch_num)
 
         pbar.close()
 
