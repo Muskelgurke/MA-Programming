@@ -1,16 +1,21 @@
 from dataclasses import dataclass, asdict, field
 from typing import List
 import torch
-from werkzeug.formparser import default_stream_factory
 
 
 @dataclass
 class TrainingMetrics:
     """Dataclass to store training metrics for each epoch"""
     epoch_avg_train_loss: float = 0.0
-    train_acc_of_epoch: float = 0.0
+    epoch_train_acc: float = 0.0
+    epoch_avg_mse_grads: float = 0.0
+    epoch_avg_mae_grads: float = 0.0
+    epoch_avg_std_difference: float = 0.0
+    epoch_avg_std_estimated: float = 0.0
+    epoch_avg_std_true: float = 0.0
+    num_batches: int = 0
+    epoch_avg_cosine_similarity: float = 0.0
     cosine_of_esti_true_grads_batch: List[float] = field(default_factory=list)
-    avg_cosine_similarity_of_epoch: float = 0.0
     estimated_gradients_batch: List[torch.Tensor] = field(default_factory=list)
     abs_of_diff_true_esti_grads_batch: List[torch.Tensor] = field(default_factory=list)
     std_of_difference_true_esti_grads_batch: List[float] = field(default_factory=list)
@@ -27,9 +32,9 @@ class TrainingMetrics:
 
     def _trainings_metrics_reset(self) -> None:
         self.epoch_avg_train_loss = 0.0
-        self.train_acc_of_epoch = 0.0
+        self.epoch_train_acc = 0.0
         self.cosine_of_esti_true_grads_batch.clear()
-        self.avg_cosine_similarity_of_epoch = 0.0
+        self.epoch_avg_cosine_similarity = 0.0
         self.estimated_gradients_batch.clear()
         self.abs_of_diff_true_esti_grads_batch.clear()
         self.std_of_difference_true_esti_grads_batch.clear()

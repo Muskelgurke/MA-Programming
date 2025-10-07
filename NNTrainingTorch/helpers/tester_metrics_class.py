@@ -1,14 +1,12 @@
-from dataclasses import dataclass, asdict, field
+from dataclasses import dataclass, asdict
 from typing import List
-import torch
-from werkzeug.formparser import default_stream_factory
 
 
 @dataclass
 class TesterMetrics:
     """Dataclass to store training metrics for each epoch"""
-    test_loss_per_epoch: float
-    test_acc_per_epoch: float
+    test_loss_per_epoch: float = 0.0
+    test_acc_per_epoch: float = 0.0
 
     def to_dict(self) -> dict:
         return asdict(self)
@@ -17,5 +15,5 @@ class TesterMetrics:
         return list(asdict(self).keys())
 
     def _trainings_metrics_reset(self) -> None:
-        self.test_loss_per_epoch.clear()
-        self.test_acc_per_epoch.clear()
+        self.test_loss_per_epoch = 0
+        self.test_acc_per_epoch = 0

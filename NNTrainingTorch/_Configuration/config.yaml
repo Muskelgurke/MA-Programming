@@ -1,23 +1,60 @@
-random_seed: 43
-learning_rate: 0.0001
-epoch_num: 1
-training_method: fgd # [bp, fgd]
+# Kombinierte Konfigurationsdatei für Single- und Multi-Parameter-Training
+# Base Configuration: Grundeinstellungen für alle Trainings
+base_config:
+  random_seed: 43
+  learning_rate: 0.001
+  epoch_num: 100
+  training_method: fgd
+  dataset_name: mnist
+  batch_size: 64
+  augment_data: false
+  model_type: fc
+  early_stopping: true
+  early_stopping_patience: 5
+  early_stopping_delta: 0.01
+  dataset_path: /home/muskelgurke/PycharmProjects/MA/_Dataset
 
+# Multi-Parameter Configuration: Parameter für Grid-Search
+# Wenn ein Parameter hier definiert ist, wird er für Multi-Training verwendet
+# Wenn nicht, wird der Wert aus base_config genommen
+multi_params:
+  learning_rate:
+    - 0.01
+    - 0.005
+    - 0.001
+    - 0.0001
+    - 0.00001
 
-# Dataset Configurations
-#dataset_name: mnist # demo_linear_regression #[demo_linear_regression, mnist, cifar10]
-dataset_name: mnist
-batch_size: 64 #Mnist 64 # Cifar10->128 # for demo_linear_regression 4
-augment_data: False
-model_type: fc # demo_linear_regression
-#Todo: add Optimizer Configurations, learninrate, Momentum, etc.
-#optimizer:
+  training_method:
+    - bp
+    - fgd
 
-#Early Stopping Configurations
-early_stopping: True
-early_stopping_patience: 5
-early_stopping_delta: 0.01
+  random_seed:
+    - 42
+    - 26
+    - 8
+    - 69
+    - 1337
+    - 2
+    - 34
 
+  # Optional: Weitere Parameter
+  # batch_size:
+  #   - 32
+  #   - 64
 
-dataset_path: /home/muskelgurke/PycharmProjects/MA/_Dataset
+  # epoch_num:
+  #   - 5
+  #   - 10
 
+# Beispiel für verschiedene Setups:
+# 1. Nur Learning Rate testen:
+#    learning_rate: [0.001, 0.0001]
+#    # Alle anderen aus base_config
+#
+# 2. Vollständiger Grid-Search:
+#    learning_rate: [0.01, 0.001, 0.0001]
+#    training_method: [bp, fgd]
+#    random_seed: [42, 43, 44]
+#    batch_size: [32, 64]
+#    # = 3 × 2 × 3 × 2 = 36 Kombinationen

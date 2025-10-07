@@ -12,7 +12,7 @@ import numpy as np
 from NNTrainingTorch.helpers import plotting
 from NNTrainingTorch.helpers.results_of_epochs import (results_of_epochs)
 from NNTrainingTorch.helpers.config_class import Config
-from NNTrainingTorch.helpers.Training_Metriken import TrainingMetrics
+from NNTrainingTorch.helpers.training_metrics_class import TrainingMetrics
 
 
 class TorchModelSaver:
@@ -20,6 +20,10 @@ class TorchModelSaver:
 
     def __init__(self, base_dir: str):
         self.run_dir = Path(base_dir)
+        self.batch_metrics_file = self.run_dir / "batch_metrics.csv"
+        self.epoch_metrics_file = self.run_dir / "epoch_metrics.csv"
+        self.epoch_csv_initialized = False
+        self.batch_csv_initialized = False
 
     def save_torch_model(self, model: torch.nn.Module, filepath: Path,
                          save_state_dict: bool = True) -> None:
@@ -91,12 +95,12 @@ class TorchModelSaver:
 
         return self.run_dir
 
-    def save_plotting_csv(self, training_metrics: TrainingMetrics, test_loss: float = None, test_accuracy: float = None,
-                          epoch: int = 0) -> None:
+    def write_epoch_metrics(self,
+                            training_metrics: TrainingMetrics,
+                            test_loss: float = None,
+                            test_accuracy: float = None,
+                            epoch: int = 0) -> None:
         """Save metrics in a plotting-friendly CSV format with one row per epoch"""
-        csv_file_path = self.run_dir / "plotting_metrics.csv"
-        file_exists = csv_file_path.exists()
-
         # Define fieldnames optimized for plotting
         fieldnames = [
             'epoch',
@@ -112,127 +116,80 @@ class TorchModelSaver:
             'avg_std_true',
             'num_batches'
         ]
-
-        with open(csv_file_path, 'a', newline='') as csvfile:
-            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-
-            # Write header only once
-            if not file_exists:
+        # Initialize CSV file with headers if not done yet
+        if not self.epoch_csv_initialized:
+            with open(self.epoch_metrics_file, 'w', newline='') as csvfile:
+                writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
                 writer.writeheader()
+            self.epoch_csv_initialized = True
 
-            # Calculate averages from batch metrics
-            metrics_dict = training_metrics.to_dict()
+        # Write one row per epoch with all relevant metrics
+        row_data = {
+            'epoch': epoch + 1,
+            'avg_train_loss': training_metrics.epoch_avg_train_loss,
+            'train_accuracy': training_metrics.epoch_train_acc,
+            'avg_test_loss': test_loss if test_loss is not None else 'csv_save=None',
+            'test_accuracy': test_accuracy if test_accuracy is not None else 'csv_save=None',
+            'avg_cosine_similarity': training_metrics.epoch_avg_cosine_similarity,
+            'avg_mse_grads': training_metrics.epoch_avg_mse_grads,
+            'avg_mae_grads': training_metrics.epoch_avg_mae_grads,
+            'avg_std_difference': training_metrics.epoch_avg_std_difference,
+            'avg_std_estimated': training_metrics.epoch_avg_std_estimated,
+            'avg_std_true': training_metrics.epoch_avg_std_true,
+            'num_batches': training_metrics.num_batches
+        }
 
-            avg_mse = np.mean(training_metrics.mse_true_esti_grads_batch)
-            avg_mae = np.mean(training_metrics.mae_true_esti_grad_batch)
-            avg_std_diff = np.mean(training_metrics.std_of_difference_true_esti_grads_batch)
-            avg_std_esti = np.mean(training_metrics.std_of_esti_grads_batch)
-            avg_std_true = np.mean(training_metrics.std_of_true_grads_batch)
-
-            # Write one row per epoch with all relevant metrics
-            row_data = {
-                'epoch': epoch + 1,
-                'avg_train_loss': training_metrics.epoch_avg_train_loss,
-                'train_accuracy': training_metrics.train_acc_of_epoch,
-                'avg_test_loss': test_loss if test_loss is not None else 'csv_save=None',
-                'test_accuracy': test_accuracy if test_accuracy is not None else 'csv_save=None',
-                'avg_cosine_similarity': training_metrics.avg_cosine_similarity_of_epoch,
-                'avg_mse_grads': avg_mse,
-                'avg_mae_grads': avg_mae,
-                'avg_std_difference': avg_std_diff,
-                'avg_std_estimated': avg_std_esti,
-                'avg_std_true': avg_std_true,
-                'num_batches': len(metrics_dict['cosine_of_esti_true_grads_batch'])
-            }
-
+        with open(self.epoch_metrics_file, 'a', newline='') as csvfile:
+            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
             writer.writerow(row_data)
 
-    def save_training_metrics_to_csv(self, training_metrics: TrainingMetrics, config: Config, epoch: int) -> None:
-        """Save training metrics to CSV file, with config written only once at the top"""
-        csv_file_path = self.run_dir / "training_metrics.csv"
-        file_exists = csv_file_path.exists()
 
-        # Define all possible fieldnames
+
+
+
+    def write_batch_metrics(self, epoch: int, batch_idx: int, loss: float,
+                           accuracy: float = None, **kwargs) -> None:
+        """Write batch-level metrics to CSV file during training"""
+
+        # Define fieldnames for batch metrics
         fieldnames = [
             'epoch',
-            'metric_type',  # 'epoch_start', 'batch', 'epoch_summary', 'test_summary'
-            'batch_id',
-            'train_loss',
-            'mse_loss',
-            'mae_loss',
-            'std_difference_true_esti',
-            'std_estimated_grads',
-            'std_true_grads',
-            'cosine_similarity_true_esti',
-            'avg_train_loss',
-            'train_accuracy',
-            'avg_test_loss',
-            'test_accuracy',
-            'avg_cosine_similarity'
+            'batch_idx',
+            'loss',
+            'accuracy',
+            'cosine_similarity',
+            'mse_grads',
+            'mae_grads',
+            'std_difference',
+            'std_estimated',
+            'std_true'
         ]
 
-        with open(csv_file_path, 'a', newline='') as csvfile:
-            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-
-            # Write header and config only once
-            if not file_exists:
-                # Write config as comments
-                csvfile.write("# Configuration Parameters:\n")
-                config_dict = config.to_dict()
-                for key, value in config_dict.items():
-                    csvfile.write(f"# {key}: {value}\n")
-                csvfile.write("# \n")
+        # Initialize CSV file with headers if not done yet
+        if not self.batch_csv_initialized:
+            with open(self.batch_metrics_file, 'w', newline='') as csvfile:
+                writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
                 writer.writeheader()
+            self.batch_csv_initialized = True
 
-            # Write epoch start marker
-            writer.writerow({
-                'epoch': epoch + 1,
-                'metric_type': 'epoch_start',
-                'batch_id': '',
-                'train_loss': '',
-                'mse_loss': '',
-                'mae_loss': '',
-                'std_difference_true_esti': '',
-                'std_estimated_grads': '',
-                'std_true_grads': '',
-                'cosine_similarity_true_esti': '',
-                'avg_train_loss': '',
-                'train_accuracy': '',
-                'avg_test_loss': '',
-                'test_accuracy': '',
-                'avg_cosine_similarity': ''
-            })
+        # Prepare row data
+        row_data = {
+            'epoch': epoch,
+            'batch_idx': batch_idx,
+            'loss': loss,
+            'accuracy': accuracy if accuracy is not None else '',
+            'cosine_similarity': kwargs.get('cosine_similarity', ''),
+            'mse_grads': kwargs.get('mse_grads', ''),
+            'mae_grads': kwargs.get('mae_grads', ''),
+            'std_difference': kwargs.get('std_difference', ''),
+            'std_estimated': kwargs.get('std_estimated', ''),
+            'std_true': kwargs.get('std_true', '')
+        }
 
-            # Write batch metrics
-            batch_metrics = training_metrics.to_dict()
-            max_batches = len(batch_metrics.get('cosine_of_esti_true_grads_batch', []))
-
-            for batch_id in range(max_batches):
-                batch_row = {
-                    'epoch': epoch + 1,
-                    'metric_type': 'batch',
-                    'batch_id': batch_id + 1,
-                    'train_loss': '',  # Individual batch loss not stored in metrics
-                    'mse_loss': batch_metrics['mse_true_esti_grads_batch'][batch_id] if batch_id < len(
-                        batch_metrics.get('mse_true_esti_grads_batch', [])) else '',
-                    'mae_loss': batch_metrics['mae_true_esti_grad_batch'][batch_id] if batch_id < len(
-                        batch_metrics.get('mae_true_esti_grad_batch', [])) else '',
-                    'std_difference_true_esti': batch_metrics['std_of_difference_true_esti_grads_batch'][
-                        batch_id] if batch_id < len(
-                        batch_metrics.get('std_of_difference_true_esti_grads_batch', [])) else '',
-                    'std_estimated_grads': batch_metrics['std_of_esti_grads_batch'][batch_id] if batch_id < len(
-                        batch_metrics.get('std_of_esti_grads_batch', [])) else '',
-                    'std_true_grads': batch_metrics['std_of_true_grads_batch'][batch_id] if batch_id < len(
-                        batch_metrics.get('std_of_true_grads_batch', [])) else '',
-                    'cosine_similarity_true_esti': batch_metrics['cosine_of_esti_true_grads_batch'][
-                        batch_id] if batch_id < len(batch_metrics.get('cosine_of_esti_true_grads_batch', [])) else '',
-                    'avg_train_loss': '',
-                    'train_accuracy': '',
-                    'avg_test_loss': '',
-                    'test_accuracy': '',
-                    'avg_cosine_similarity': ''
-                }
-                writer.writerow(batch_row)
+        # Write row to CSV
+        with open(self.batch_metrics_file, 'a', newline='') as csvfile:
+            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+            writer.writerow(row_data)
 
 
     def load_training_session(self, training_dir: Path,

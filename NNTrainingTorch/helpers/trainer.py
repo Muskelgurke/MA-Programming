@@ -6,7 +6,8 @@ from torch import nn
 from tqdm import tqdm
 from NNTrainingTorch.helpers.config_class import Config
 from torch.utils.tensorboard import SummaryWriter
-from NNTrainingTorch.helpers.Training_Metriken import TrainingMetrics
+from NNTrainingTorch.helpers.training_metrics_class import TrainingMetrics
+from NNTrainingTorch.helpers.saver_class import TorchModelSaver
 
 class Trainer:
     """
@@ -22,7 +23,9 @@ class Trainer:
                  device: torch.device,
                  total_epochs: int,
                  seed: int,
-                 tensorboard_writer: torch.utils.tensorboard.SummaryWriter):
+                 tensorboard_writer: torch.utils.tensorboard.SummaryWriter,
+                 saver_class: TorchModelSaver):
+
         """Initialize the trainer with all required parameters."""
         self.model = model
         self.data_loader = data_loader
@@ -35,18 +38,16 @@ class Trainer:
         self.config = config_file
 
         # Logging
-        self.writer = tensorboard_writer
-        self.training_dir = self.writer.log_dir
-
+        self.tensorboard_writer = tensorboard_writer
+        self.training_dir = self.tensorboard_writer.log_dir
+        self.saver = saver_class
         self.metrics = TrainingMetrics()
 
-
-
-        torch.manual_seed(seed)
-        np.random.seed(seed)
+        torch.manual_seed(self.seed)
+        np.random.seed(self.seed)
         if torch.cuda.is_available():
-            torch.cuda.manual_seed(seed)
-            torch.cuda.manual_seed_all(seed)
+            torch.cuda.manual_seed(self.seed)
+            torch.cuda.manual_seed_all(self.seed)
 
         match self.config.training_method:
             case "fgd":
@@ -61,7 +62,7 @@ class Trainer:
         y = torch.func.functional_call(self.model, (params, {}), (x,))
         return nn.functional.cross_entropy(y, targets)
 
-    def train_epoch(self, epoch_num: int):
+    def train_epoch(self, epoch_num: int) -> TrainingMetrics:
         """
         Train the model for one epoch using functional forward gradient descent.
         """
@@ -153,8 +154,8 @@ class Trainer:
                 # Distance-based metrics
                 mse_grads=  nn.MSELoss()(estimated_grads_flat, true_grads_flat).item()
                 mae_grads= nn.L1Loss()(estimated_grads_flat, true_grads_flat).item()
-                self.metrics.mse_true_esti_grads_batch = mse_grads
-                self.metrics.mae_true_esti_grad_batch = mae_grads
+                self.metrics.mse_true_esti_grads_batch.append(mse_grads)
+                self.metrics.mae_true_esti_grad_batch.append(mae_grads)
 
                 # Absolute Differenz
                 gradient_diff = estimated_grads_flat - true_grads_flat
@@ -202,27 +203,42 @@ class Trainer:
 
             # Tensorboard Logging
             unique_increasing_counter = (self.epoch_num - 1) * len(self.data_loader) + batch_idx
-            if self.writer is not None:
-                self.writer.add_scalar('Train/Loss - Batch', loss.item(), unique_increasing_counter)
-                self.writer.add_scalar('Train/Accuracy - Batch', acc_of_batch, unique_increasing_counter)
-                self.writer.add_scalar('Train/Cosine_Similarity_EstGrad_TrueGrad - Batch',
-                                       cosine_sim_esti_true_grads,
-                                       unique_increasing_counter)
-                self.writer.add_scalar('GradientMetrics/STD_Difference - Batch',
-                                       std_of_difference_true_esti_grads,
-                                       unique_increasing_counter)
-                self.writer.add_scalar('GradientMetrics/STD_Estimated - Batch',
-                                       std_of_esti_grad,
-                                       unique_increasing_counter)
-                self.writer.add_scalar('GradientMetrics/STD_True',
-                                       std_of_true_grad,
-                                       unique_increasing_counter)
-                self.writer.add_scalar('GradientMetrics/MSE_Estimated_True - Batch',
-                                       mse_grads,
-                                       unique_increasing_counter)
-                self.writer.add_scalar('GradientMetrics/MAE_Estimated_True - Batch',
-                                       mae_grads,
-                                       unique_increasing_counter)
+            if self.tensorboard_writer is not None:
+                self.tensorboard_writer.add_scalar('Train/Loss - Batch', loss.item(), unique_increasing_counter)
+                self.tensorboard_writer.add_scalar('Train/Accuracy - Batch', acc_of_batch, unique_increasing_counter)
+                self.tensorboard_writer.add_scalar('GradientMetrics/Cosine_Esti_True - Batch',
+                                                   cosine_sim_esti_true_grads,
+                                                   unique_increasing_counter)
+                self.tensorboard_writer.add_scalar('GradientMetrics/STD_Difference - Batch',
+                                                   std_of_difference_true_esti_grads,
+                                                   unique_increasing_counter)
+                self.tensorboard_writer.add_scalar('GradientMetrics/STD_Esti_Grad - Batch',
+                                                   std_of_esti_grad,
+                                                   unique_increasing_counter)
+                self.tensorboard_writer.add_scalar('GradientMetrics/STD_True_Grad',
+                                                   std_of_true_grad,
+                                                   unique_increasing_counter)
+                self.tensorboard_writer.add_scalar('GradientMetrics/MSE_Esti_True - Batch',
+                                                   mse_grads,
+                                                   unique_increasing_counter)
+                self.tensorboard_writer.add_scalar('GradientMetrics/MAE_Esti_True - Batch',
+                                                   mae_grads,
+                                                   unique_increasing_counter)
+
+            # Save batch metrics to CSV
+            self.saver.write_batch_metrics(
+                epoch=self.epoch_num,
+                batch_idx=batch_idx,
+                loss=loss.item(),
+                accuracy=acc_of_batch,
+                cosine_similarity=cosine_sim_esti_true_grads,
+                mse_grads=mse_grads,
+                mae_grads=mae_grads,
+                std_difference=std_of_difference_true_esti_grads,
+                std_estimated=std_of_esti_grad,
+                std_true=std_of_true_grad
+            )
+
             # Update progress bar
             pbar.update(1)
             pbar.set_postfix({
@@ -230,7 +246,7 @@ class Trainer:
             })
 
 
-        self.metrics.train_acc_of_epoch = (
+        self.metrics.epoch_train_acc = (
                 sum_correct_samples / sum_total_samples * 100
         )
 
@@ -238,23 +254,28 @@ class Trainer:
                 sum_loss / len(self.data_loader)
         )
 
-        self.metrics.avg_cosine_similarity_of_epoch = float(np.mean(
+        self.metrics.epoch_avg_cosine_similarity = float(np.mean(
             self.metrics.cosine_of_esti_true_grads_batch
         ))
-
+        self.metrics.epoch_avg_mse_grads = float(np.mean(self.metrics.mse_true_esti_grads_batch))
+        self.metrics.epoch_avg_mae_grads = float(np.mean(self.metrics.mae_true_esti_grad_batch))
+        self.metrics.epoch_avg_std_difference = float(np.mean(self.metrics.std_of_difference_true_esti_grads_batch))
+        self.metrics.epoch_avg_std_estimated = float(np.mean(self.metrics.std_of_esti_grads_batch))
+        self.metrics.epoch_avg_std_true = float(np.mean(self.metrics.std_of_true_grads_batch))
+        self.metrics.num_batches = len(self.data_loader)
         # Writer Logging per Epoch
-        self.writer.add_scalar('Training Accuracy - Epoch',
-                               self.metrics.train_acc_of_epoch,
-                               self.epoch_num)
-        self.writer.add_scalar('Training Cosine_Similarity - Epoch',
-                               float(np.mean(
+        self.tensorboard_writer.add_scalar('Train/Accuracy - Epoch',
+                                           self.metrics.epoch_train_acc,
+                                           self.epoch_num)
+        self.tensorboard_writer.add_scalar('Train/Avg. Cosine_Esti_True - Epoch',
+                                           float(np.mean(
                                    self.metrics.cosine_of_esti_true_grads_batch
                                )),
-                               self.epoch_num)
-        self.writer.add_scalar('Training Loss - Epoch',
-                               self.metrics.epoch_avg_train_loss,
-                               self.epoch_num)
-
+                                           self.epoch_num)
+        self.tensorboard_writer.add_scalar('Train/Loss - Epoch',
+                                           self.metrics.epoch_avg_train_loss,
+                                           self.epoch_num)
+        self.saver.write_batch_metrics
         pbar.close()
 
     def _train_epoch_forward_gradient(self) -> None:
@@ -322,9 +343,9 @@ class Trainer:
 
             # Tensorboard Logging
             unique_increasing_counter = (self.epoch_num - 1) * len(self.data_loader) + batch_idx
-            if self.writer is not None:
-                self.writer.add_scalar('Train/Loss', loss.item(), unique_increasing_counter)
-                self.writer.add_scalar('Train/Accuracy', acc_of_batch, unique_increasing_counter)
+            if self.tensorboard_writer is not None:
+                self.tensorboard_writer.add_scalar('Train/Loss', loss.item(), unique_increasing_counter)
+                self.tensorboard_writer.add_scalar('Train/Accuracy', acc_of_batch, unique_increasing_counter)
 
             # Update progress bar
             pbar.update(1)
@@ -339,8 +360,6 @@ class Trainer:
         self.train_acc = self.accumulated_correct_samples_of_all_batches / self.accumulated_total_samples_of_all_batches * 100
 
         self.avg_train_loss_of_epoch = accumulated_running_loss_over_all_batches / len(self.data_loader)
-
-        pbar.close()
 
     def _train_epoch_forward_gradient_4(self) -> tuple[float, int, int]:
         accumulated_running_loss_over_all_batches = 0.0
@@ -744,6 +763,8 @@ class Trainer:
     def _backpropaggation(self) -> None:
         accumulated_running_loss_over_all_batches = 0
         acc_of_all_batches = []
+        num_correct_samples = 0
+        sum_total_samples = 0
 
         pbar = tqdm(self.data_loader, desc=f'BP - Training Epoch {self.epoch_num}/{self.total_epochs}') # just a nice to have progress bar
 
@@ -759,14 +780,20 @@ class Trainer:
             accumulated_running_loss_over_all_batches += loss.item()
 
             # statistics
-            acc_of_batch = self._calculation_acc_of_batch(inputs, targets)
-            acc_of_all_batches.append(acc_of_batch)
+            with torch.no_grad():
+                outputs = self.model(inputs)
+                _, predicted = torch.max(outputs.data, 1)
+                total = targets.size(0)
+                correct = (predicted == targets).sum().item()
+                acc_of_batch = 100.0 * correct / total
+                num_correct_samples += correct
+                sum_total_samples += total
 
             # Tensorboard Logging
             unique_increasing_counter = (self.epoch_num - 1) * len(self.data_loader) + batch_idx
-            if self.writer is not None:
-                self.writer.add_scalar('Train/Loss', loss.item(), unique_increasing_counter)
-                self.writer.add_scalar('Train/Accuracy', acc_of_batch, unique_increasing_counter)
+            if self.tensorboard_writer is not None:
+                self.tensorboard_writer.add_scalar('Train/Loss', loss.item(), unique_increasing_counter)
+                self.tensorboard_writer.add_scalar('Train/Accuracy', acc_of_batch, unique_increasing_counter)
 
             # Update progress bar
             pbar.set_postfix({
@@ -774,9 +801,28 @@ class Trainer:
                 'Train Acc': f' {acc_of_batch:.2f}%'
             })
 
-        self.avg_train_acc_of_epoch = np.mean(acc_of_all_batches)
+        avg_train_loss = accumulated_running_loss_over_all_batches / len(self.data_loader)
+        train_acc = num_correct_samples / sum_total_samples * 100
+        self.tensorboard_writer.add_scalar('Train/Loss - Epoch',
+                                           avg_train_loss,
+                                           self.epoch_num)
+        self.tensorboard_writer.add_scalar('Train/Accuracy - Epoch',
+                                           train_acc,
+                                           self.epoch_num)
+        self.metrics.epoch_train_acc = train_acc
 
-        self.train_acc = self.accumulated_correct_samples_of_all_batches / self.accumulated_total_samples_of_all_batches * 100
+        self.metrics.epoch_avg_train_loss = avg_train_loss
 
-        self.avg_train_loss_of_epoch = accumulated_running_loss_over_all_batches / len(self.data_loader)
+    def _calculation_acc_of_batch(self, inputs: torch.Tensor, targets: torch.Tensor) -> float:
+        """Calculate accuracy for a batch"""
+        with torch.no_grad():
+            outputs = self.model(inputs)
+            _, predicted = torch.max(outputs.data, 1)
+            total = targets.size(0)
+            correct = (predicted == targets).sum().item()
+            return 100.0 * correct / total
 
+    def _mse_loss(self, params: dict, x: torch.Tensor, targets: torch.Tensor):
+        """MSE loss function for linear regression"""
+        y = torch.func.functional_call(self.model, (params, {}), (x,))
+        return nn.functional.mse_loss(y, targets)

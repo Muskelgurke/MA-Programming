@@ -4,7 +4,7 @@ from torch.nn import MSELoss
 from tqdm import tqdm
 from torch.utils.tensorboard import SummaryWriter
 from NNTrainingTorch.helpers.config_class import Config
-from NNTrainingTorch.helpers.Tester_Metriken import TesterMetrics
+from NNTrainingTorch.helpers.tester_metrics_class import TesterMetrics
 
 class Tester:
     def __init__(self,
@@ -42,10 +42,10 @@ class Tester:
         self.precision = 0
         self.recall = 0
 
-        self.metrics = TesterMetrics(0, 0)
+        self.metrics = TesterMetrics()
+        self.epoch_num = 0
 
-
-    def validate_epoch(self, epoch_num: int)-> None:
+    def validate_epoch(self, epoch_num: int)-> TesterMetrics:
         self.epoch_num = epoch_num
         # print("Evaluation of Epoch on Test Dataset")
         self.model.eval()
@@ -68,6 +68,7 @@ class Tester:
             self.eval_linearRegression()
         else:
             self.eval_classification()
+
         return self.metrics
 
     def eval_classification(self):
@@ -111,7 +112,6 @@ class Tester:
                 })
 
             pbar.close()
-
         # calculating Acc and Loss
         self.metrics.test_acc_per_epoch = sum_correct_samples / sum_total_samples * 100
 
