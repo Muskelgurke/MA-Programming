@@ -12,6 +12,7 @@ import numpy as np
 from NNTrainingTorch.helpers import plotting
 from NNTrainingTorch.helpers.results_of_epochs import (results_of_epochs)
 from NNTrainingTorch.helpers.config_class import Config
+from NNTrainingTorch.helpers.Training_Metriken import TrainingMetrics
 
 
 class TorchModelSaver:
@@ -108,27 +109,13 @@ class TorchModelSaver:
 
         return self.run_dir
 
-    def save_training_metrics_to_csv(self, training_metrics, config: Config, epoch: int) -> None:
+    def save_training_metrics_to_csv(self, training_metrics: TrainingMetrics, config: Config, epoch: int) -> None:
         """Save training metrics to CSV file, with config written only once at the top"""
         csv_file_path = self.run_dir / "training_metrics.csv"
         file_exists = csv_file_path.exists()
 
         # Define fieldnames for metrics only
-        metric_fieldnames = [
-            'epoch',
-            'avg_train_loss_of_epoch',
-            'avg_train_acc_of_epoch',
-            'train_acc',
-            'accumulated_correct_samples_of_all_batches',
-            'accumulated_total_samples_of_all_batches',
-            'avg_cosine_similarity_of_epoch',
-            'cosine_sim_for_batch',
-            'std_of_difference_true_esti_grads',
-            'std_of_esti_grads',
-            'std_of_true_grads',
-            'mse_true_esti_grads',
-            'mae_true_esti_grad'
-        ]
+        metric_fieldnames = training_metrics.get_csv_fieldnames()
 
         with open(csv_file_path, 'a', newline='') as csvfile:
             writer = csv.DictWriter(csvfile, fieldnames=metric_fieldnames)
@@ -146,18 +133,7 @@ class TorchModelSaver:
                 writer.writeheader()
 
             # Write only metrics data
-            metrics_dict = {
-                'epoch': epoch,
-                'avg_train_loss_of_epoch': training_metrics.epoch_avg_train_loss,
-                'train_acc': training_metrics.train_acc_of_epoch,
-                'avg_cosine_similarity_of_epoch': training_metrics.avg_cosine_similarity_of_epoch,
-                'cosine_sim_for_batch': training_metrics.cosine_sim_for_batch,
-                'std_of_difference_true_esti_grads': training_metrics.std_of_difference_true_esti_grads,
-                'std_of_esti_grads': training_metrics.std_of_esti_grads,
-                'std_of_true_grads': training_metrics.std_of_true_grads,
-                'mse_true_esti_grads': training_metrics.mse_true_esti_grads,
-                'mae_true_esti_grad': training_metrics.mae_true_esti_grad
-            }
+            metrics_dict = training_metrics.to_dict()
 
             writer.writerow(metrics_dict)
     def _save_training_log(self, training_dir: Path, train_accs: list,

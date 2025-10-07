@@ -39,8 +39,8 @@ class Trainer:
         self.training_dir = self.writer.log_dir
 
         self.metrics = TrainingMetrics()
-        self.metrics.cosine_of_esti_true_grads_for_each_batch = []
-        self.metrics.estimated_gradients = []
+        self.metrics.cosine_of_esti_true_grads_batch = []
+        self.metrics.estimated_gradients_batch = []
         self.mse_of_true_esti_grads_over_all_batches = []
 
 
@@ -155,30 +155,30 @@ class Trainer:
                 # Distance-based metrics
                 mse_grads=  nn.MSELoss()(estimated_grads_flat, true_grads_flat).item()
                 mae_grads= nn.L1Loss()(estimated_grads_flat, true_grads_flat).item()
-                self.metrics.mse_true_esti_grads = mse_grads
-                self.metrics.mae_true_esti_grad = mae_grads
+                self.metrics.mse_true_esti_grads_batch = mse_grads
+                self.metrics.mae_true_esti_grad_batch = mae_grads
 
                 # Absolute Differenz
                 gradient_diff = estimated_grads_flat - true_grads_flat
-                self.metrics.abs_of_diff_true_esti_grads.append(torch.abs(gradient_diff))
+                self.metrics.abs_of_diff_true_esti_grads_batch.append(torch.abs(gradient_diff))
 
                 #Standardabweichung der Differenz
                 std_of_difference_true_esti_grads = torch.std(gradient_diff).item()
-                self.metrics.std_of_difference_true_esti_grads.append(std_of_difference_true_esti_grads)
+                self.metrics.std_of_difference_true_esti_grads_batch.append(std_of_difference_true_esti_grads)
                 std_of_true_grad = torch.std(true_grads_flat).item()
                 std_of_esti_grad = torch.std(estimated_grads_flat).item()
-                self.metrics.std_of_true_grads.append(std_of_true_grad)
-                self.metrics.std_of_esti_grads.append(std_of_esti_grad)
+                self.metrics.std_of_true_grads_batch.append(std_of_true_grad)
+                self.metrics.std_of_esti_grads_batch.append(std_of_esti_grad)
 
-                self.metrics.std_of_esti_grads.append(torch.std(estimated_grads_flat).item())
-                self.metrics.std_of_true_grads.append(torch.std(true_grads_flat).item())
+                self.metrics.std_of_esti_grads_batch.append(torch.std(estimated_grads_flat).item())
+                self.metrics.std_of_true_grads_batch.append(torch.std(true_grads_flat).item())
                 # Cosine similarity
                 cosine_sim_esti_true_grads = torch.nn.functional.cosine_similarity(
                     true_grads_flat.unsqueeze(0),
                     estimated_grads_flat.unsqueeze(0),
                     dim=1
                 ).item()
-                self.metrics.cosine_of_esti_true_grads_for_each_batch.append(cosine_sim_esti_true_grads)
+                self.metrics.cosine_of_esti_true_grads_batch.append(cosine_sim_esti_true_grads)
 
 
                 # torch.nn.utils.clip_grad_norm_(self.model.parameters(), max_norm=5.0)
@@ -243,7 +243,7 @@ class Trainer:
         )
 
         self.metrics.avg_cosine_similarity_of_epoch = float(np.mean(
-            self.metrics.cosine_of_esti_true_grads_for_each_batch
+            self.metrics.cosine_of_esti_true_grads_batch
         ))
 
 
