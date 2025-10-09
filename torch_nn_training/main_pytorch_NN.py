@@ -5,21 +5,20 @@ import torch
 from torch import nn
 from torch.utils.tensorboard import SummaryWriter
 
-from torch_nn_training.helpers.training_metrics_class import TrainingMetrics
-from torch_nn_training.helpers.config_class import Config, MultiParamLoader
-from torch_nn_training.helpers.saver_class import TorchModelSaver
-from torch_nn_training.helpers.results_of_epochs import results_of_epochs
+from torch_nn_training.configuration.config_class import Config, MultiParamLoader
+from torch_nn_training.saver.saver_class import TorchModelSaver
+from torch_nn_training.saver.results_of_epochs import results_of_epochs
 from torch_nn_training.helpers.early_stopping import EarlyStopping
-from torch_nn_training.helpers.trainer import Trainer
-from torch_nn_training.helpers.tester import Tester
-import torch_nn_training.helpers.datasets as datasets_helper
-import torch_nn_training.helpers.model as model_helper
+from torch_nn_training.trainer.trainer import Trainer
+from torch_nn_training.tester.tester import Tester
+import torch_nn_training.dataset.datasets as datasets_helper
+import torch_nn_training.model.model as model_helper
 
 def run_multi_training():
     """Führt Multi-Parameter-Training basierend auf kombinierter YAML-Konfiguration durch"""
     print("=== MULTI-PARAMETER TRAINING ===")
     # Kombinierte Config laden
-    config_path = "_Configuration/config.yaml"
+    config_path = "config.yaml"
 
     try:
         base_config_dict, multi_params = MultiParamLoader.load_combined_config(config_path)
@@ -300,7 +299,7 @@ if __name__ == "__main__":
 
     if choice == "1":
         # Normales einzelnes Training
-        config_path = "_Configuration/config.yaml"
+        config_path = "config.yaml"
         training_configurations = load_config_File(config_path)
         train_loader, test_loader = datasets_helper.get_dataloaders(training_configurations)
         start_NN(training_configurations, train_loader, test_loader)
@@ -311,7 +310,7 @@ if __name__ == "__main__":
 
     else:
         print("Ungültige Auswahl. Starte normales Training...")
-        config_path = "_Configuration/config.yaml"
+        config_path = "config.yaml"
         training_configurations = load_config_File(config_path)
         train_loader, test_loader = datasets_helper.get_dataloaders(training_configurations)
         start_NN(training_configurations, train_loader, test_loader)

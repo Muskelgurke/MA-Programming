@@ -2,7 +2,7 @@ import torch.nn as nn
 import torch
 
 
-from torch_nn_training.helpers.config_class import Config
+from torch_nn_training.configuration.config_class import Config
 
 def get_model(config: Config) -> nn.Module:
     match config.dataset_name.lower():

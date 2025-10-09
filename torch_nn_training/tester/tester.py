@@ -1,10 +1,9 @@
 import numpy as np
 import torch
-from torch.nn import MSELoss
 from tqdm import tqdm
 from torch.utils.tensorboard import SummaryWriter
-from torch_nn_training.helpers.config_class import Config
-from torch_nn_training.helpers.tester_metrics_class import TesterMetrics
+from torch_nn_training.configuration.config_class import Config
+from torch_nn_training.tester.tester_metrics_class import TesterMetrics
 
 class Tester:
     def __init__(self,

@@ -1,18 +1,13 @@
 import csv
-import datetime
-import pickle
 import json
 import torch
 import yaml
 from pathlib import Path
-from typing import Dict, Any, Union
+from typing import Dict, Any
 
-import numpy as np
-
-from torch_nn_training.helpers import plotting
-from torch_nn_training.helpers.results_of_epochs import (results_of_epochs)
-from torch_nn_training.helpers.config_class import Config
-from torch_nn_training.helpers.training_metrics_class import TrainingMetrics
+from torch_nn_training.saver.results_of_epochs import (results_of_epochs)
+from torch_nn_training.configuration.config_class import Config
+from torch_nn_training.trainer.training_metrics_class import TrainingMetrics
 
 
 class TorchModelSaver:

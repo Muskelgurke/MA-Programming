@@ -1,4 +1,3 @@
-# Kombinierte Konfigurationsdatei für Single- und Multi-Parameter-Training
 # Base Configuration: Grundeinstellungen für alle Trainings
 base_config:
   random_seed: 43
