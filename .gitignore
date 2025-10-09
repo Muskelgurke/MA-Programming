@@ -4,3 +4,4 @@
 /NNTrainingTorch/training_runs/
 __pycache__/
 /NNTrainingTorch/runs/
+/.venv*

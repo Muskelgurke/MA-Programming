@@ -8,6 +8,8 @@ class EarlyStopping:
         self.best_model_state = None
 
     def __call__(self, val_loss, model):
+        if val_loss is None:
+            self.early_stop = True
         score = -val_loss
 
         if self.best_score is None:

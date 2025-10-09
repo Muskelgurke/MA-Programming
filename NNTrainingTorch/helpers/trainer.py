@@ -104,7 +104,7 @@ class Trainer:
 
             # data loading
             self.model.train()
-            inputs, targets = inputs.to(self.device), targets.to(self.device)
+
             self.optimizer.zero_grad()
 
             # Forward
@@ -160,6 +160,12 @@ class Trainer:
                 # Absolute Differenz
                 gradient_diff = estimated_grads_flat - true_grads_flat
                 self.metrics.abs_of_diff_true_esti_grads_batch.append(torch.abs(gradient_diff))
+
+                # Variance der geschätzten Gradienten
+                var_of_esti_grad = torch.var(estimated_grads_flat).item()
+                self.metrics.var_of_esti_grads_batch.append(var_of_esti_grad)
+                var_of_true_grad = torch.var(true_grads_flat).item()
+                self.metrics.var_of_true_grads_batch.append(var_of_true_grad)
 
                 #Standardabweichung der Differenz
                 std_of_difference_true_esti_grads = torch.std(gradient_diff).item()
@@ -236,7 +242,9 @@ class Trainer:
                 mae_grads=mae_grads,
                 std_difference=std_of_difference_true_esti_grads,
                 std_estimated=std_of_esti_grad,
-                std_true=std_of_true_grad
+                var_estimated=var_of_esti_grad,
+                std_true=std_of_true_grad,
+                var_true= var_of_true_grad
             )
 
             # Update progress bar
@@ -262,6 +270,7 @@ class Trainer:
         self.metrics.epoch_avg_std_difference = float(np.mean(self.metrics.std_of_difference_true_esti_grads_batch))
         self.metrics.epoch_avg_std_estimated = float(np.mean(self.metrics.std_of_esti_grads_batch))
         self.metrics.epoch_avg_std_true = float(np.mean(self.metrics.std_of_true_grads_batch))
+        self.metrics.epoch_avg_var_estimated = float(np.mean(self.metrics.var_of_esti_grads_batch))
         self.metrics.num_batches = len(self.data_loader)
         # Writer Logging per Epoch
         self.tensorboard_writer.add_scalar('Train/Accuracy - Epoch',
@@ -275,7 +284,6 @@ class Trainer:
         self.tensorboard_writer.add_scalar('Train/Loss - Epoch',
                                            self.metrics.epoch_avg_train_loss,
                                            self.epoch_num)
-        self.saver.write_batch_metrics
         pbar.close()
 
     def _train_epoch_forward_gradient(self) -> None:

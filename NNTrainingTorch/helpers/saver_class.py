@@ -113,7 +113,9 @@ class TorchModelSaver:
             'avg_mae_grads',
             'avg_std_difference',
             'avg_std_estimated',
+            'avg_var_estimated',
             'avg_std_true',
+            'avg_var_true',
             'num_batches'
         ]
         # Initialize CSV file with headers if not done yet
@@ -136,6 +138,8 @@ class TorchModelSaver:
             'avg_std_difference': training_metrics.epoch_avg_std_difference,
             'avg_std_estimated': training_metrics.epoch_avg_std_estimated,
             'avg_std_true': training_metrics.epoch_avg_std_true,
+            'avg_var_estimated': training_metrics.epoch_avg_var_estimated,
+            'avg_var_true': training_metrics.epoch_avg_var_true,
             'num_batches': training_metrics.num_batches
         }
 
@@ -162,7 +166,9 @@ class TorchModelSaver:
             'mae_grads',
             'std_difference',
             'std_estimated',
-            'std_true'
+            'var_estimated',
+            'std_true',
+            'var_true'
         ]
 
         # Initialize CSV file with headers if not done yet
@@ -183,7 +189,9 @@ class TorchModelSaver:
             'mae_grads': kwargs.get('mae_grads', ''),
             'std_difference': kwargs.get('std_difference', ''),
             'std_estimated': kwargs.get('std_estimated', ''),
-            'std_true': kwargs.get('std_true', '')
+            'var_estimated': kwargs.get('var_estimated', ''),
+            'std_true': kwargs.get('std_true', ''),
+            'var_true': kwargs.get('var_true', '')
         }
 
         # Write row to CSV

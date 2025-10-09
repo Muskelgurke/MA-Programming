@@ -13,10 +13,13 @@ class Config:
     dataset_path: str
     model_type: str
     training_method: str # e.g., "backpropagation", "forward_gradient"
+    optimizer: str # e.g., "SGD", "Adam"
+    momentum: float
     early_stopping_delta: float
     early_stopping: bool = False
     early_stopping_patience: Optional[int] = None
     augment_data: bool = False
+
 
     @classmethod
     def from_yaml(cls, yaml_path: str = "") -> "Config":

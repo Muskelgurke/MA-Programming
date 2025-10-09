@@ -187,6 +187,7 @@ def start_NN(config: Config, train_loader: torch.utils.data.DataLoader, test_loa
     test_accs_per_epoch = []
     epoch_times_per_epoch = []
 
+    # To Do
     for epoch in range(config.epoch_num):
         start_time = time.time()
 
@@ -269,11 +270,19 @@ def get_optimizer_and_lossfunction(config: Config, model: torch.nn.Module) -> tu
             optimizer = torch.optim.SGD(model.parameters(), lr=config.learning_rate)
             loss_function = nn.MSELoss()
         case "mnist" | "fashionmnist" | "small_mnist_for_manual_calculation":
-            #optimizer = torch.optim.Adam(model.parameters(), lr=config.learning_rate)
-            optimizer = torch.optim.SGD(model.parameters(), lr=config.learning_rate)
+            if config.optimizer == "sgd":
+                optimizer = torch.optim.SGD(model.parameters(),
+                                            lr=config.learning_rate,
+                                            momentum=config.momentum)
+            if config.optimizer == "adam":
+                optimizer = torch.optim.Adam(model.parameters(),
+                                             lr=config.learning_rate)
+
             loss_function = nn.CrossEntropyLoss()
         case _:
             raise ValueError(f"Unknown dataset_name. Can´t load optimizer and loss_function: {config.dataset_name}")
+
+
     return loss_function, optimizer
 
 

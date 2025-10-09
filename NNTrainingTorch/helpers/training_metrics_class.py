@@ -13,6 +13,8 @@ class TrainingMetrics:
     epoch_avg_std_difference: float = 0.0
     epoch_avg_std_estimated: float = 0.0
     epoch_avg_std_true: float = 0.0
+    epoch_avg_var_estimated: float = 0.0
+    epoch_avg_var_true: float = 0.0
     num_batches: int = 0
     epoch_avg_cosine_similarity: float = 0.0
     cosine_of_esti_true_grads_batch: List[float] = field(default_factory=list)
@@ -21,6 +23,8 @@ class TrainingMetrics:
     std_of_difference_true_esti_grads_batch: List[float] = field(default_factory=list)
     std_of_esti_grads_batch: List[float] = field(default_factory=list)
     std_of_true_grads_batch: List[float] = field(default_factory=list)
+    var_of_esti_grads_batch: List[float] = field(default_factory=list)
+    var_of_true_grads_batch: List[float] = field(default_factory=list)
     mse_true_esti_grads_batch: List[float] = field(default_factory=list)
     mae_true_esti_grad_batch: List[float] = field(default_factory=list)
 

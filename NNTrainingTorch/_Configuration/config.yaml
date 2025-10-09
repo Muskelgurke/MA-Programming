@@ -9,6 +9,8 @@ base_config:
   batch_size: 64
   augment_data: false
   model_type: fc
+  optimizer: sgd
+  momentum: 0.9
   early_stopping: true
   early_stopping_patience: 5
   early_stopping_delta: 0.01
@@ -19,24 +21,21 @@ base_config:
 # Wenn nicht, wird der Wert aus base_config genommen
 multi_params:
   learning_rate:
-    - 0.01
-    - 0.005
-    - 0.001
     - 0.0001
-    - 0.00001
-
+    - 0.0002
+    - 0.0003
+    - 0.0004
+    - 0.0005
   training_method:
-    - bp
     - fgd
 
   random_seed:
     - 42
-    - 26
-    - 8
-    - 69
-    - 1337
-    - 2
     - 34
+
+  optimizer:
+    - sgd
+    - adam
 
   # Optional: Weitere Parameter
   # batch_size:
