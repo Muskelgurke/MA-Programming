@@ -4,10 +4,10 @@ import numpy as np
 
 from torch import nn
 from tqdm import tqdm
-from NNTrainingTorch.helpers.config_class import Config
+from torch_nn_training.helpers.config_class import Config
 from torch.utils.tensorboard import SummaryWriter
-from NNTrainingTorch.helpers.training_metrics_class import TrainingMetrics
-from NNTrainingTorch.helpers.saver_class import TorchModelSaver
+from torch_nn_training.helpers.training_metrics_class import TrainingMetrics
+from torch_nn_training.helpers.saver_class import TorchModelSaver
 
 class Trainer:
     """

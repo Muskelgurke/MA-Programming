@@ -3,8 +3,8 @@ import torch
 from torch.nn import MSELoss
 from tqdm import tqdm
 from torch.utils.tensorboard import SummaryWriter
-from NNTrainingTorch.helpers.config_class import Config
-from NNTrainingTorch.helpers.tester_metrics_class import TesterMetrics
+from torch_nn_training.helpers.config_class import Config
+from torch_nn_training.helpers.tester_metrics_class import TesterMetrics
 
 class Tester:
     def __init__(self,

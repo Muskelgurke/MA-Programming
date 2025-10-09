@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import List, Any
 
-from NNTrainingTorch.helpers.training_metrics_class import TrainingMetrics
+from torch_nn_training.helpers.training_metrics_class import TrainingMetrics
 
 
 @dataclass

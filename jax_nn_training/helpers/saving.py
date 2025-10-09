@@ -9,8 +9,8 @@ import jax.numpy as jnp
 from jax import Array
 import toml
 
-from NNTrainingJAX.helpers import plotting
-from NNTrainingJAX.helpers.TrainingResults import TrainingResults
+from jax_nn_training.helpers import plotting
+from jax_nn_training.helpers.TrainingResults import TrainingResults
 
 
 def save_jax_array(array: Array, filepath: Path) -> None:

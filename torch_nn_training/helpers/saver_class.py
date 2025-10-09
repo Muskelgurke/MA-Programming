@@ -9,10 +9,10 @@ from typing import Dict, Any, Union
 
 import numpy as np
 
-from NNTrainingTorch.helpers import plotting
-from NNTrainingTorch.helpers.results_of_epochs import (results_of_epochs)
-from NNTrainingTorch.helpers.config_class import Config
-from NNTrainingTorch.helpers.training_metrics_class import TrainingMetrics
+from torch_nn_training.helpers import plotting
+from torch_nn_training.helpers.results_of_epochs import (results_of_epochs)
+from torch_nn_training.helpers.config_class import Config
+from torch_nn_training.helpers.training_metrics_class import TrainingMetrics
 
 
 class TorchModelSaver:

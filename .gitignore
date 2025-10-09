@@ -1,7 +1,7 @@
 /.idea/workspace.xml
 /_Dataset/
-/NNTrainingJAX/training_runs/
-/NNTrainingTorch/training_runs/
+/jax_nn_training/training_runs/
+/torch_nn_training/training_runs/
 __pycache__/
-/NNTrainingTorch/runs/
+/torch_nn_training/runs/
 /.venv*

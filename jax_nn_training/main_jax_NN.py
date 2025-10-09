@@ -1,8 +1,8 @@
-from NNTrainingJAX.helpers import saving
-from NNTrainingJAX.helpers.TrainingConfiguration import TrainingConfiguration
-from NNTrainingJAX.helpers.TrainingResults import TrainingResults
-from NNTrainingJAX.helpers.TrainingData import TrainingData
-from NNTrainingJAX.helpers.JAXModel import JAXModel
+from jax_nn_training.helpers import saving
+from jax_nn_training.helpers.TrainingConfiguration import TrainingConfiguration
+from jax_nn_training.helpers.TrainingResults import TrainingResults
+from jax_nn_training.helpers.TrainingData import TrainingData
+from jax_nn_training.helpers.JAXModel import JAXModel
 
 from typing import List, Tuple, Callable
 from torch.utils.data import DataLoader, default_collate

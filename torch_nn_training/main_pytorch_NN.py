@@ -5,15 +5,15 @@ import torch
 from torch import nn
 from torch.utils.tensorboard import SummaryWriter
 
-from NNTrainingTorch.helpers.training_metrics_class import TrainingMetrics
-from NNTrainingTorch.helpers.config_class import Config, MultiParamLoader
-from NNTrainingTorch.helpers.saver_class import TorchModelSaver
-from NNTrainingTorch.helpers.results_of_epochs import results_of_epochs
-from NNTrainingTorch.helpers.early_stopping import EarlyStopping
-from NNTrainingTorch.helpers.trainer import Trainer
-from NNTrainingTorch.helpers.tester import Tester
-import NNTrainingTorch.helpers.datasets as datasets_helper
-import NNTrainingTorch.helpers.model as model_helper
+from torch_nn_training.helpers.training_metrics_class import TrainingMetrics
+from torch_nn_training.helpers.config_class import Config, MultiParamLoader
+from torch_nn_training.helpers.saver_class import TorchModelSaver
+from torch_nn_training.helpers.results_of_epochs import results_of_epochs
+from torch_nn_training.helpers.early_stopping import EarlyStopping
+from torch_nn_training.helpers.trainer import Trainer
+from torch_nn_training.helpers.tester import Tester
+import torch_nn_training.helpers.datasets as datasets_helper
+import torch_nn_training.helpers.model as model_helper
 
 def run_multi_training():
     """Führt Multi-Parameter-Training basierend auf kombinierter YAML-Konfiguration durch"""
