@@ -37,27 +37,6 @@ class Config:
         """Convert Config object to dictionary"""
         return asdict(self)
 
-@dataclass
-class MultiConfig:
-    """Holds multiple configurations for hyperparameter tuning."""
-    configs: List[Config]
-
-    @classmethod
-    def from_yaml(cls, yaml_path: str) -> "MultiConfig":
-        """Load multiple configurations from a YAML file."""
-        with open(yaml_path, "r") as file:
-            config_data = yaml.safe_load(file)
-
-        # Expecting the YAML to have a top-level key for each config
-        configs = [Config.from_dict({**config_data[key], "config_name": key}) for key in config_data]
-        return cls(configs)
-
-    def to_yaml(self, yaml_path: str):
-        """Save multiple configurations to a YAML file."""
-        with open(yaml_path, "w") as file:
-            for config in self.configs:
-                yaml.dump({config.config_name: config.to_dict()}, file)
-
 class MultiParamLoader:
     """Hilfsklasse zum Laden und Verarbeiten von Multi-Parameter-Konfigurationen"""
 
