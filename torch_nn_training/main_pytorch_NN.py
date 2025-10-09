@@ -52,7 +52,7 @@ def run_multi_training():
 
             try:
                 train_loader, test_loader = datasets_helper.get_dataloaders(config)
-                result = start_NN(config, train_loader, test_loader, run_number=i+1)
+                result = start_nn_run(config, train_loader, test_loader, run_number=i + 1)
 
                 results.append({
                     'run': i+1,
@@ -136,7 +136,7 @@ def print_training_summary(results: list):
 
     print("="*80)
 
-def start_NN(config: Config, train_loader: torch.utils.data.DataLoader, test_loader: torch.utils.data.DataLoader, run_number: int = 1):
+def start_nn_run(config: Config, train_loader: torch.utils.data.DataLoader, test_loader: torch.utils.data.DataLoader, run_number: int = 1):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Using device: {device}")
     model = model_helper.get_model(config)
@@ -154,9 +154,11 @@ def start_NN(config: Config, train_loader: torch.utils.data.DataLoader, test_loa
     early_stopping = EarlyStopping(patience=config.early_stopping_patience,
                                    delta=config.early_stopping_delta) if config.early_stopping else None
 
-    timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+    timestamp = datetime.datetime.now().strftime("%H_%M_%S")
+    date = datetime.datetime.now().strftime("%Y_%m_%d")
+
     # Erweiterte Namensgebung für Multi-Parameter-Training
-    run_path = f'runs/{timestamp}_run{run_number}_{config.dataset_name}_{config.model_type}_{config.training_method}_lr{config.learning_rate}_seed{config.random_seed}'
+    run_path = f'runs/{date}/{timestamp}_run{run_number}_{config.dataset_name}_{config.model_type}_{config.training_method}_lr{config.learning_rate}_seed{config.random_seed}'
     tensorboard_writer = SummaryWriter(log_dir=run_path)
     saver = TorchModelSaver(tensorboard_writer.log_dir) # eigener Saver gebaut. Plotting etc.
 
@@ -231,25 +233,10 @@ def start_NN(config: Config, train_loader: torch.utils.data.DataLoader, test_loa
     print(f"Durchschnittliche Zeit pro Epoch: {statistics.mean(epoch_times_per_epoch):.2f}s")
     print("-" * 60)
 
-    results = results_of_epochs(
-        train_accs  =     train_accs_per_epoch,
-        test_accs   =      test_accs_per_epoch,
-        train_losses=   train_losses_per_epoch,
-        test_losses =    test_losses_per_epoch,
-        epoch_times =    epoch_times_per_epoch
-    )
 
-    saver.save_session(results_of_epoch=results,
-                       config= config,
+    saver.save_session(config= config,
                        model= model,
-                       save_full_model=True)
-
-
-    ###########################################################################################
-    # Linear Regresssion Demo Extra Output
-    if config.dataset_name == "demo_linear_regression":
-        print(f'\nYour New Funktion: y = {model.linear.weight.item():.6f} * X + {model.linear.bias.item():.6f}\n')
-    ###########################################################################################
+                       save_full_model= True)
 
     # Für Multi-Parameter-Training: Ergebnisse zurückgeben
     return {
@@ -302,7 +289,7 @@ if __name__ == "__main__":
         config_path = "config.yaml"
         training_configurations = load_config_File(config_path)
         train_loader, test_loader = datasets_helper.get_dataloaders(training_configurations)
-        start_NN(training_configurations, train_loader, test_loader)
+        start_nn_run(training_configurations, train_loader, test_loader)
 
     elif choice == "2":
         # Multi-Parameter Training
@@ -313,4 +300,4 @@ if __name__ == "__main__":
         config_path = "config.yaml"
         training_configurations = load_config_File(config_path)
         train_loader, test_loader = datasets_helper.get_dataloaders(training_configurations)
-        start_NN(training_configurations, train_loader, test_loader)
+        start_nn_run(training_configurations, train_loader, test_loader)

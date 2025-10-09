@@ -42,8 +42,8 @@ class TorchModelSaver:
             # Loading full model
             return torch.load(filepath, map_location='cpu')
 
-    def save_session(self, results_of_epoch: results_of_epochs,
-                     config: Config, model: torch.nn.Module,
+    def save_session(self,config: Config,
+                     model: torch.nn.Module,
                      save_full_model: bool = False) -> Path:
         """
         Save complete PyTorch training session including model, metrics, and configuration.
@@ -57,13 +57,7 @@ class TorchModelSaver:
         Returns:
             Path to the created training directory
         """
-        train_accs = results_of_epoch.train_accs
-        test_accs = results_of_epoch.test_accs
-        train_losses = results_of_epoch.train_losses
-        test_losses = results_of_epoch.test_losses
-        epoch_times = results_of_epoch.epoch_times
-
-        # Prepare training data for yaml
+       # Prepare training data for yaml
         training_config = config.to_dict()
 
         yaml_path = self.run_dir / "training_info.yaml"
