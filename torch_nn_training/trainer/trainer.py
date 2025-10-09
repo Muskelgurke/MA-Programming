@@ -94,9 +94,13 @@ class Trainer:
         std_of_difference_true_esti_grads = 0
         cosine_sim_esti_true_grads = 0
         std_of_esti_grad = 0
+        var_of_esti_grad = 0
         std_of_true_grad = 0
+        var_of_true_grad = 0
         mse_grads = 0
         mae_grads = 0
+        loss_esti = 0 # loss of forward AD (Estimated Gradient)
+        loss_true = 0 # loss of bakprop (True Gradient
 
         pbar = tqdm(self.data_loader, desc=f'FGD Training Epoch {self.epoch_num}/{self.total_epochs}')
 
@@ -136,7 +140,7 @@ class Trainer:
                     true_grads_flat = torch.cat([g.view(-1) for g in true_grads])
 
                 # Compute JVP (Forward AD)
-                loss, dir_der = torch.func.jvp(
+                loss_esti, dir_der = torch.func.jvp(
                     lambda params: loss_fn(params, inputs, targets),
                     (params,),
                     (v_params,)
@@ -187,14 +191,14 @@ class Trainer:
 
                 self.optimizer.step()
 
-                if torch.isnan(loss):
+                if torch.isnan(loss_esti):
                     print(f"NaN loss detected in batch {batch_idx}")
 
             except Exception as e:
                 print(f'Error in batch {batch_idx}: {e}')
 
             # Calculate metrics
-            sum_loss += loss.item()
+            sum_loss += loss_esti.item()
 
             with torch.no_grad():
                 outputs = self.model(inputs)
@@ -210,7 +214,7 @@ class Trainer:
             # Tensorboard Logging
             unique_increasing_counter = (self.epoch_num - 1) * len(self.data_loader) + batch_idx
             if self.tensorboard_writer is not None:
-                self.tensorboard_writer.add_scalar('Train/Loss - Batch', loss.item(), unique_increasing_counter)
+                self.tensorboard_writer.add_scalar('Train/Loss - Batch', loss_esti.item(), unique_increasing_counter)
                 self.tensorboard_writer.add_scalar('Train/Accuracy - Batch', acc_of_batch, unique_increasing_counter)
                 self.tensorboard_writer.add_scalar('GradientMetrics/Cosine_Esti_True - Batch',
                                                    cosine_sim_esti_true_grads,
@@ -235,7 +239,7 @@ class Trainer:
             self.saver.write_batch_metrics(
                 epoch=self.epoch_num,
                 batch_idx=batch_idx,
-                loss=loss.item(),
+                loss=loss_esti.item(),
                 accuracy=acc_of_batch,
                 cosine_similarity=cosine_sim_esti_true_grads,
                 mse_grads=mse_grads,
@@ -250,7 +254,7 @@ class Trainer:
             # Update progress bar
             pbar.update(1)
             pbar.set_postfix({
-                'Train Loss': f' {loss.item():.4f}'
+                'Train Loss': f' {loss_esti.item():.4f}'
             })
 
 
