@@ -6,8 +6,9 @@ class EarlyStopping:
         self.early_stop = False
         self.counter = 0
         self.best_model_state = None
+        self.early_stop_inf = {}
 
-    def __call__(self, val_loss, model):
+    def check_validation(self, val_loss, model):
         if val_loss is None:
             self.early_stop = True
         score = -val_loss
@@ -26,3 +27,12 @@ class EarlyStopping:
 
     def load_best_model(self, model):
         model.load_state_dict(self.best_model_state)
+
+    def set_break_info(self,info: dict) -> None:
+        self.early_stop_info = info
+
+    def break_cause_nan_is_loss(self,)->None:
+        self.early_stop_nan_loss = True
+
+    def get_break_info(self)->dict:
+        return self.early_stop_info

@@ -8,6 +8,7 @@ from torch_nn_training.configuration.config_class import Config
 from torch.utils.tensorboard import SummaryWriter
 from torch_nn_training.trainer.training_metrics_class import TrainingMetrics
 from torch_nn_training.saver.saver_class import TorchModelSaver
+from torch_nn_training.helpers.early_stopping import EarlyStopping
 
 class Trainer:
     """
@@ -24,7 +25,8 @@ class Trainer:
                  total_epochs: int,
                  seed: int,
                  tensorboard_writer: torch.utils.tensorboard.SummaryWriter,
-                 saver_class: TorchModelSaver):
+                 saver_class: TorchModelSaver,
+                 early_stopping_class: EarlyStopping):
 
         """Initialize the trainer with all required parameters."""
         self.model = model
@@ -42,6 +44,7 @@ class Trainer:
         self.training_dir = self.tensorboard_writer.log_dir
         self.saver = saver_class
         self.metrics = TrainingMetrics()
+        self.early_stopping = early_stopping_class
 
         torch.manual_seed(self.seed)
         np.random.seed(self.seed)
@@ -62,7 +65,7 @@ class Trainer:
         y = torch.func.functional_call(self.model, (params, {}), (x,))
         return nn.functional.cross_entropy(y, targets)
 
-    def train_epoch(self, epoch_num: int) -> TrainingMetrics:
+    def train_epoch(self, epoch_num: int) -> tuple[TrainingMetrics, dict]:
         """
         Train the model for one epoch using functional forward gradient descent.
         """
@@ -100,7 +103,8 @@ class Trainer:
         mse_grads = 0
         mae_grads = 0
         loss_esti = 0 # loss of forward AD (Estimated Gradient)
-        loss_true = 0 # loss of bakprop (True Gradient
+        loss_true = 0 # loss of bakprop (True Gradient)
+        last_valid_loss = None
 
         pbar = tqdm(self.data_loader, desc=f'FGD Training Epoch {self.epoch_num}/{self.total_epochs}')
 
@@ -145,6 +149,27 @@ class Trainer:
                     (params,),
                     (v_params,)
                 )
+
+                if torch.isnan(loss_esti):
+                    print(f"\n NaN loss detected in batch {batch_idx}")
+                    if last_valid_loss is not None:
+                        print(f"Using last valid loss: {last_valid_loss}")
+                        loss_esti = last_valid_loss
+                    else:
+                        print("No valid loss available, stopping training")
+                    print("stopping training due to NaN loss")
+                    early_stop_info = {
+                        "reason": "nan_loss_detected",
+                        "stopped_at_epoch": self.epoch_num,
+                        "stopped_at_batch": batch_idx,
+                        "last_valid_loss": last_valid_loss
+                    }
+                    self.early_stopping.set_break_info(info=early_stop_info)
+                    self.early_stopping.break_cause_nan_is_loss()
+                    break
+
+
+                last_valid_loss = loss_esti.item()
                 estimated_gradients = []
                 # Set gradients: gradient = v * jvp (scalar multiplication)
                 with torch.no_grad():
@@ -191,8 +216,6 @@ class Trainer:
 
                 self.optimizer.step()
 
-                if torch.isnan(loss_esti):
-                    print(f"NaN loss detected in batch {batch_idx}")
 
             except Exception as e:
                 print(f'Error in batch {batch_idx}: {e}')

@@ -171,7 +171,8 @@ def start_nn_run(config: Config, train_loader: torch.utils.data.DataLoader, test
                       total_epochs=config.epoch_num,
                       seed=config.random_seed,
                       tensorboard_writer=tensorboard_writer,
-                      saver_class=saver)
+                      saver_class=saver,
+                      early_stopping_class=early_stopping)
 
     tester = Tester(config_file=config,
                     model=model,
@@ -187,7 +188,6 @@ def start_nn_run(config: Config, train_loader: torch.utils.data.DataLoader, test
     test_losses_per_epoch = []
     test_accs_per_epoch = []
     epoch_times_per_epoch = []
-
     # To Do
     for epoch in range(config.epoch_num):
         start_time = time.time()
@@ -223,22 +223,51 @@ def start_nn_run(config: Config, train_loader: torch.utils.data.DataLoader, test
                               tester_results.test_acc_per_epoch,
                               epoch)
 
-        early_stopping(tester.avg_validation_loss, model)
+        if early_stopping.early_stop_nan_loss:
+            run_time = time.time() - start_time
+
+            saver.write_run_summary(config=config,
+                                    total_training_time=run_time,
+                                    train_acc=train_accs_per_epoch[-1],
+                                    test_acc=test_accs_per_epoch[-1],
+                                    test_loss=test_losses_per_epoch[-1],
+                                    early_stop_info=early_stopping.get_break_info())
+            break
+
+
+        early_stopping.check_validation(tester.avg_validation_loss, model)
         if early_stopping.early_stop:
+            run_time = time.time() - start_time
+
+            early_stop_info = {
+                "reason": "early_stopping_patience",
+                "stopped_at_epoch": epoch,
+                "patience_reached": True
+            }
+            saver.write_run_summary(config=config,
+                                    total_training_time=run_time,
+                                    train_acc=train_accs_per_epoch[-1],
+                                    test_acc=test_accs_per_epoch[-1],
+                                    test_loss=test_losses_per_epoch[-1],
+                                    early_stop_info=early_stop_info
+                                    )
             print(f"Stopping early at Epoch {epoch + 1}")
             break
+
 
     print("-"* 60)
     print("\nTraining and Testing completed")
     print(f"Durchschnittliche Zeit pro Epoch: {statistics.mean(epoch_times_per_epoch):.2f}s")
     print("-" * 60)
 
-
     saver.save_session(config= config,
                        model= model,
                        save_full_model= True)
 
+
     # Für Multi-Parameter-Training: Ergebnisse zurückgeben
+
+
     return {
         'final_train_acc': train_accs_per_epoch[-1] if train_accs_per_epoch else 0.0,
         'final_test_acc': test_accs_per_epoch[-1] if test_accs_per_epoch else 0.0,

@@ -136,8 +136,34 @@ class TorchModelSaver:
             writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
             writer.writerow(row_data)
 
+    def write_run_summary(self, config: Config,
+                          total_training_time: float,
+                          train_acc: float = None,
+                          test_acc: float = None,
+                          test_loss: float = None,
+                          early_stop_info: Dict = None) -> None:
+        """Save run information including configuration and total training time"""
+        # Prepare run summary
+        run_info = {
+            "total_training_time_seconds": total_training_time
+        }
 
+        # Add final metrics if provided
+        if train_acc is not None:
+            run_info["final_train_accuracy"] = train_acc
+        if test_acc is not None:
+            run_info["final_test_accuracy"] = test_acc
+        if test_loss is not None:
+            run_info["final_test_loss"] = test_loss
 
+        # Add early stopping information if provided
+        if early_stop_info is not None:
+            run_info["early_stopping"] = early_stop_info
+
+        # Save run summary to YAML
+        run_info_path = self.run_dir / "run_summary.yaml"
+        with open(run_info_path, 'w') as f:
+            yaml.dump(run_info, f, default_flow_style=False)
 
 
     def write_batch_metrics(self, epoch: int, batch_idx: int, loss: float,
