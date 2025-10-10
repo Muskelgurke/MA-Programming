@@ -110,7 +110,7 @@ def run_multi_training(config_path: str = None,
 
         # Alle Kombinationen durchlaufen
         results = []
-
+        saver = None
         for i, config in enumerate(configs):
             print(f"\n{'='*60}")
             print(f"Training {i+1}/{len(configs)}")
@@ -150,8 +150,12 @@ def run_multi_training(config_path: str = None,
                     },
                     'error': str(e)
                 })
-
-        print_save_session_summary(results,saver)
+        saver_for_summary = None
+        for result in results:
+            if 'error' not in result:
+                saver_for_summary = saver
+                break
+        print_save_session_summary(results,saver_for_summary)
 
 
     except FileNotFoundError as e:
@@ -207,7 +211,7 @@ def print_save_session_summary(results: list,
             print(f"Lauf {result['run']}: {result['error']}")
 
     print("="*80)
-    if saver is None:
+    if saver is not None:
         saver.write_multi_session_summary(successful_runs=successful_runs, failed_runs=failed_runs)
     else:
         print("Warnung: kein saver verfügbar, um die Zusammenfassung zu speichern.")
