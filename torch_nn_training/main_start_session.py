@@ -207,8 +207,10 @@ def print_save_session_summary(results: list,
             print(f"Lauf {result['run']}: {result['error']}")
 
     print("="*80)
-    saver.write_multi_session_summary(successful_runs=successful_runs, failed_runs=failed_runs)
-
+    if saver is None:
+        saver.write_multi_session_summary(successful_runs=successful_runs, failed_runs=failed_runs)
+    else:
+        print("Warnung: kein saver verfügbar, um die Zusammenfassung zu speichern.")
 def start_nn_run(config: Config,
                  train_loader: torch.utils.data.DataLoader,
                  test_loader: torch.utils.data.DataLoader,
@@ -382,6 +384,7 @@ def load_config_File(config_path: str)->Config:
     return Config.from_dict(base_config_dict)
 
 if __name__ == "__main__":
+
     parser = setup_argument_parser()
     args = parser.parse_args()
 
