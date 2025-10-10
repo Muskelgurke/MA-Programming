@@ -226,12 +226,13 @@ def start_nn_run(config: Config, train_loader: torch.utils.data.DataLoader, test
         if early_stopping.early_stop_nan_loss:
             run_time = time.time() - start_time
 
+
             saver.write_run_summary(config=config,
                                     total_training_time=run_time,
                                     train_acc=train_accs_per_epoch[-1],
                                     test_acc=test_accs_per_epoch[-1],
                                     test_loss=test_losses_per_epoch[-1],
-                                    early_stop_info=early_stopping.get_break_info())
+                                    early_stop_info=early_stopping.early_stop_info)
             break
 
 

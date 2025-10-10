@@ -34,5 +34,8 @@ class EarlyStopping:
     def break_cause_nan_is_loss(self,)->None:
         self.early_stop_nan_loss = True
 
-    def get_break_info(self)->dict:
-        return self.early_stop_info
+    def reset_early_stop(self)->None:
+        self.early_stop = False
+        self.counter = 0
+        self.best_score = None
+        self.best_model_state = None

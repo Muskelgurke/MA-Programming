@@ -5,7 +5,6 @@ import yaml
 from pathlib import Path
 from typing import Dict, Any
 
-from torch_nn_training.saver.results_of_epochs import (results_of_epochs)
 from torch_nn_training.configuration.config_class import Config
 from torch_nn_training.trainer.training_metrics_class import TrainingMetrics
 
