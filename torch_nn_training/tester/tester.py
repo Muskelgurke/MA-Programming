@@ -2,8 +2,8 @@ import numpy as np
 import torch
 from tqdm import tqdm
 from torch.utils.tensorboard import SummaryWriter
-from torch_nn_training.configuration.config_class import Config
-from torch_nn_training.tester.tester_metrics_class import TesterMetrics
+from configuration.config_class import Config
+from tester.tester_metrics_class import TesterMetrics
 
 class Tester:
     def __init__(self,

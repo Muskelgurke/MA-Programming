@@ -4,11 +4,11 @@ import numpy as np
 
 from torch import nn
 from tqdm import tqdm
-from torch_nn_training.configuration.config_class import Config
+from configuration.config_class import Config
 from torch.utils.tensorboard import SummaryWriter
-from torch_nn_training.trainer.training_metrics_class import TrainingMetrics
-from torch_nn_training.saver.saver_class import TorchModelSaver
-from torch_nn_training.helpers.early_stopping import EarlyStopping
+from trainer.training_metrics_class import TrainingMetrics
+from saver.saver_class import TorchModelSaver
+from helpers.early_stopping import EarlyStopping
 
 class Trainer:
     """

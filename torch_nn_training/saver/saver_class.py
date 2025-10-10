@@ -5,8 +5,8 @@ import yaml
 from pathlib import Path
 from typing import Dict, Any
 
-from torch_nn_training.configuration.config_class import Config
-from torch_nn_training.trainer.training_metrics_class import TrainingMetrics
+from configuration.config_class import Config
+from trainer.training_metrics_class import TrainingMetrics
 
 
 class TorchModelSaver:

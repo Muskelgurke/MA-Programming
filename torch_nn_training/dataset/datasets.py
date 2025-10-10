@@ -1,6 +1,6 @@
 import torch.utils.data
 from torchvision import datasets, transforms
-from torch_nn_training.configuration.config_class import Config
+from configuration.config_class import Config
 
 def get_linear_regression_dataloaders(config: Config) -> tuple[torch.utils.data.DataLoader, torch.utils.data.DataLoader]:
     """
