@@ -11,7 +11,7 @@ from helpers.early_stopping import EarlyStopping
 from trainer.trainer import Trainer
 from tester.tester import Tester
 import dataset.datasets as datasets_helper
-import model as model_helper
+import model.model as model_helper
 
 def run_multi_training():
     """Führt Multi-Parameter-Training basierend auf kombinierter YAML-Konfiguration durch"""
