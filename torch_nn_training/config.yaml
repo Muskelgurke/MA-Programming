@@ -21,6 +21,7 @@ base_config:
 multi_params:
   learning_rate:
     - 0.004
+    - 0.001
   training_method:
     - fgd
 

@@ -2,8 +2,10 @@ import csv
 import json
 import torch
 import yaml
+import datetime
 from pathlib import Path
 from typing import Dict, Any
+
 
 from configuration.config_class import Config
 from trainer.training_metrics_class import TrainingMetrics
@@ -163,6 +165,100 @@ class TorchModelSaver:
         run_info_path = self.run_dir / "run_summary.yaml"
         with open(run_info_path, 'w') as f:
             yaml.dump(run_info, f, default_flow_style=False)
+
+    def write_multi_session_summary(self,
+                                    successful_runs: list,
+                                    failed_runs: list) -> None:
+        """Save multi-run training summary to CSV with ranking"""
+        timestamp = datetime.datetime.now().strftime("%H_%M_%S")
+        today = datetime.datetime.now().strftime("%Y_%m_%d")
+        day_path = Path(f"runs/{today}/{timestamp}_multi_run_summary")
+
+        day_path.mkdir(parents=True, exist_ok=True)
+
+        # CSV für erfolgreiche Läufe
+        if successful_runs:
+            # Nach Test-Accuracy sortieren
+            successful_runs.sort(key=lambda x: x['final_test_acc'], reverse=True)
+
+            successful_csv_path = day_path / "xx_multi_run_rank_summary.csv"
+            fieldnames = [
+                'rank',
+                'run_id',
+                'learning_rate',
+                'training_method',
+                'random_seed',
+                'final_train_acc',
+                'final_test_acc',
+                'final_train_loss',
+                'final_test_loss',
+                'total_training_time'
+            ]
+
+            with open(successful_csv_path, 'w', newline='') as csvfile:
+                writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+                writer.writeheader()
+
+                for rank, result in enumerate(successful_runs, 1):
+                    config = result['config']
+                    row_data = {
+                        'rank': rank,
+                        'run_id': result['run'],
+                        'learning_rate': config['learning_rate'],
+                        'training_method': config['training_method'],
+                        'random_seed': config['random_seed'],
+                        'final_train_acc': result['final_train_acc'],
+                        'final_test_acc': result['final_test_acc'],
+                        'final_train_loss': result['final_train_loss'],
+                        'final_test_loss': result['final_test_loss'],
+                        'total_training_time': result.get('total_training_time', '')
+                    }
+                    writer.writerow(row_data)
+
+        # CSV für fehlgeschlagene Läufe
+        if failed_runs:
+            failed_csv_path = day_path / "xx_multi_run_results_failed.csv"
+            fieldnames = ['run_id', 'error', 'learning_rate', 'training_method', 'random_seed']
+
+            with open(failed_csv_path, 'w', newline='') as csvfile:
+                writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+                writer.writeheader()
+
+                for result in failed_runs:
+                    config = result.get('config', {})
+                    row_data = {
+                        'run_id': result['run'],
+                        'error': result['error'],
+                        'learning_rate': config.get('learning_rate', ''),
+                        'training_method': config.get('training_method', ''),
+                        'random_seed': config.get('random_seed', '')
+                    }
+                    writer.writerow(row_data)
+
+        # Kombinierte Übersicht
+        overview_csv_path = day_path / "xx_multi_run_overview.csv"
+        with open(overview_csv_path, 'w', newline='') as csvfile:
+            writer = csv.writer(csvfile)
+            writer.writerow(['Summary', 'Count'])
+            writer.writerow(['Total Runs', len(successful_runs) + len(failed_runs)])
+            writer.writerow(['Successful Runs', len(successful_runs)])
+            writer.writerow(['Failed Runs', len(failed_runs)])
+
+            if successful_runs:
+                writer.writerow([])
+                writer.writerow(['Best Result', ''])
+                best = successful_runs[0]
+                writer.writerow(['Best Test Accuracy', f"{best['final_test_acc']:.2f}%"])
+                writer.writerow(['Best run_id', best['run']])
+                writer.writerow(['Best Learning Rate', best['config']['learning_rate']])
+                writer.writerow(['Best Training Method', best['config']['training_method']])
+                writer.writerow(['Best Random Seed', best['config']['random_seed']])
+
+        print(f"Multi-run Ergebnisse gespeichert in:")
+        print(f"  - {successful_csv_path}")
+        if failed_runs:
+            print(f"  - {failed_csv_path}")
+        print(f"  - {overview_csv_path}")
 
 
     def write_batch_metrics(self, epoch: int, batch_idx: int, loss: float,

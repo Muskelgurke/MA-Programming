@@ -1,3 +1,7 @@
+import os
+import sys
+import argparse
+from pathlib import Path
 import datetime
 import statistics
 import time
@@ -13,11 +17,67 @@ from tester.tester import Tester
 import dataset.datasets as datasets_helper
 import model.model as model_helper
 
-def run_multi_training():
+def find_config_path()->str:
+    """Findet den config.yaml Pfad mit mehreren Fallback-Strategien"""
+    # 1. Command-line Argument (höchste Priorität)
+    if len(sys.argv) > 1 and sys.argv[1].endswith('.yaml'):
+        config_path = sys.argv[1]
+        if os.path.exists(config_path):
+            return config_path
+
+    # 2. Umgebungsvariable
+    env_config = os.getenv('CONFIG_PATH')
+    if env_config and os.path.exists(env_config):
+        return env_config
+
+    # 3. Relativ zum Skript-Verzeichnis
+    script_dir = Path(__file__).parent
+    config_in_script_dir = script_dir / "config.yaml"
+    if config_in_script_dir.exists():
+        return str(config_in_script_dir)
+
+    # 4. Relativ zum Projekt-Root (eine Ebene höher)
+    project_root = script_dir.parent
+    config_in_root = project_root / "config.yaml"
+    if config_in_root.exists():
+        return str(config_in_root)
+
+    # 5. Aktuelles Arbeitsverzeichnis
+    current_dir_config = Path.cwd() / "config.yaml"
+    if current_dir_config.exists():
+        return str(current_dir_config)
+
+    # Fehler wenn nichts gefunden
+    raise FileNotFoundError(
+        f"config.yaml nicht gefunden. Gesucht in:\n"
+        f"  - {config_in_script_dir}\n"
+        f"  - {config_in_root}\n"
+        f"  - {current_dir_config}\n"
+        f"Verwende: python {sys.argv[0]} <config_path> oder setze CONFIG_PATH"
+    )
+
+def setup_argument_parser():
+    """Erstellt ArgumentParser für Command-Line Interface"""
+    parser = argparse.ArgumentParser(description='PyTorch Neural Network Training')
+    parser.add_argument('--config', '-c', type=str,
+                       help='Pfad zur config.yaml Datei')
+    parser.add_argument('--mode', '-m', choices=['single', 'multi'],
+                       default='multi',
+                       help='Training Modus: single oder multi')
+    parser.add_argument('--auto-confirm', '-y', action='store_true',
+                       help='Automatisch bestätigen (für Server)')
+    return parser
+
+
+def run_multi_training(config_path: str = None,
+                       auto_confirm: bool = False) -> None:
     """Führt Multi-Parameter-Training basierend auf kombinierter YAML-Konfiguration durch"""
     print("=== MULTI-PARAMETER TRAINING ===")
-    # Kombinierte Config laden
-    config_path = "config.yaml"
+    if config_path is None:
+        config_path = find_config_path()
+
+    print(f"Lade Konfiguration von: {config_path}")
+
 
     try:
         base_config_dict, multi_params = MultiParamLoader.load_combined_config(config_path)
@@ -30,28 +90,39 @@ def run_multi_training():
         configs = MultiParamLoader.generate_combinations(multi_params, base_config)
 
         print(f"\nGenerierte {len(configs)} Konfigurationen:")
+
+
+
         for i, config in enumerate(configs[:5]):  # Zeige nur die ersten 5
             print(f"  {i+1}. LR={config.learning_rate}, Method={config.training_method}, Seed={config.random_seed}")
         if len(configs) > 5:
             print(f"  ... und {len(configs) - 5} weitere")
 
-        # Benutzer-Bestätigung
-        user_input = input(f"\nMöchtest du {len(configs)} Trainings starten? (y/n): ")
-        if user_input.lower() != 'y':
-            print("Training abgebrochen.")
-            return
+        if not auto_confirm:
+            # Nur fragen wenn nicht auto-confirm
+            user_input = input(f"Trainings starten? (Y/n): ").strip().lower()
+            if user_input in ['n', 'no', 'nein']:
+                print("Training abgebrochen.")
+                return
+            elif user_input not in ['y', 'yes', 'ja', '']:
+                print("Ungültige Eingabe. Training abgebrochen.")
+                return
 
         # Alle Kombinationen durchlaufen
         results = []
+
         for i, config in enumerate(configs):
             print(f"\n{'='*60}")
             print(f"Training {i+1}/{len(configs)}")
             print(f"Parameter: LR={config.learning_rate}, Method={config.training_method}, Seed={config.random_seed}")
+            print(f"Batch Size: {config.batch_size}, Epochs: {config.epoch_num}")
+            print(f"model_type: {config.model_type}, dataset_name: {config.dataset_name}")
+
             print(f"{'='*60}")
 
             try:
                 train_loader, test_loader = datasets_helper.get_dataloaders(config)
-                result = start_nn_run(config, train_loader, test_loader, run_number=i + 1)
+                result, saver = start_nn_run(config, train_loader, test_loader, run_number=i + 1)
 
                 results.append({
                     'run': i+1,
@@ -80,7 +151,8 @@ def run_multi_training():
                     'error': str(e)
                 })
 
-        print_training_summary(results)
+        print_save_session_summary(results,saver)
+
 
     except FileNotFoundError as e:
         print(f"Konfigurationsdatei nicht gefunden: {e}")
@@ -98,7 +170,8 @@ def create_config_for_combination(base_config: Config, param_names: list, combo:
 
     return Config.from_dict(config_dict)
 
-def print_training_summary(results: list):
+def print_save_session_summary(results: list,
+                               saver: TorchModelSaver) -> None:
     """Druckt eine Zusammenfassung aller Trainings-Ergebnisse"""
     successful_runs = [r for r in results if 'error' not in r]
     failed_runs = [r for r in results if 'error' in r]
@@ -134,8 +207,13 @@ def print_training_summary(results: list):
             print(f"Lauf {result['run']}: {result['error']}")
 
     print("="*80)
+    saver.write_multi_session_summary(successful_runs=successful_runs, failed_runs=failed_runs)
 
-def start_nn_run(config: Config, train_loader: torch.utils.data.DataLoader, test_loader: torch.utils.data.DataLoader, run_number: int = 1):
+def start_nn_run(config: Config,
+                 train_loader: torch.utils.data.DataLoader,
+                 test_loader: torch.utils.data.DataLoader,
+                 run_number: int = 1)-> tuple[dict, TorchModelSaver]:
+    """Startet einen einzelnen Trainingslauf basierend auf der gegebenen Konfiguration"""
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Using device: {device}")
     model = model_helper.get_model(config)
@@ -143,9 +221,6 @@ def start_nn_run(config: Config, train_loader: torch.utils.data.DataLoader, test
     print("-" * 60)
     print(model)
     print("-" * 60)
-    print(f"\t Dataset:\t{config.dataset_name}\n\tModel:\t{config.model_type}")
-    print("-" * 60)
-    print("\t Schritt für Schritt ")
 
     loss_function, optimizer = get_optimizer_and_lossfunction(config=config,
                                                               model=model)
@@ -154,10 +229,10 @@ def start_nn_run(config: Config, train_loader: torch.utils.data.DataLoader, test
                                    delta=config.early_stopping_delta) if config.early_stopping else None
 
     timestamp = datetime.datetime.now().strftime("%H_%M_%S")
-    date = datetime.datetime.now().strftime("%Y_%m_%d")
+    today = datetime.datetime.now().strftime("%Y_%m_%d")
 
     # Erweiterte Namensgebung für Multi-Parameter-Training
-    run_path = f'runs/{date}/{timestamp}_run{run_number}_{config.dataset_name}_{config.model_type}_{config.training_method}_lr{config.learning_rate}_seed{config.random_seed}'
+    run_path = f'runs/{today}/{timestamp}_run{run_number}_{config.dataset_name}_{config.model_type}_{config.training_method}_lr{config.learning_rate}_seed{config.random_seed}'
     tensorboard_writer = SummaryWriter(log_dir=run_path)
     saver = TorchModelSaver(tensorboard_writer.log_dir) # eigener Saver gebaut. Plotting etc.
 
@@ -275,7 +350,7 @@ def start_nn_run(config: Config, train_loader: torch.utils.data.DataLoader, test
         'final_test_loss': test_losses_per_epoch[-1] if test_losses_per_epoch else 0.0,
         'avg_epoch_time': statistics.mean(epoch_times_per_epoch) if epoch_times_per_epoch else 0.0,
         'total_epochs': len(epoch_times_per_epoch)
-    }
+    },saver
 
 def get_optimizer_and_lossfunction(config: Config, model: torch.nn.Module) -> tuple[torch.nn.Module, torch.optim.Optimizer]:
     loss_function = None
@@ -307,26 +382,19 @@ def load_config_File(config_path: str)->Config:
     return Config.from_dict(base_config_dict)
 
 if __name__ == "__main__":
-    print("=== PyTorch Neural Network Training ===")
-    print("1. Einzelnes Training (normale Config)")
-    print("2. Multi-Parameter Training (mehrere Kombinationen)")
+    parser = setup_argument_parser()
+    args = parser.parse_args()
 
-    choice = input("Wähle eine Option (1 oder 2): ")
+    try:
+        if args.mode == "single":
+            config_path = args.config or find_config_path()
+            training_configurations = load_config_File(config_path)
+            train_loader, test_loader = datasets_helper.get_dataloaders(training_configurations)
+            start_nn_run(training_configurations, train_loader, test_loader)
 
-    if choice == "1":
-        # Normales einzelnes Training
-        config_path = "config.yaml"
-        training_configurations = load_config_File(config_path)
-        train_loader, test_loader = datasets_helper.get_dataloaders(training_configurations)
-        start_nn_run(training_configurations, train_loader, test_loader)
+        else:
+            run_multi_training(args.config, args.auto_confirm)
 
-    elif choice == "2":
-        # Multi-Parameter Training
-        run_multi_training()
-
-    else:
-        print("Ungültige Auswahl. Starte normales Training...")
-        config_path = "config.yaml"
-        training_configurations = load_config_File(config_path)
-        train_loader, test_loader = datasets_helper.get_dataloaders(training_configurations)
-        start_nn_run(training_configurations, train_loader, test_loader)
+    except FileNotFoundError as e:
+        print(f"Fehler: {e}")
+        sys.exit(1)
