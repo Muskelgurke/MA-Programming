@@ -75,12 +75,13 @@ class Tester:
             pbar = tqdm(self.test_loader, desc=f'Test Epoch {self.epoch_num}/{self.total_epochs}')
             sum_correct_samples = 0
             sum_total_samples = 0
-            for batch_idx, (inputs_from_test_loader, targets_from_test_loader) in enumerate(self.test_loader):
+            for batch_idx, (inputs, targets) in enumerate(self.test_loader):
 
-                inputs_from_test_loader = inputs_from_test_loader.to(self.device)
-                targets_from_test_loader = targets_from_test_loader.to(self.device)
-                outputs = self.model(inputs_from_test_loader)
-                validation_loss = self.loss_function(outputs, targets_from_test_loader)
+                inputs = inputs.to(self.device)
+                targets = targets.to(self.device)
+
+                outputs = self.model(inputs)
+                validation_loss = self.loss_function(outputs, targets)
 
                 self.accumulated_running_loss_over_all_batches += validation_loss.item()
                 n_correct_samples = 0
@@ -89,11 +90,11 @@ class Tester:
                 with torch.no_grad():
 
                     _, predicted = torch.max(outputs.data, 1)
-                    amount_samples += targets_from_test_loader.size(0)
-                    n_correct_samples += (predicted == targets_from_test_loader).sum().item()
+                    amount_samples += targets.size(0)
+                    n_correct_samples += (predicted == targets).sum().item()
                     acc_of_batch = 100. * n_correct_samples / amount_samples
                     self.y_pred.extend(predicted.cpu().numpy())
-                    self.y_true.extend(targets_from_test_loader.cpu().numpy())
+                    self.y_true.extend(targets.cpu().numpy())
                     sum_correct_samples += n_correct_samples
                     sum_total_samples += amount_samples
 

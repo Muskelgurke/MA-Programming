@@ -24,9 +24,6 @@ def get_dataloaders(config: Config, device=None):
             train_loader, test_loader = get_linear_regression_dataloaders(config)
         case _:
             raise ValueError(f"Unknown dataset-name: {config.dataset_name}")
-    if device is not None and device.type == 'cuda':
-        train_loader = load_dataloader_to_gpu(train_loader, device)
-        test_loader = load_dataloader_to_gpu(test_loader, device)
 
     return train_loader, test_loader
 
@@ -73,12 +70,29 @@ def get_mnist_dataloaders(config: Config)-> tuple[torch.utils.data.DataLoader, t
                                     transforms.Normalize((0.1307,), (0.3081,))])
 
     # Load training dataset
-    train_dataset = datasets.MNIST(config.dataset_path, train=True, download=True, transform=transform_mnist)
-    train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=config.batch_size, shuffle=True)
+    train_dataset = datasets.MNIST(root=config.dataset_path,
+                                   train=True,
+                                   download=True,
+                                   transform=transform_mnist)
+    train_loader = torch.utils.data.DataLoader(dataset=train_dataset,
+                                               batch_size=config.batch_size,
+                                               shuffle=True,
+                                               num_workers=4,
+                                               pin_memory=True,
+                                               persistent_workers=True)
 
     # Load test dataset der 10.000 Bilder hat
-    test_dataset = datasets.MNIST(config.dataset_path, train=False, download=True, transform=transform_mnist)
-    test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=config.batch_size, shuffle=False)
+    test_dataset = datasets.MNIST(root=config.dataset_path,
+                                  train=False,
+                                  download=True,
+                                  transform=transform_mnist)
+
+    test_loader = torch.utils.data.DataLoader(dataset=test_dataset,
+                                              batch_size=config.batch_size,
+                                              shuffle=False,
+                                              num_workers=4,
+                                              pin_memory=True,
+                                              persistent_workers=True)
 
     return train_loader, test_loader
 
