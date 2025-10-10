@@ -108,7 +108,7 @@ class MultiParamLoader:
         return count
 
     @staticmethod
-    def print_summary(multi_params: dict, base_config: dict = None):
+    def print_overview_of_config(multi_params: dict, base_config: dict = None):
         """Zeige eine Übersicht der Parameter-Kombinationen"""
         print("Multi-Parameter Übersicht:")
         print("-" * 40)

@@ -8,6 +8,7 @@ import time
 import torch
 from torch import nn
 from torch.utils.tensorboard import SummaryWriter
+from typing import Dict, Any
 
 from configuration.config_class import Config, MultiParamLoader
 from saver.saver_class import TorchModelSaver
@@ -73,30 +74,22 @@ def run_multi_training(config_path: str = None,
                        auto_confirm: bool = False) -> None:
     """Führt Multi-Parameter-Training basierend auf kombinierter YAML-Konfiguration durch"""
     print("=== MULTI-PARAMETER TRAINING ===")
-    if config_path is None:
+    config_path_is_none = config_path is None
+
+    if config_path_is_none:
         config_path = find_config_path()
 
     print(f"Lade Konfiguration von: {config_path}")
-
 
     try:
         base_config_dict, multi_params = MultiParamLoader.load_combined_config(config_path)
         base_config = Config.from_dict(base_config_dict)
 
         # Übersicht anzeigen
-        MultiParamLoader.print_summary(multi_params, base_config_dict)
+        MultiParamLoader.print_overview_of_config(multi_params, base_config_dict)
 
         # Alle Kombinationen generieren
-        configs = MultiParamLoader.generate_combinations(multi_params, base_config)
-
-        print(f"\nGenerierte {len(configs)} Konfigurationen:")
-
-
-
-        for i, config in enumerate(configs[:5]):  # Zeige nur die ersten 5
-            print(f"  {i+1}. LR={config.learning_rate}, Method={config.training_method}, Seed={config.random_seed}")
-        if len(configs) > 5:
-            print(f"  ... und {len(configs) - 5} weitere")
+        configs = create_print_config_combinations(base_config, multi_params)
 
         if not auto_confirm:
             # Nur fragen wenn nicht auto-confirm
@@ -109,53 +102,9 @@ def run_multi_training(config_path: str = None,
                 return
 
         # Alle Kombinationen durchlaufen
-        results = []
-        saver = None
-        for i, config in enumerate(configs):
-            print(f"\n{'='*60}")
-            print(f"Training {i+1}/{len(configs)}")
-            print(f"Parameter: LR={config.learning_rate}, Method={config.training_method}, Seed={config.random_seed}")
-            print(f"Batch Size: {config.batch_size}, Epochs: {config.epoch_num}")
-            print(f"model_type: {config.model_type}, dataset_name: {config.dataset_name}")
+        results, saver = run_all_combinations(configs)
 
-            print(f"{'='*60}")
-
-            try:
-                train_loader, test_loader = datasets_helper.get_dataloaders(config)
-                result, saver = start_nn_run(config, train_loader, test_loader, run_number=i + 1)
-
-                results.append({
-                    'run': i+1,
-                    'config': {
-                        'learning_rate': config.learning_rate,
-                        'training_method': config.training_method,
-                        'random_seed': config.random_seed,
-                        'batch_size': config.batch_size,
-                        'epoch_num': config.epoch_num
-                    },
-                    'final_train_acc': result.get('final_train_acc', 0),
-                    'final_test_acc': result.get('final_test_acc', 0),
-                    'final_train_loss': result.get('final_train_loss', 0),
-                    'final_test_loss': result.get('final_test_loss', 0)
-                })
-
-            except Exception as e:
-                print(f"Fehler beim Training {i+1}: {e}")
-                results.append({
-                    'run': i+1,
-                    'config': {
-                        'learning_rate': config.learning_rate,
-                        'training_method': config.training_method,
-                        'random_seed': config.random_seed
-                    },
-                    'error': str(e)
-                })
-        saver_for_summary = None
-        for result in results:
-            if 'error' not in result:
-                saver_for_summary = saver
-                break
-        print_save_session_summary(results,saver_for_summary)
+        save_summary(results, saver)
 
 
     except FileNotFoundError as e:
@@ -163,6 +112,72 @@ def run_multi_training(config_path: str = None,
         print("Stelle sicher, dass config.yaml existiert und base_config sowie multi_params enthält.")
     except Exception as e:
         print(f"Fehler beim Laden der Konfiguration: {e}")
+
+
+def save_summary(results: list[Any], saver: TorchModelSaver):
+    saver_for_summary = None
+    for result in results:
+        if 'error' not in result:
+            saver_for_summary = saver
+            break
+    print_save_session_summary(results, saver_for_summary)
+
+
+def run_all_combinations(configs: list[Config]) -> tuple[list[Any], TorchModelSaver]:
+    results = []
+    saver = None
+    for i, config in enumerate(configs):
+        print(f"\n{'=' * 60}")
+        print(f"Training {i + 1}/{len(configs)}")
+        print(f"Parameter: LR={config.learning_rate}, Method={config.training_method}, Seed={config.random_seed}")
+        print(f"Batch Size: {config.batch_size}, Epochs: {config.epoch_num}")
+        print(f"model_type: {config.model_type}, dataset_name: {config.dataset_name}")
+
+        print(f"{'=' * 60}")
+
+        try:
+
+            result, saver = start_nn_run(config, run_number=i + 1)
+
+            results.append({
+                'run': i + 1,
+                'config': {
+                    'learning_rate': config.learning_rate,
+                    'training_method': config.training_method,
+                    'random_seed': config.random_seed,
+                    'batch_size': config.batch_size,
+                    'epoch_num': config.epoch_num
+                },
+                'final_train_acc': result.get('final_train_acc', 0),
+                'final_test_acc': result.get('final_test_acc', 0),
+                'final_train_loss': result.get('final_train_loss', 0),
+                'final_test_loss': result.get('final_test_loss', 0)
+            })
+
+        except Exception as e:
+            print(f"Fehler beim Training {i + 1}: {e}")
+            results.append({
+                'run': i + 1,
+                'config': {
+                    'learning_rate': config.learning_rate,
+                    'training_method': config.training_method,
+                    'random_seed': config.random_seed
+                },
+                'error': str(e)
+            })
+    return results, saver
+
+
+def create_print_config_combinations(base_config: Config, multi_params: dict) -> list[Config]:
+    configs = MultiParamLoader.generate_combinations(multi_params, base_config)
+    print(f"\nGenerierte {len(configs)} Konfigurationen:")
+
+    for i, config in enumerate(configs[:5]):  # Zeige nur die ersten 5
+        print(f"  {i + 1}. LR={config.learning_rate}, Method={config.training_method}, Seed={config.random_seed}")
+    if len(configs) > 5:
+        print(f"  ... und {len(configs) - 5} weitere")
+    return configs
+
 
 def create_config_for_combination(base_config: Config, param_names: list, combo: tuple) -> Config:
     """Erstellt eine neue Config mit den spezifischen Parameter-Werten"""
@@ -215,13 +230,19 @@ def print_save_session_summary(results: list,
         saver.write_multi_session_summary(successful_runs=successful_runs, failed_runs=failed_runs)
     else:
         print("Warnung: kein saver verfügbar, um die Zusammenfassung zu speichern.")
+
 def start_nn_run(config: Config,
-                 train_loader: torch.utils.data.DataLoader,
-                 test_loader: torch.utils.data.DataLoader,
                  run_number: int = 1)-> tuple[dict, TorchModelSaver]:
     """Startet einen einzelnen Trainingslauf basierend auf der gegebenen Konfiguration"""
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    train_loader, test_loader = datasets_helper.get_dataloaders(config)
+    if torch.cuda.is_available() and torch.cuda.device_count() >= 3:
+        device = torch.device("cuda:2")
+        train_loader = train_loader.to(device)
+        test_loader = test_loader.to(device)
+    else:
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Using device: {device}")
+
     model = model_helper.get_model(config)
     model.to(device)
     print("-" * 60)
@@ -269,6 +290,7 @@ def start_nn_run(config: Config,
     test_accs_per_epoch = []
     epoch_times_per_epoch = []
     # To Do
+
     for epoch in range(config.epoch_num):
         start_time = time.time()
 

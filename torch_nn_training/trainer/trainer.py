@@ -112,8 +112,9 @@ class Trainer:
 
             # data loading
             self.model.train()
-
             self.optimizer.zero_grad()
+            if self.device == torch.device('cpu'):
+                inputs, targets = inputs.to(self.device), targets.to(self.device)
 
             # Forward
 
