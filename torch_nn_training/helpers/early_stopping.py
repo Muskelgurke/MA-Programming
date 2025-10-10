@@ -7,6 +7,7 @@ class EarlyStopping:
         self.counter = 0
         self.best_model_state = None
         self.early_stop_inf = {}
+        self.early_stop_nan_train_loss = False
 
     def check_validation(self, val_loss, model):
         if val_loss is None:
@@ -32,7 +33,7 @@ class EarlyStopping:
         self.early_stop_info = info
 
     def break_cause_nan_is_loss(self,)->None:
-        self.early_stop_nan_loss = True
+        self.early_stop_nan_train_loss = True
 
     def reset_early_stop(self)->None:
         self.early_stop = False

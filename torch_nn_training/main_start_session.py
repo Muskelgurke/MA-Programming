@@ -325,7 +325,7 @@ def start_nn_run(config: Config,
                               tester_results.test_acc_per_epoch,
                               epoch)
 
-        if early_stopping.early_stop_nan_loss:
+        if early_stopping.early_stop_nan_train_loss:
             run_time = time.time() - start_time
 
 
