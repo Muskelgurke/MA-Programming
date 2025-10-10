@@ -133,11 +133,16 @@ def run_all_combinations(configs: list[Config]) -> tuple[list[Any], TorchModelSa
         print(f"Batch Size: {config.batch_size}, Epochs: {config.epoch_num}")
         print(f"model_type: {config.model_type}, dataset_name: {config.dataset_name}")
 
-        print(f"{'=' * 60}")
-
         try:
+            if torch.cuda.is_available() and torch.cuda.device_count() >= 3:
+                device = torch.device("cuda:2")
+            else:
+                device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+            print(f"Using device: {device}")
 
-            result, saver = start_nn_run(config, run_number=i + 1)
+            result, saver = start_nn_run(config=config,
+                                         device=device,
+                                         run_number=i + 1)
 
             results.append({
                 'run': i + 1,
@@ -232,16 +237,11 @@ def print_save_session_summary(results: list,
         print("Warnung: kein saver verfügbar, um die Zusammenfassung zu speichern.")
 
 def start_nn_run(config: Config,
+                 device: torch.device,
                  run_number: int = 1)-> tuple[dict, TorchModelSaver]:
     """Startet einen einzelnen Trainingslauf basierend auf der gegebenen Konfiguration"""
-    train_loader, test_loader = datasets_helper.get_dataloaders(config)
-    if torch.cuda.is_available() and torch.cuda.device_count() >= 3:
-        device = torch.device("cuda:2")
-        train_loader = train_loader.to(device)
-        test_loader = test_loader.to(device)
-    else:
-        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    print(f"Using device: {device}")
+
+    train_loader, test_loader = datasets_helper.get_dataloaders(config, device)
 
     model = model_helper.get_model(config)
     model.to(device)
@@ -359,7 +359,7 @@ def start_nn_run(config: Config,
 
 
     print("-"* 60)
-    print("\nTraining and Testing completed")
+    print("Training and Testing completed")
     print(f"Durchschnittliche Zeit pro Epoch: {statistics.mean(epoch_times_per_epoch):.2f}s")
     print("-" * 60)
 

@@ -2,6 +2,34 @@ import torch.utils.data
 from torchvision import datasets, transforms
 from configuration.config_class import Config
 
+
+def get_dataloaders(config: Config, device=None):
+    """
+    Load dataset and return training and test dataloaders.
+
+    Args:
+        config (Config): Configuration object containing dataset and batch size.
+        device (torch.device): Device to use.
+    Returns:
+        Tuple[DataLoader, DataLoader]: Training and test dataloaders.
+        When device is 'cuda', the entire dataset is loaded to GPU memory.
+    """
+    train_loader = None
+    test_loader = None
+
+    match config.dataset_name.lower():
+        case "mnist":
+            train_loader, test_loader = get_mnist_dataloaders(config)
+        case "demo_linear_regression":
+            train_loader, test_loader = get_linear_regression_dataloaders(config)
+        case _:
+            raise ValueError(f"Unknown dataset-name: {config.dataset_name}")
+    if device is not None and device.type == 'cuda':
+        train_loader = load_dataloader_to_gpu(train_loader, device)
+        test_loader = load_dataloader_to_gpu(test_loader, device)
+
+    return train_loader, test_loader
+
 def get_linear_regression_dataloaders(config: Config) -> tuple[torch.utils.data.DataLoader, torch.utils.data.DataLoader]:
     """
     Load a simple linear regression dataset and return training and test dataloaders.
@@ -54,20 +82,21 @@ def get_mnist_dataloaders(config: Config)-> tuple[torch.utils.data.DataLoader, t
 
     return train_loader, test_loader
 
-def get_dataloaders(config: Config):
-    """
-    Load dataset and return training and test dataloaders.
+def load_dataloader_to_gpu(dataloader, device):
+    """Load entire dataloader to GPU memory"""
+    gpu_data = []
+    gpu_targets = []
 
-    Args:
-        config (Config): Configuration object containing dataset and batch size.
+    for data, targets in dataloader:
+        gpu_data.append(data.to(device, non_blocking=True))
+        gpu_targets.append(targets.to(device, non_blocking=True))
 
-    Returns:
-        Tuple[DataLoader, DataLoader]: Training and test dataloaders.
-    """
-    match config.dataset_name.lower():
-        case "mnist" | "fashionmnist":
-            return get_mnist_dataloaders(config)
-        case "demo_linear_regression":
-            return get_linear_regression_dataloaders(config)
-        case _:
-            raise ValueError(f"Unknown dataset-name: {config.dataset_name}")
+    # Concatenate all batches
+    all_data = torch.cat(gpu_data, dim=0)
+    all_targets = torch.cat(gpu_targets, dim=0)
+
+    # Create new dataset and dataloader
+    gpu_dataset = torch.utils.data.TensorDataset(all_data, all_targets)
+    return torch.utils.data.DataLoader(gpu_dataset,
+                                     batch_size=dataloader.batch_size,
+                                     shuffle=True)
