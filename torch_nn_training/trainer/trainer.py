@@ -166,7 +166,7 @@ class Trainer:
                         "last_valid_loss": last_valid_loss
                     }
                     self.early_stopping.set_break_info(info=early_stop_info)
-                    self.early_stopping.break_cause_nan_is_loss()
+                    self.early_stopping.stop_nan_train_loss()
                     break
 
 

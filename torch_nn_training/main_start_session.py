@@ -243,142 +243,160 @@ def start_nn_run(config: Config,
     """Startet einen einzelnen Trainingslauf basierend auf der gegebenen Konfiguration"""
 
     train_loader, test_loader = datasets_helper.get_dataloaders(config, device)
+    try:
+        model = model_helper.get_model(config)
+        model.to(device)
+        print("-" * 60)
+        print(model)
+        print("-" * 60)
 
-    model = model_helper.get_model(config)
-    model.to(device)
-    print("-" * 60)
-    print(model)
-    print("-" * 60)
+        loss_function, optimizer = get_optimizer_and_lossfunction(config=config,
+                                                                  model=model)
 
-    loss_function, optimizer = get_optimizer_and_lossfunction(config=config,
-                                                              model=model)
+        early_stopping = EarlyStopping(patience=config.early_stopping_patience,
+                                       delta=config.early_stopping_delta) if config.early_stopping else None
 
-    early_stopping = EarlyStopping(patience=config.early_stopping_patience,
-                                   delta=config.early_stopping_delta) if config.early_stopping else None
+        timestamp = datetime.datetime.now().strftime("%H_%M_%S")
+        today = datetime.datetime.now().strftime("%Y_%m_%d")
 
-    timestamp = datetime.datetime.now().strftime("%H_%M_%S")
-    today = datetime.datetime.now().strftime("%Y_%m_%d")
+        # Erweiterte Namensgebung für Multi-Parameter-Training
+        run_path = f'runs/{today}/{timestamp}_run{run_number}_{config.dataset_name}_{config.model_type}_{config.training_method}_lr{config.learning_rate}_seed{config.random_seed}'
+        tensorboard_writer = SummaryWriter(log_dir=run_path)
+        saver = TorchModelSaver(tensorboard_writer.log_dir) # eigener Saver gebaut. Plotting etc.
 
-    # Erweiterte Namensgebung für Multi-Parameter-Training
-    run_path = f'runs/{today}/{timestamp}_run{run_number}_{config.dataset_name}_{config.model_type}_{config.training_method}_lr{config.learning_rate}_seed{config.random_seed}'
-    tensorboard_writer = SummaryWriter(log_dir=run_path)
-    saver = TorchModelSaver(tensorboard_writer.log_dir) # eigener Saver gebaut. Plotting etc.
+        trainer = Trainer(config_file=config,
+                          model=model,
+                          data_loader=train_loader,
+                          loss_function=loss_function,
+                          optimizer=optimizer,
+                          device=device,
+                          total_epochs=config.epoch_num,
+                          seed=config.random_seed,
+                          tensorboard_writer=tensorboard_writer,
+                          saver_class=saver,
+                          early_stopping_class=early_stopping)
 
-    trainer = Trainer(config_file=config,
-                      model=model,
-                      data_loader=train_loader,
-                      loss_function=loss_function,
-                      optimizer=optimizer,
-                      device=device,
-                      total_epochs=config.epoch_num,
-                      seed=config.random_seed,
-                      tensorboard_writer=tensorboard_writer,
-                      saver_class=saver,
-                      early_stopping_class=early_stopping)
+        tester = Tester(config_file=config,
+                        model=model,
+                        test_loader=test_loader,
+                        loss_function=loss_function,
+                        device=device,
+                        total_epochs=config.epoch_num,
+                        seed=config.random_seed,
+                        tensorboard_writer=tensorboard_writer)
 
-    tester = Tester(config_file=config,
-                    model=model,
-                    test_loader=test_loader,
-                    loss_function=loss_function,
-                    device=device,
-                    total_epochs=config.epoch_num,
-                    seed=config.random_seed,
-                    tensorboard_writer=tensorboard_writer)
+        train_losses_per_epoch = []
+        train_accs_per_epoch = []
+        test_losses_per_epoch = []
+        test_accs_per_epoch = []
+        epoch_times_per_epoch = []
+        # To Do
 
-    train_losses_per_epoch = []
-    train_accs_per_epoch = []
-    test_losses_per_epoch = []
-    test_accs_per_epoch = []
-    epoch_times_per_epoch = []
-    # To Do
+        for epoch in range(config.epoch_num):
+            start_time = time.time()
 
-    for epoch in range(config.epoch_num):
-        start_time = time.time()
+            training_results = trainer.train_epoch(epoch_num=epoch)
 
-        training_results = trainer.train_epoch(epoch_num=epoch)
+            tester_results = tester.validate_epoch(epoch_num=epoch)
 
-        tester_results = tester.validate_epoch(epoch_num=epoch)
+            epoch_time = time.time() - start_time
+            epoch_times_per_epoch.append(epoch_time)
 
-        epoch_time = time.time() - start_time
-        epoch_times_per_epoch.append(epoch_time)
+            saver.write_epoch_metrics(training_metrics=training_results,
+                                      test_loss=tester_results.test_loss_per_epoch,
+                                      test_accuracy=tester_results.test_acc_per_epoch,
+                                      epoch=epoch)
 
-        saver.write_epoch_metrics(training_metrics=training_results,
-                                  test_loss=tester_results.test_loss_per_epoch,
-                                  test_accuracy=tester_results.test_acc_per_epoch,
-                                  epoch=epoch)
+            train_losses_per_epoch.append(training_results.epoch_avg_train_loss)
+            train_accs_per_epoch.append(training_results.epoch_train_acc)
 
-        train_losses_per_epoch.append(training_results.epoch_avg_train_loss)
-        train_accs_per_epoch.append(training_results.epoch_train_acc)
+            test_losses_per_epoch.append(tester_results.test_loss_per_epoch)
+            test_accs_per_epoch.append(tester_results.test_acc_per_epoch)
 
-        test_losses_per_epoch.append(tester_results.test_loss_per_epoch)
-        test_accs_per_epoch.append(tester_results.test_acc_per_epoch)
+            if tensorboard_writer is not None:
+                tensorboard_writer.add_scalar('Train/Loss - Epoch',
+                                  training_results.epoch_avg_train_loss,
+                                  epoch)
+                tensorboard_writer.add_scalar('Train/Accuracy - Epoch',
+                                  training_results.epoch_train_acc)
+                tensorboard_writer.add_scalar('Test/Loss - Epoch',
+                                  tester_results.test_loss_per_epoch,
+                                  epoch)
+                tensorboard_writer.add_scalar('Test/Accuracy - Epoch',
+                                  tester_results.test_acc_per_epoch,
+                                  epoch)
 
-        if tensorboard_writer is not None:
-            tensorboard_writer.add_scalar('Train/Loss - Epoch',
-                              training_results.epoch_avg_train_loss,
-                              epoch)
-            tensorboard_writer.add_scalar('Train/Accuracy - Epoch',
-                              training_results.epoch_train_acc)
-            tensorboard_writer.add_scalar('Test/Loss - Epoch',
-                              tester_results.test_loss_per_epoch,
-                              epoch)
-            tensorboard_writer.add_scalar('Test/Accuracy - Epoch',
-                              tester_results.test_acc_per_epoch,
-                              epoch)
+            if early_stopping.early_stop_nan_train_loss:
+                run_time = time.time() - start_time
 
-        if early_stopping.early_stop_nan_train_loss:
-            run_time = time.time() - start_time
-
-            saver.write_run_summary(config=config,
-                                    total_training_time=run_time,
-                                    train_acc=train_accs_per_epoch[-1],
-                                    test_acc=test_accs_per_epoch[-1],
-                                    test_loss=test_losses_per_epoch[-1],
-                                    early_stop_info=early_stopping.early_stop_info)
-            break
-
-
-        early_stopping.check_validation(tester.avg_validation_loss, model)
-        if early_stopping.early_stop:
-            run_time = time.time() - start_time
-
-            early_stop_info = {
-                "reason": "early_stopping_patience",
-                "stopped_at_epoch": epoch,
-                "patience_reached": True
-            }
-            saver.write_run_summary(config=config,
-                                    total_training_time=run_time,
-                                    train_acc=train_accs_per_epoch[-1],
-                                    test_acc=test_accs_per_epoch[-1],
-                                    test_loss=test_losses_per_epoch[-1],
-                                    early_stop_info=early_stop_info
-                                    )
-            print(f"Stopping early at Epoch {epoch + 1}")
-            break
+                saver.write_run_summary(config=config,
+                                        total_training_time=run_time,
+                                        train_acc=train_accs_per_epoch[-1],
+                                        test_acc=test_accs_per_epoch[-1],
+                                        test_loss=test_losses_per_epoch[-1],
+                                        early_stop_info=early_stopping.early_stop_info)
+                break
 
 
-    print("-"* 60)
-    print("Training and Testing completed")
-    print(f"Durchschnittliche Zeit pro Epoch: {statistics.mean(epoch_times_per_epoch):.2f}s")
-    print("-" * 60)
+            early_stopping.check_validation(tester_results.test_loss_per_epoch, model)
 
-    saver.save_session(config= config,
-                       model= model,
-                       save_full_model= True)
+            if early_stopping.early_stop:
+                run_time = time.time() - start_time
+
+                early_stop_info = {
+                    "reason": "early_stopping_patience",
+                    "stopped_at_epoch": epoch,
+                    "patience_reached": True
+                }
+                saver.write_run_summary(config=config,
+                                        total_training_time=run_time,
+                                        train_acc=train_accs_per_epoch[-1],
+                                        test_acc=test_accs_per_epoch[-1],
+                                        test_loss=test_losses_per_epoch[-1],
+                                        early_stop_info=early_stop_info
+                                        )
+                print(f"Stopping early at Epoch {epoch + 1}")
+                break
+
+        tensorboard_writer.flush()
+        tensorboard_writer.close()
+        print("-"* 60)
+        print("Training and Testing completed")
+        print(f"Durchschnittliche Zeit pro Epoch: {statistics.mean(epoch_times_per_epoch):.2f}s")
+        print("-" * 60)
+
+        saver.save_session(config= config,
+                           model= model,
+                           save_full_model= True)
 
 
-    # Für Multi-Parameter-Training: Ergebnisse zurückgeben
+        # Für Multi-Parameter-Training: Ergebnisse zurückgeben
 
 
-    return {
-        'final_train_acc': train_accs_per_epoch[-1] if train_accs_per_epoch else 0.0,
-        'final_test_acc': test_accs_per_epoch[-1] if test_accs_per_epoch else 0.0,
-        'final_train_loss': train_losses_per_epoch[-1] if train_losses_per_epoch else 0.0,
-        'final_test_loss': test_losses_per_epoch[-1] if test_losses_per_epoch else 0.0,
-        'avg_epoch_time': statistics.mean(epoch_times_per_epoch) if epoch_times_per_epoch else 0.0,
-        'total_epochs': len(epoch_times_per_epoch)
-    },saver
+        return {
+            'final_train_acc': train_accs_per_epoch[-1] if train_accs_per_epoch else 0.0,
+            'final_test_acc': test_accs_per_epoch[-1] if test_accs_per_epoch else 0.0,
+            'final_train_loss': train_losses_per_epoch[-1] if train_losses_per_epoch else 0.0,
+            'final_test_loss': test_losses_per_epoch[-1] if test_losses_per_epoch else 0.0,
+            'avg_epoch_time': statistics.mean(epoch_times_per_epoch) if epoch_times_per_epoch else 0.0,
+            'total_epochs': len(epoch_times_per_epoch)
+        },saver
+    finally:
+        # Clean up DataLoaders to prevent "too many open files"
+        try:
+            if hasattr(train_loader, '_iterator') and train_loader._iterator is not None:
+                train_loader._iterator._shutdown_workers()
+        except:
+            pass
+        try:
+            if hasattr(test_loader, '_iterator') and test_loader._iterator is not None:
+                test_loader._iterator._shutdown_workers()
+        except:
+            pass
+
+        # Close tensorboard writer
+        if 'tensorboard_writer' in locals():
+            tensorboard_writer.close()
 
 def get_optimizer_and_lossfunction(config: Config, model: torch.nn.Module) -> tuple[torch.nn.Module, torch.optim.Optimizer]:
     loss_function = None

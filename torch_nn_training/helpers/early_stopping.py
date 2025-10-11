@@ -10,9 +10,10 @@ class EarlyStopping:
         self.early_stop_info = {}
         self.early_stop_nan_train_loss = False
 
-    def check_validation(self, val_loss, model):
-        if val_loss is None or torch.isnan(val_loss):
+    def check_validation(self, val_loss: float, model: torch.nn.Module):
+        if val_loss is None or val_loss > 1e6 or torch.isnan(torch.tensor(val_loss)):
             self.early_stop = True
+            return
 
         score = -val_loss
 
@@ -34,7 +35,7 @@ class EarlyStopping:
     def set_break_info(self,info: dict) -> None:
         self.early_stop_info = info
 
-    def break_cause_nan_is_loss(self,)->None:
+    def stop_nan_train_loss(self, )->None:
         self.early_stop_nan_train_loss = True
 
     def reset_early_stop(self)->None:
