@@ -34,15 +34,14 @@ class TrainingMetrics:
     def get_csv_fieldnames(self) -> List[str]:
         return list(asdict(self).keys())
 
-    def _trainings_metrics_reset(self) -> None:
-        self.epoch_avg_train_loss = 0.0
-        self.epoch_train_acc = 0.0
+    def clear_batch_metrics(self):
+        """Leert alle batch-level Listen um Speicher freizugeben"""
         self.cosine_of_esti_true_grads_batch.clear()
-        self.epoch_avg_cosine_similarity = 0.0
-        self.estimated_gradients_batch.clear()
+        self.mse_true_esti_grads_batch.clear()
+        self.mae_true_esti_grad_batch.clear()
         self.abs_of_diff_true_esti_grads_batch.clear()
+        self.var_of_esti_grads_batch.clear()
+        self.var_of_true_grads_batch.clear()
         self.std_of_difference_true_esti_grads_batch.clear()
         self.std_of_esti_grads_batch.clear()
         self.std_of_true_grads_batch.clear()
-        self.mse_true_esti_grads_batch.clear()
-        self.mae_true_esti_grad_batch.clear()

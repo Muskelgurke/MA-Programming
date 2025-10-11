@@ -117,7 +117,7 @@ class Trainer:
         for batch_idx, (inputs, targets) in enumerate(self.data_loader):
 
             try:
-                with torch.cuda.amp.autocast():
+                with torch.amp.autocast('cuda'):
                     inputs, targets = inputs.to(self.device, non_blocking=True), targets.to(self.device)
 
                     self.optimizer.zero_grad()
@@ -220,76 +220,78 @@ class Trainer:
                     ).item()
                     self.metrics.cosine_of_esti_true_grads_batch.append(cosine_sim_esti_true_grads)
 
+
+
                     # torch.nn.utils.clip_grad_norm_(self.model.parameters(), max_norm=5.0)
 
-                    self.optimizer.step()
+                self.optimizer.step()
 
 
-                    # Calculate metrics
-                    sum_loss += loss_esti.item()
+                # Calculate metrics
+                sum_loss += loss_esti.item()
 
-                    with torch.no_grad():
-                        outputs = self.model(inputs)
-                        _, predicted = torch.max(outputs.data, 1)
-                        total_amount_of_samples += targets.size(0)
-                        n_correct_samples += (predicted == targets).sum().item()
-                        acc_of_batch = 100. * n_correct_samples / total_amount_of_samples
+                with torch.no_grad():
+                    outputs = self.model(inputs)
+                    _, predicted = torch.max(outputs.data, 1)
+                    total_amount_of_samples += targets.size(0)
+                    n_correct_samples += (predicted == targets).sum().item()
+                    acc_of_batch = 100. * n_correct_samples / total_amount_of_samples
 
-                    acc_per_batch.append(acc_of_batch)
-                    sum_correct_samples += n_correct_samples
-                    sum_total_samples += total_amount_of_samples
+                acc_per_batch.append(acc_of_batch)
+                sum_correct_samples += n_correct_samples
+                sum_total_samples += total_amount_of_samples
 
-                    # Tensorboard Logging
-                    unique_increasing_counter = (self.epoch_num - 1) * len(self.data_loader) + batch_idx
-                    if self.tensorboard_writer is not None:
-                        self.tensorboard_writer.add_scalar('Train/Loss - Batch', loss_esti.item(), unique_increasing_counter)
-                        self.tensorboard_writer.add_scalar('Train/Accuracy - Batch', acc_of_batch, unique_increasing_counter)
-                        self.tensorboard_writer.add_scalar('GradientMetrics/Cosine_Esti_True - Batch',
-                                                           cosine_sim_esti_true_grads,
-                                                           unique_increasing_counter)
-                        self.tensorboard_writer.add_scalar('GradientMetrics/STD_Difference - Batch',
-                                                           std_of_difference_true_esti_grads,
-                                                           unique_increasing_counter)
-                        self.tensorboard_writer.add_scalar('GradientMetrics/STD_Esti_Grad - Batch',
-                                                           std_of_esti_grad,
-                                                           unique_increasing_counter)
-                        self.tensorboard_writer.add_scalar('GradientMetrics/STD_True_Grad',
-                                                           std_of_true_grad,
-                                                           unique_increasing_counter)
-                        self.tensorboard_writer.add_scalar('GradientMetrics/MSE_Esti_True - Batch',
-                                                           mse_grads,
-                                                           unique_increasing_counter)
-                        self.tensorboard_writer.add_scalar('GradientMetrics/MAE_Esti_True - Batch',
-                                                           mae_grads,
-                                                           unique_increasing_counter)
+                # Tensorboard Logging
+                unique_increasing_counter = (self.epoch_num - 1) * len(self.data_loader) + batch_idx
+                if self.tensorboard_writer is not None:
+                    self.tensorboard_writer.add_scalar('Train/Loss - Batch', loss_esti.item(), unique_increasing_counter)
+                    self.tensorboard_writer.add_scalar('Train/Accuracy - Batch', acc_of_batch, unique_increasing_counter)
+                    self.tensorboard_writer.add_scalar('GradientMetrics/Cosine_Esti_True - Batch',
+                                                       cosine_sim_esti_true_grads,
+                                                       unique_increasing_counter)
+                    self.tensorboard_writer.add_scalar('GradientMetrics/STD_Difference - Batch',
+                                                       std_of_difference_true_esti_grads,
+                                                       unique_increasing_counter)
+                    self.tensorboard_writer.add_scalar('GradientMetrics/STD_Esti_Grad - Batch',
+                                                       std_of_esti_grad,
+                                                       unique_increasing_counter)
+                    self.tensorboard_writer.add_scalar('GradientMetrics/STD_True_Grad',
+                                                       std_of_true_grad,
+                                                       unique_increasing_counter)
+                    self.tensorboard_writer.add_scalar('GradientMetrics/MSE_Esti_True - Batch',
+                                                       mse_grads,
+                                                       unique_increasing_counter)
+                    self.tensorboard_writer.add_scalar('GradientMetrics/MAE_Esti_True - Batch',
+                                                       mae_grads,
+                                                       unique_increasing_counter)
 
-                    # Save batch metrics to CSV
-                    self.saver.write_batch_metrics(
-                        epoch=self.epoch_num,
-                        batch_idx=batch_idx,
-                        loss=loss_esti.item(),
-                        accuracy=acc_of_batch,
-                        cosine_similarity=cosine_sim_esti_true_grads,
-                        mse_grads=mse_grads,
-                        mae_grads=mae_grads,
-                        std_difference=std_of_difference_true_esti_grads,
-                        std_estimated=std_of_esti_grad,
-                        var_estimated=var_of_esti_grad,
-                        std_true=std_of_true_grad,
-                        var_true= var_of_true_grad
-                    )
-                    del estimated_grads_flat, true_grads_flat, gradient_diff
-                    if torch.cuda.is_available():
-                        if batch_idx % 100 == 0:
-                            if cuda.memory_allocated() > 0.8 * cuda.get_device_properties(self.device).total_memory:
-                                torch.cuda.empty_cache()
+                # Save batch metrics to CSV
+                self.saver.write_batch_metrics(
+                    epoch=self.epoch_num,
+                    batch_idx=batch_idx,
+                    loss=loss_esti.item(),
+                    accuracy=acc_of_batch,
+                    cosine_similarity=cosine_sim_esti_true_grads,
+                    mse_grads=mse_grads,
+                    mae_grads=mae_grads,
+                    std_difference=std_of_difference_true_esti_grads,
+                    std_estimated=std_of_esti_grad,
+                    var_estimated=var_of_esti_grad,
+                    std_true=std_of_true_grad,
+                    var_true= var_of_true_grad
+                )
+                del estimated_grads_flat, true_grads_flat, gradient_diff
+                if torch.cuda.is_available():
+                    if batch_idx % 100 == 0:
+                        if cuda.memory_allocated() > 0.8 * cuda.get_device_properties(self.device).total_memory:
+                            torch.cuda.empty_cache()
 
-                    # Update progress bar
-                    pbar.update(1)
-                    pbar.set_postfix({
-                        'Loss': f' {loss_esti.item():.4f}',
-                        'ACC' : f' {100. * n_correct_samples / total_amount_of_samples:.2f}%'
-                    })
+                # Update progress bar
+                pbar.update(1)
+                pbar.set_postfix({
+                    'Loss': f' {loss_esti.item():.4f}',
+                    'ACC' : f' {100. * n_correct_samples / total_amount_of_samples:.2f}%'
+                })
 
             except Exception as e:
                 print(f'Error in batch {batch_idx}: {e}')
@@ -334,6 +336,8 @@ class Trainer:
                                            self.metrics.epoch_avg_train_loss,
                                            self.epoch_num)
         pbar.close()
+
+        self.metrics.clear_batch_metrics()
 
     def _train_epoch_forward_gradient(self) -> None:
         accumulated_running_loss_over_all_batches = 0

@@ -45,7 +45,7 @@ class Tester:
         self.epoch_num = 0
 
     def validate_epoch(self, epoch_num: int)-> TesterMetrics:
-        self.epoch_num = epoch_num
+        self.epoch_num = epoch_num + 1
         # print("Evaluation of Epoch on Test Dataset")
         self.model.eval()
         # Reset metrics
@@ -75,6 +75,10 @@ class Tester:
             pbar = tqdm(self.test_loader, desc=f'Test Epoch {self.epoch_num}/{self.total_epochs}')
             sum_correct_samples = 0
             sum_total_samples = 0
+
+            all_predictions = []
+            all_targets = []
+
             for batch_idx, (inputs, targets) in enumerate(self.test_loader):
 
                 inputs = inputs.to(self.device)
@@ -84,19 +88,19 @@ class Tester:
                 validation_loss = self.loss_function(outputs, targets)
 
                 self.accumulated_running_loss_over_all_batches += validation_loss.item()
-                n_correct_samples = 0
-                amount_samples = 0
 
-                with torch.no_grad():
+                _, predicted = torch.max(outputs.data, 1)
 
-                    _, predicted = torch.max(outputs.data, 1)
-                    amount_samples += targets.size(0)
-                    n_correct_samples += (predicted == targets).sum().item()
-                    acc_of_batch = 100. * n_correct_samples / amount_samples
-                    self.y_pred.extend(predicted.cpu().numpy())
-                    self.y_true.extend(targets.cpu().numpy())
-                    sum_correct_samples += n_correct_samples
-                    sum_total_samples += amount_samples
+                batch_correct = (predicted == targets).sum().item()
+                batch_size = targets.size(0)
+
+                sum_correct_samples += batch_correct
+                sum_total_samples += batch_size
+
+                acc_of_batch = 100. * batch_correct / batch_size
+
+                all_predictions.append(predicted)
+                all_targets.append(targets)
 
                 self.acc_of_all_batches.append(acc_of_batch)
 
@@ -109,14 +113,20 @@ class Tester:
                 pbar.update(1)
                 pbar.set_postfix({
                     'Loss': f'{validation_loss.item():.4f}',
-                    'ACC': f' {100. * n_correct_samples / sum_total_samples:.2f}%'
+                    'ACC': f' {100. * sum_correct_samples / sum_total_samples:.2f}%'
                 })
+                if torch.cuda.is_available():
+                    if batch_idx % 50 == 0:
+                        torch.cuda.empty_cache()
 
             pbar.close()
-        # calculating Acc and Loss
-        self.metrics.test_acc_per_epoch = sum_correct_samples / sum_total_samples * 100
 
-        self.metrics.test_loss_per_epoch = self.accumulated_running_loss_over_all_batches / len(self.test_loader)
+            self.y_pred = torch.cat(all_predictions).cpu().numpy()
+            self.y_true = torch.cat(all_targets).cpu().numpy()
+            # calculating Acc and Loss
+            self.metrics.test_acc_per_epoch = sum_correct_samples / sum_total_samples * 100
+
+            self.metrics.test_loss_per_epoch = self.accumulated_running_loss_over_all_batches / len(self.test_loader)
 
     def _calculate_f1(self):
         # Calculate F1-Score, Precision, Recall

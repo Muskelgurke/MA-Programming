@@ -383,6 +383,7 @@ def start_nn_run(config: Config,
             'avg_epoch_time': statistics.mean(epoch_times_per_epoch) if epoch_times_per_epoch else 0.0,
             'total_epochs': len(epoch_times_per_epoch)
         },saver
+
     finally:
         # Clean up DataLoaders to prevent "too many open files"
         try:

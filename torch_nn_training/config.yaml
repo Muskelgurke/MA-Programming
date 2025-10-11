@@ -18,7 +18,9 @@ base_config:
 # Multi-Parameter Configuration: Parameter für Grid-Search
 # Wenn ein Parameter hier definiert ist, wird er für Multi-Training verwendet
 # Wenn nicht, wird der Wert aus base_config genommen
+
 multi_params:
+  
   learning_rate:
     - 0.0001
     - 0.000125
@@ -59,6 +61,7 @@ multi_params:
   optimizer:
     - sgd
     - adam
+
   #momentum:
   #  - 0.8
   #  - 0.9
