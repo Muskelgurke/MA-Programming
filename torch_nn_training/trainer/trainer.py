@@ -1,6 +1,8 @@
 import torch
 import torch.autograd.forward_ad as fwAD
 import numpy as np
+import gc
+import torch.cuda as cuda
 
 from torch import nn
 from tqdm import tqdm
@@ -72,19 +74,23 @@ class Trainer:
 
         self.epoch_num = epoch_num + 1
         self.model.train()
+        try:
+            match self.config.training_method:
+                case "fgd":
+                    if self.config.dataset_name == "demo_linear_regression":
+                        self._train_epoch_forward_gradient_linearRegression()
+                    else:
+                        self._train_epoch_forward_gradient_and_true_gradient()
+                        #self._train_epoch_forward_gradient()
+                case "bp":
+                    self._backpropaggation()
+                case _:
+                    raise ValueError(f"Unknown Training - Method: {self.config.training_method}")
+        finally:
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
 
-        match self.config.training_method:
-            case "fgd":
-                if self.config.dataset_name == "demo_linear_regression":
-                    self._train_epoch_forward_gradient_linearRegression()
-                else:
-                    self._train_epoch_forward_gradient_and_true_gradient()
-                    #self._train_epoch_forward_gradient()
-            case "bp":
-                self._backpropaggation()
-            case _:
-                raise ValueError(f"Unknown Training - Method: {self.config.training_method}")
-
+            gc.collect()
         return self.metrics
 
     def _train_epoch_forward_gradient_and_true_gradient(self) -> None:
@@ -106,34 +112,36 @@ class Trainer:
         loss_true = 0 # loss of bakprop (True Gradient)
         last_valid_loss = None
 
-        pbar = tqdm(self.data_loader, desc=f'FGD Training Epoch {self.epoch_num}/{self.total_epochs}')
+        pbar = tqdm(self.data_loader, desc=f'Trai Epoch {self.epoch_num}/{self.total_epochs}')
 
         for batch_idx, (inputs, targets) in enumerate(self.data_loader):
-
-            # data loading
-            self.model.train()
-            self.optimizer.zero_grad()
-
-            inputs, targets = inputs.to(self.device), targets.to(self.device)
-
-            # Forward
-
-            # Get parameters as tuple (like in the example)
-            named_params = dict(self.model.named_parameters())
-            params = tuple(named_params.values())
-            names = tuple(named_params.keys())
-
-            # Sample perturbation vectors for every parameter
-            v_params = tuple([torch.randn_like(p) for p in params])
-
-            # Define loss function for functional call
-            def loss_fn(params_tuple, inputs, targets):
-                # Reconstruct parameter dict from tuple
-                params_dict = dict(zip(names, params_tuple))
-                output = torch.func.functional_call(self.model, params_dict, inputs)
-                return nn.functional.cross_entropy(output, targets)
-
             try:
+                inputs, targets = inputs.to(self.device, non_blocking=True), targets.to(self.device)
+
+                self.optimizer.zero_grad()
+                self.model.train()
+
+
+
+
+                # Forward
+
+                # Get parameters as tuple (like in the example)
+                named_params = dict(self.model.named_parameters())
+                params = tuple(named_params.values())
+                names = tuple(named_params.keys())
+
+                # Sample perturbation vectors for every parameter
+                v_params = tuple([torch.randn_like(p) for p in params])
+
+                # Define loss function for functional call
+                def loss_fn(params_tuple, inputs, targets):
+                    # Reconstruct parameter dict from tuple
+                    params_dict = dict(zip(names, params_tuple))
+                    output = torch.func.functional_call(self.model, params_dict, inputs)
+                    return nn.functional.cross_entropy(output, targets)
+
+
                 # calculate true gradient with backprop
                 with torch.enable_grad():
                     outputs_true = self.model(inputs)
@@ -275,10 +283,15 @@ class Trainer:
                 var_true= var_of_true_grad
             )
 
+            if batch_idx % 100 == 0:
+                if cuda.memory_allocated() > 0.8 * cuda.get_device_properties(device).total_memory:
+                    torch.cuda.empty_cache()
+
             # Update progress bar
             pbar.update(1)
             pbar.set_postfix({
-                'Train Loss': f' {loss_esti.item():.4f}'
+                'Loss': f' {loss_esti.item():.4f}',
+                'ACC' : f' {100. * n_correct_samples / total_amount_of_samples:.2f}%'
             })
 
 

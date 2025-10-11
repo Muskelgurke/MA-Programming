@@ -62,7 +62,7 @@ def get_mnist_dataloaders(config: Config)-> tuple[torch.utils.data.DataLoader, t
     Returns:
         Tuple[DataLoader, DataLoader]: Training and test dataloaders.
     """
-    # ToDO: Augmentation?
+    num_workers = min(8, torch.get_num_threads())
     # Mittelwert und Standardabweichung für MNIST
     # mean = 0.1307
     # std = 0.3081
@@ -74,12 +74,15 @@ def get_mnist_dataloaders(config: Config)-> tuple[torch.utils.data.DataLoader, t
                                    train=True,
                                    download=True,
                                    transform=transform_mnist)
+
     train_loader = torch.utils.data.DataLoader(dataset=train_dataset,
                                                batch_size=config.batch_size,
                                                shuffle=True,
-                                               num_workers=4,
+                                               num_workers=num_workers,
                                                pin_memory=True,
-                                               persistent_workers=True)
+                                               persistent_workers=True if num_workers > 0 else False,
+                                               prefetch_factor=2 if num_workers > 0 else None
+                                               )
 
     # Load test dataset der 10.000 Bilder hat
     test_dataset = datasets.MNIST(root=config.dataset_path,
@@ -90,9 +93,55 @@ def get_mnist_dataloaders(config: Config)-> tuple[torch.utils.data.DataLoader, t
     test_loader = torch.utils.data.DataLoader(dataset=test_dataset,
                                               batch_size=config.batch_size,
                                               shuffle=False,
-                                              num_workers=4,
+                                              num_workers=num_workers,
                                               pin_memory=True,
-                                              persistent_workers=True)
+                                              persistent_workers=True if num_workers > 0 else False,
+                                              )
+
+    return train_loader, test_loader
+
+
+def get_cifar10_dataloaders(config: Config):
+    num_workers = min(8, torch.get_num_threads())
+
+    transform_train = transforms.Compose([
+        transforms.RandomCrop(32, padding=4),
+        transforms.RandomHorizontalFlip(),
+        transforms.ToTensor(),
+        transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
+    ])
+
+    transform_test = transforms.Compose([
+        transforms.ToTensor(),
+        transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
+    ])
+
+    train_dataset = datasets.CIFAR10(root=config.dataset_path,
+                                     train=True,
+                                     download=True,
+                                     transform=transform_train)
+
+    test_dataset = datasets.CIFAR10(root=config.dataset_path,
+                                    train=False,
+                                    download=True,
+                                    transform=transform_test)
+
+    train_loader = torch.utils.data.DataLoader(train_dataset,
+                                               batch_size=config.batch_size,
+                                               shuffle=True,
+                                               num_workers=num_workers,
+                                               pin_memory=True,
+                                               persistent_workers=True if num_workers > 0 else False,
+                                               prefetch_factor=2
+                                               )
+
+    test_loader = torch.utils.data.DataLoader(test_dataset,
+                                              batch_size=config.batch_size,
+                                              shuffle=False,
+                                              num_workers=num_workers,
+                                              pin_memory=True,
+                                              persistent_workers=True if num_workers > 0 else False
+                                              )
 
     return train_loader, test_loader
 

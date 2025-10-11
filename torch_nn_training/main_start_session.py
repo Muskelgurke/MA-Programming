@@ -249,6 +249,7 @@ def start_nn_run(config: Config,
         print("-" * 60)
         print(model)
         print("-" * 60)
+        torch.backends.cudnn.benchmark = True
 
         loss_function, optimizer = get_optimizer_and_lossfunction(config=config,
                                                                   model=model)
@@ -293,6 +294,7 @@ def start_nn_run(config: Config,
         # To Do
 
         for epoch in range(config.epoch_num):
+
             start_time = time.time()
 
             training_results = trainer.train_epoch(epoch_num=epoch)

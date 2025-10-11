@@ -108,7 +108,8 @@ class Tester:
 
                 pbar.update(1)
                 pbar.set_postfix({
-                    'Loss': f'{validation_loss.item():.4f}'
+                    'Loss': f'{validation_loss.item():.4f}',
+                    'ACC': f' {100. * n_correct_samples / sum_total_samples:.2f}%'
                 })
 
             pbar.close()
