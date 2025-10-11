@@ -132,6 +132,7 @@ def run_all_combinations(configs: list[Config]) -> tuple[list[Any], TorchModelSa
         print(f"Parameter: LR={config.learning_rate}, Method={config.training_method}, Seed={config.random_seed}")
         print(f"Batch Size: {config.batch_size}, Epochs: {config.epoch_num}")
         print(f"model_type: {config.model_type}, dataset_name: {config.dataset_name}")
+        print(f"Optimizer: {config.optimizer}, Momentum: {config.momentum}")
 
         try:
             if torch.cuda.is_available() and torch.cuda.device_count() >= 3:
@@ -327,7 +328,6 @@ def start_nn_run(config: Config,
 
         if early_stopping.early_stop_nan_train_loss:
             run_time = time.time() - start_time
-
 
             saver.write_run_summary(config=config,
                                     total_training_time=run_time,
