@@ -56,13 +56,6 @@ class Tester:
         self.accumulated_running_loss_over_all_batches = 0
         self.acc_of_all_batches = []
 
-        # F1-Score
-        self.y_pred = []
-        self.y_true = []
-        self.f1_score = 0
-        self.precision = 0
-        self.recall = 0
-
         if self.config.model_type == "demo_linear_regression":
             self.eval_linearRegression()
         else:
@@ -75,6 +68,7 @@ class Tester:
             pbar = tqdm(self.test_loader, desc=f'Test Epoch {self.epoch_num}/{self.total_epochs}')
             sum_correct_samples = 0
             sum_total_samples = 0
+            sum_loss = 0
 
             all_predictions = []
             all_targets = []
@@ -87,7 +81,7 @@ class Tester:
                 outputs = self.model(inputs)
                 validation_loss = self.loss_function(outputs, targets)
 
-                self.accumulated_running_loss_over_all_batches += validation_loss.item()
+                sum_loss += validation_loss.item()
 
                 _, predicted = torch.max(outputs.data, 1)
 
@@ -121,35 +115,11 @@ class Tester:
 
             pbar.close()
 
-            self.y_pred = torch.cat(all_predictions).cpu().numpy()
-            self.y_true = torch.cat(all_targets).cpu().numpy()
             # calculating Acc and Loss
             self.metrics.test_acc_per_epoch = sum_correct_samples / sum_total_samples * 100
 
-            self.metrics.test_loss_per_epoch = self.accumulated_running_loss_over_all_batches / len(self.test_loader)
+            self.metrics.test_loss_per_epoch = sum_loss / len(self.test_loader)
 
-    def _calculate_f1(self):
-        # Calculate F1-Score, Precision, Recall
-        y_true_tensor = torch.tensor(self.y_true)
-        y_pred_tensor = torch.tensor(self.y_pred)
-        TP = ((y_pred_tensor == 1) & (y_true_tensor == 1)).sum().item()
-        FP = ((y_pred_tensor == 1) & (y_true_tensor == 0)).sum().item()
-        FN = ((y_pred_tensor == 0) & (y_true_tensor == 1)).sum().item()
-
-        if TP + FP > 0:
-            self.precision = TP / (TP + FP)
-        else:
-            self.precision = 0
-
-        if TP + FN > 0:
-            self.recall = TP / (TP + FN)
-        else:
-            self.recall = 0
-
-        if self.precision + self.recall > 0:
-            self.f1_score = 2 * (self.precision * self.recall) / (self.precision + self.recall)
-        else:
-            self.f1_score = 0
 
     def eval_linearRegression(self):
         with torch.no_grad():  # Disable gradient computation for efficiency
