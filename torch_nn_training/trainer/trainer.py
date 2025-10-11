@@ -115,184 +115,192 @@ class Trainer:
         pbar = tqdm(self.data_loader, desc=f'Trai Epoch {self.epoch_num}/{self.total_epochs}')
 
         for batch_idx, (inputs, targets) in enumerate(self.data_loader):
+
             try:
-                inputs, targets = inputs.to(self.device, non_blocking=True), targets.to(self.device)
+                with torch.cuda.amp.autocast():
+                    inputs, targets = inputs.to(self.device, non_blocking=True), targets.to(self.device)
 
-                self.optimizer.zero_grad()
-                self.model.train()
+                    self.optimizer.zero_grad()
+                    self.model.train()
 
+                    # Forward
 
+                    # Get parameters as tuple (like in the example)
+                    named_params = dict(self.model.named_parameters())
+                    params = tuple(named_params.values())
+                    names = tuple(named_params.keys())
 
+                    # Sample perturbation vectors for every parameter
+                    v_params = tuple([torch.randn_like(p) for p in params])
 
-                # Forward
-
-                # Get parameters as tuple (like in the example)
-                named_params = dict(self.model.named_parameters())
-                params = tuple(named_params.values())
-                names = tuple(named_params.keys())
-
-                # Sample perturbation vectors for every parameter
-                v_params = tuple([torch.randn_like(p) for p in params])
-
-                # Define loss function for functional call
-                def loss_fn(params_tuple, inputs, targets):
-                    # Reconstruct parameter dict from tuple
-                    params_dict = dict(zip(names, params_tuple))
-                    output = torch.func.functional_call(self.model, params_dict, inputs)
-                    return nn.functional.cross_entropy(output, targets)
+                    # Define loss function for functional call
+                    def loss_fn(params_tuple, inputs, targets):
+                        # Reconstruct parameter dict from tuple
+                        params_dict = dict(zip(names, params_tuple))
+                        output = torch.func.functional_call(self.model, params_dict, inputs)
+                        return nn.functional.cross_entropy(output, targets)
 
 
-                # calculate true gradient with backprop
-                with torch.enable_grad():
-                    outputs_true = self.model(inputs)
-                    loss_true = nn.functional.cross_entropy(outputs_true, targets)
-                    true_grads = torch.autograd.grad(outputs=loss_true,
-                                                     inputs= self.model.parameters(),
-                                                     create_graph=False,
-                                                     retain_graph=False)
-                    true_grads_flat = torch.cat([g.view(-1) for g in true_grads])
+                    # calculate true gradient with backprop
+                    with torch.enable_grad():
+                        outputs_true = self.model(inputs)
+                        loss_true = nn.functional.cross_entropy(outputs_true, targets)
+                        true_grads = torch.autograd.grad(outputs=loss_true,
+                                                         inputs= self.model.parameters(),
+                                                         create_graph=False,
+                                                         retain_graph=False)
+                        true_grads_flat = torch.cat([g.view(-1) for g in true_grads])
 
-                # Compute JVP (Forward AD)
-                loss_esti, dir_der = torch.func.jvp(
-                    lambda params: loss_fn(params, inputs, targets),
-                    (params,),
-                    (v_params,)
-                )
+                    # Compute JVP (Forward AD)
+                    loss_esti, dir_der = torch.func.jvp(
+                        lambda params: loss_fn(params, inputs, targets),
+                        (params,),
+                        (v_params,)
+                    )
 
-                if torch.isnan(loss_esti):
-                    print(f"\n NaN loss detected in batch {batch_idx}")
-                    if last_valid_loss is not None:
-                        print(f"Using last valid loss: {last_valid_loss}")
-                        loss_esti = last_valid_loss
-                    else:
-                        print("No valid loss available, stopping training")
-                    print("stopping training due to NaN loss")
-                    early_stop_info = {
-                        "reason": "nan_loss_detected",
-                        "stopped_at_epoch": self.epoch_num,
-                        "stopped_at_batch": batch_idx,
-                        "last_valid_loss": last_valid_loss
-                    }
-                    self.early_stopping.set_break_info(info=early_stop_info)
-                    self.early_stopping.stop_nan_train_loss()
-                    break
+                    if torch.isnan(loss_esti):
+                        print(f"\n NaN loss detected in batch {batch_idx}")
+                        if last_valid_loss is not None:
+                            print(f"Using last valid loss: {last_valid_loss}")
+                            loss_esti = last_valid_loss
+                        else:
+                            print("No valid loss available, stopping training")
+                        print("stopping training due to NaN loss")
+                        early_stop_info = {
+                            "reason": "nan_loss_detected",
+                            "stopped_at_epoch": self.epoch_num,
+                            "stopped_at_batch": batch_idx,
+                            "last_valid_loss": last_valid_loss
+                        }
+                        self.early_stopping.set_break_info(info=early_stop_info)
+                        self.early_stopping.stop_nan_train_loss()
+                        break
 
 
-                last_valid_loss = loss_esti.item()
-                estimated_gradients = []
-                # Set gradients: gradient = v * jvp (scalar multiplication)
-                with torch.no_grad():
-                    for j, param in enumerate(self.model.parameters()):
-                        estimated_grad = dir_der * v_params[j]
-                        param.grad = estimated_grad
-                        estimated_gradients.append(estimated_grad)
+                    last_valid_loss = loss_esti.item()
+                    estimated_gradients = []
+                    # Set gradients: gradient = v * jvp (scalar multiplication)
+                    with torch.no_grad():
+                        for j, param in enumerate(self.model.parameters()):
+                            estimated_grad = dir_der * v_params[j]
+                            param.grad = estimated_grad
+                            estimated_gradients.append(estimated_grad)
 
-                estimated_grads_flat = torch.cat([g.view(-1) for g in estimated_gradients])
+                    estimated_grads_flat = torch.cat([g.view(-1) for g in estimated_gradients])
 
-                # Distance-based metrics
-                mse_grads=  nn.MSELoss()(estimated_grads_flat, true_grads_flat).item()
-                mae_grads= nn.L1Loss()(estimated_grads_flat, true_grads_flat).item()
-                self.metrics.mse_true_esti_grads_batch.append(mse_grads)
-                self.metrics.mae_true_esti_grad_batch.append(mae_grads)
+                    # Distance-based metrics
+                    mse_grads=  nn.MSELoss()(estimated_grads_flat, true_grads_flat).item()
+                    mae_grads= nn.L1Loss()(estimated_grads_flat, true_grads_flat).item()
+                    self.metrics.mse_true_esti_grads_batch.append(mse_grads)
+                    self.metrics.mae_true_esti_grad_batch.append(mae_grads)
 
-                # Absolute Differenz
-                gradient_diff = estimated_grads_flat - true_grads_flat
-                self.metrics.abs_of_diff_true_esti_grads_batch.append(torch.abs(gradient_diff))
+                    # Absolute Differenz
+                    gradient_diff = estimated_grads_flat - true_grads_flat
+                    self.metrics.abs_of_diff_true_esti_grads_batch.append(torch.abs(gradient_diff))
 
-                # Variance der geschätzten Gradienten
-                var_of_esti_grad = torch.var(estimated_grads_flat).item()
-                self.metrics.var_of_esti_grads_batch.append(var_of_esti_grad)
-                var_of_true_grad = torch.var(true_grads_flat).item()
-                self.metrics.var_of_true_grads_batch.append(var_of_true_grad)
+                    # Variance der geschätzten Gradienten
+                    var_of_esti_grad = torch.var(estimated_grads_flat).item()
+                    self.metrics.var_of_esti_grads_batch.append(var_of_esti_grad)
+                    var_of_true_grad = torch.var(true_grads_flat).item()
+                    self.metrics.var_of_true_grads_batch.append(var_of_true_grad)
 
-                #Standardabweichung der Differenz
-                std_of_difference_true_esti_grads = torch.std(gradient_diff).item()
-                self.metrics.std_of_difference_true_esti_grads_batch.append(std_of_difference_true_esti_grads)
-                std_of_true_grad = torch.std(true_grads_flat).item()
-                std_of_esti_grad = torch.std(estimated_grads_flat).item()
-                self.metrics.std_of_true_grads_batch.append(std_of_true_grad)
-                self.metrics.std_of_esti_grads_batch.append(std_of_esti_grad)
+                    #Standardabweichung der Differenz
+                    std_of_difference_true_esti_grads = torch.std(gradient_diff).item()
+                    self.metrics.std_of_difference_true_esti_grads_batch.append(std_of_difference_true_esti_grads)
+                    std_of_true_grad = torch.std(true_grads_flat).item()
+                    std_of_esti_grad = torch.std(estimated_grads_flat).item()
+                    self.metrics.std_of_true_grads_batch.append(std_of_true_grad)
+                    self.metrics.std_of_esti_grads_batch.append(std_of_esti_grad)
 
-                # Cosine similarity
-                cosine_sim_esti_true_grads = torch.nn.functional.cosine_similarity(
-                    true_grads_flat.unsqueeze(0),
-                    estimated_grads_flat.unsqueeze(0),
-                    dim=1
-                ).item()
-                self.metrics.cosine_of_esti_true_grads_batch.append(cosine_sim_esti_true_grads)
+                    # Cosine similarity
+                    cosine_sim_esti_true_grads = torch.nn.functional.cosine_similarity(
+                        true_grads_flat.unsqueeze(0),
+                        estimated_grads_flat.unsqueeze(0),
+                        dim=1
+                    ).item()
+                    self.metrics.cosine_of_esti_true_grads_batch.append(cosine_sim_esti_true_grads)
 
-                # torch.nn.utils.clip_grad_norm_(self.model.parameters(), max_norm=5.0)
+                    # torch.nn.utils.clip_grad_norm_(self.model.parameters(), max_norm=5.0)
 
-                self.optimizer.step()
+                    self.optimizer.step()
 
+
+                    # Calculate metrics
+                    sum_loss += loss_esti.item()
+
+                    with torch.no_grad():
+                        outputs = self.model(inputs)
+                        _, predicted = torch.max(outputs.data, 1)
+                        total_amount_of_samples += targets.size(0)
+                        n_correct_samples += (predicted == targets).sum().item()
+                        acc_of_batch = 100. * n_correct_samples / total_amount_of_samples
+
+                    acc_per_batch.append(acc_of_batch)
+                    sum_correct_samples += n_correct_samples
+                    sum_total_samples += total_amount_of_samples
+
+                    # Tensorboard Logging
+                    unique_increasing_counter = (self.epoch_num - 1) * len(self.data_loader) + batch_idx
+                    if self.tensorboard_writer is not None:
+                        self.tensorboard_writer.add_scalar('Train/Loss - Batch', loss_esti.item(), unique_increasing_counter)
+                        self.tensorboard_writer.add_scalar('Train/Accuracy - Batch', acc_of_batch, unique_increasing_counter)
+                        self.tensorboard_writer.add_scalar('GradientMetrics/Cosine_Esti_True - Batch',
+                                                           cosine_sim_esti_true_grads,
+                                                           unique_increasing_counter)
+                        self.tensorboard_writer.add_scalar('GradientMetrics/STD_Difference - Batch',
+                                                           std_of_difference_true_esti_grads,
+                                                           unique_increasing_counter)
+                        self.tensorboard_writer.add_scalar('GradientMetrics/STD_Esti_Grad - Batch',
+                                                           std_of_esti_grad,
+                                                           unique_increasing_counter)
+                        self.tensorboard_writer.add_scalar('GradientMetrics/STD_True_Grad',
+                                                           std_of_true_grad,
+                                                           unique_increasing_counter)
+                        self.tensorboard_writer.add_scalar('GradientMetrics/MSE_Esti_True - Batch',
+                                                           mse_grads,
+                                                           unique_increasing_counter)
+                        self.tensorboard_writer.add_scalar('GradientMetrics/MAE_Esti_True - Batch',
+                                                           mae_grads,
+                                                           unique_increasing_counter)
+
+                    # Save batch metrics to CSV
+                    self.saver.write_batch_metrics(
+                        epoch=self.epoch_num,
+                        batch_idx=batch_idx,
+                        loss=loss_esti.item(),
+                        accuracy=acc_of_batch,
+                        cosine_similarity=cosine_sim_esti_true_grads,
+                        mse_grads=mse_grads,
+                        mae_grads=mae_grads,
+                        std_difference=std_of_difference_true_esti_grads,
+                        std_estimated=std_of_esti_grad,
+                        var_estimated=var_of_esti_grad,
+                        std_true=std_of_true_grad,
+                        var_true= var_of_true_grad
+                    )
+                    del estimated_grads_flat, true_grads_flat, gradient_diff
+                    if torch.cuda.is_available():
+                        if batch_idx % 100 == 0:
+                            if cuda.memory_allocated() > 0.8 * cuda.get_device_properties(self.device).total_memory:
+                                torch.cuda.empty_cache()
+
+                    # Update progress bar
+                    pbar.update(1)
+                    pbar.set_postfix({
+                        'Loss': f' {loss_esti.item():.4f}',
+                        'ACC' : f' {100. * n_correct_samples / total_amount_of_samples:.2f}%'
+                    })
 
             except Exception as e:
                 print(f'Error in batch {batch_idx}: {e}')
-
-            # Calculate metrics
-            sum_loss += loss_esti.item()
-
-            with torch.no_grad():
-                outputs = self.model(inputs)
-                _, predicted = torch.max(outputs.data, 1)
-                total_amount_of_samples += targets.size(0)
-                n_correct_samples += (predicted == targets).sum().item()
-                acc_of_batch = 100. * n_correct_samples / total_amount_of_samples
-
-            acc_per_batch.append(acc_of_batch)
-            sum_correct_samples += n_correct_samples
-            sum_total_samples += total_amount_of_samples
-
-            # Tensorboard Logging
-            unique_increasing_counter = (self.epoch_num - 1) * len(self.data_loader) + batch_idx
-            if self.tensorboard_writer is not None:
-                self.tensorboard_writer.add_scalar('Train/Loss - Batch', loss_esti.item(), unique_increasing_counter)
-                self.tensorboard_writer.add_scalar('Train/Accuracy - Batch', acc_of_batch, unique_increasing_counter)
-                self.tensorboard_writer.add_scalar('GradientMetrics/Cosine_Esti_True - Batch',
-                                                   cosine_sim_esti_true_grads,
-                                                   unique_increasing_counter)
-                self.tensorboard_writer.add_scalar('GradientMetrics/STD_Difference - Batch',
-                                                   std_of_difference_true_esti_grads,
-                                                   unique_increasing_counter)
-                self.tensorboard_writer.add_scalar('GradientMetrics/STD_Esti_Grad - Batch',
-                                                   std_of_esti_grad,
-                                                   unique_increasing_counter)
-                self.tensorboard_writer.add_scalar('GradientMetrics/STD_True_Grad',
-                                                   std_of_true_grad,
-                                                   unique_increasing_counter)
-                self.tensorboard_writer.add_scalar('GradientMetrics/MSE_Esti_True - Batch',
-                                                   mse_grads,
-                                                   unique_increasing_counter)
-                self.tensorboard_writer.add_scalar('GradientMetrics/MAE_Esti_True - Batch',
-                                                   mae_grads,
-                                                   unique_increasing_counter)
-
-            # Save batch metrics to CSV
-            self.saver.write_batch_metrics(
-                epoch=self.epoch_num,
-                batch_idx=batch_idx,
-                loss=loss_esti.item(),
-                accuracy=acc_of_batch,
-                cosine_similarity=cosine_sim_esti_true_grads,
-                mse_grads=mse_grads,
-                mae_grads=mae_grads,
-                std_difference=std_of_difference_true_esti_grads,
-                std_estimated=std_of_esti_grad,
-                var_estimated=var_of_esti_grad,
-                std_true=std_of_true_grad,
-                var_true= var_of_true_grad
-            )
-
-            if batch_idx % 100 == 0:
-                if cuda.memory_allocated() > 0.8 * cuda.get_device_properties(device).total_memory:
+            finally:
+                # Explicit cleanup
+                if 'estimated_gradients' in locals():
+                    del estimated_gradients
+                if 'true_grads' in locals():
+                    del true_grads
+                if torch.cuda.is_available():
                     torch.cuda.empty_cache()
-
-            # Update progress bar
-            pbar.update(1)
-            pbar.set_postfix({
-                'Loss': f' {loss_esti.item():.4f}',
-                'ACC' : f' {100. * n_correct_samples / total_amount_of_samples:.2f}%'
-            })
 
 
         self.metrics.epoch_train_acc = (

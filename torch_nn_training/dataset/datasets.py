@@ -62,7 +62,8 @@ def get_mnist_dataloaders(config: Config)-> tuple[torch.utils.data.DataLoader, t
     Returns:
         Tuple[DataLoader, DataLoader]: Training and test dataloaders.
     """
-    num_workers = min(8, torch.get_num_threads())
+    num_workers = min(16, torch.get_num_threads())
+
     # Mittelwert und Standardabweichung für MNIST
     # mean = 0.1307
     # std = 0.3081
@@ -81,7 +82,8 @@ def get_mnist_dataloaders(config: Config)-> tuple[torch.utils.data.DataLoader, t
                                                num_workers=num_workers,
                                                pin_memory=True,
                                                persistent_workers=True if num_workers > 0 else False,
-                                               prefetch_factor=2 if num_workers > 0 else None
+                                               prefetch_factor=4 if num_workers > 0 else None,
+                                               drop_last=True
                                                )
 
     # Load test dataset der 10.000 Bilder hat
@@ -144,22 +146,3 @@ def get_cifar10_dataloaders(config: Config):
                                               )
 
     return train_loader, test_loader
-
-def load_dataloader_to_gpu(dataloader, device):
-    """Load entire dataloader to GPU memory"""
-    gpu_data = []
-    gpu_targets = []
-
-    for data, targets in dataloader:
-        gpu_data.append(data.to(device, non_blocking=True))
-        gpu_targets.append(targets.to(device, non_blocking=True))
-
-    # Concatenate all batches
-    all_data = torch.cat(gpu_data, dim=0)
-    all_targets = torch.cat(gpu_targets, dim=0)
-
-    # Create new dataset and dataloader
-    gpu_dataset = torch.utils.data.TensorDataset(all_data, all_targets)
-    return torch.utils.data.DataLoader(gpu_dataset,
-                                     batch_size=dataloader.batch_size,
-                                     shuffle=True)
