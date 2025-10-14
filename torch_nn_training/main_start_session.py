@@ -499,10 +499,14 @@ if __name__ == "__main__":
 
     try:
         if args.mode == "single":
+            if torch.cuda.is_available() and torch.cuda.device_count() >= 3:
+                device = torch.device("cuda:2")
+            else:
+                device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+            print(f"Using device: {device}")
             config_path = args.config or find_config_path()
             training_configurations = load_config_File(config_path)
-            train_loader, test_loader = datasets_helper.get_dataloaders(training_configurations)
-            start_nn_run(training_configurations, train_loader, test_loader)
+            start_nn_run(config=training_configurations,device=device)
 
         else:
             run_multi_training(args.config, args.auto_confirm)

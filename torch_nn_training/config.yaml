@@ -1,17 +1,17 @@
 # Base Configuration: Grundeinstellungen für alle Trainings
 base_config:
   random_seed: 43
-  learning_rate: 0.001
-  epoch_num: 100
+  learning_rate: 0.00125
+  epoch_num: 10
   training_method: fgd
   dataset_name: mnist
   batch_size: 64
   augment_data: false
-  model_type: fc
-  optimizer: sgd
+  model_type: cnn
+  optimizer: adam
   momentum: 0.9
   early_stopping: true
-  early_stopping_patience: 10
+  early_stopping_patience: 5
   early_stopping_delta: 0.01
   dataset_path: _Dataset
 

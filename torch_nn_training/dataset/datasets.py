@@ -6,7 +6,7 @@ from torchvision import datasets, transforms
 from configuration.config_class import Config
 
 
-def get_dataloaders(config: Config, device: torch.device):
+def get_dataloaders(config: Config, device: torch.device) -> tuple[torch.utils.data.DataLoader, torch.utils.data.DataLoader]:
     """
     Load dataset and return training and test dataloaders.
 
@@ -29,8 +29,18 @@ def get_dataloaders(config: Config, device: torch.device):
               #                                                    train_loader=train_loader,
                #                                                   config=config,
                 #                                                  device=device)
+        case "fashionmnist":
+            train_loader, test_loader = get_fashion_mnist_dataloaders(config, device)
+
+        case "cifar10":
+            train_loader, test_loader = get_cifar10_dataloaders(config,device)
+
+        case "cifar100":
+            train_loader, test_loader = get_cifar100_dataloaders(config,device)
+
         case "demo_linear_regression":
             train_loader, test_loader = get_linear_regression_dataloaders(config)
+
         case _:
             raise ValueError(f"Unknown dataset-name: {config.dataset_name}")
 
@@ -74,6 +84,7 @@ def get_mnist_dataloaders(config: Config, device: torch.device)-> tuple[torch.ut
     # Mittelwert und Standardabweichung für MNIST
     # mean = 0.1307
     # std = 0.3081
+    pin_memory = False
     transform_mnist = transforms.Compose([transforms.ToTensor(),
                                     transforms.Normalize((0.1307,), (0.3081,))])
 
@@ -87,7 +98,7 @@ def get_mnist_dataloaders(config: Config, device: torch.device)-> tuple[torch.ut
                                                batch_size=config.batch_size,
                                                shuffle=True,
                                                num_workers=0,
-                                               pin_memory=True if device.type == 'cuda' else False,
+                                               pin_memory=pin_memory,
                                                drop_last=True
                                                )
 
@@ -101,6 +112,51 @@ def get_mnist_dataloaders(config: Config, device: torch.device)-> tuple[torch.ut
                                               batch_size=config.batch_size,
                                               shuffle=False,
                                               num_workers=0,
+                                              pin_memory=pin_memory,
+                                              drop_last=False
+                                              )
+
+    return train_loader, test_loader
+def get_fashion_mnist_dataloaders(config: Config, device: torch.device)-> tuple[torch.utils.data.DataLoader, torch.utils.data.DataLoader]:
+    """
+    Load Fashion-MNIST dataset and return training and test dataloaders.
+
+    Args:
+        config (Config): Configuration object containing dataset path and batch size.
+
+    Returns:
+        Tuple[DataLoader, DataLoader]: Training and test dataloaders.
+    """
+    # Mittelwert und Standardabweichung für MNIST
+    mean = 0.2860
+    std = 0.3530
+
+    transform_fashion = transforms.Compose([transforms.ToTensor(),
+                                    transforms.Normalize((mean,), (std,))])
+
+    train_dataset = datasets.FashionMNIST(root=config.dataset_path,
+                                   train=True,
+                                   download=True,
+                                   transform=transform_fashion)
+
+    train_loader = torch.utils.data.DataLoader(dataset=train_dataset,
+                                               batch_size=config.batch_size,
+                                               shuffle=True,
+                                               num_workers=0,
+                                               pin_memory=True if device.type == 'cuda' else False,
+                                               drop_last=True
+                                               )
+
+
+    test_dataset = datasets.FashionMNIST(root=config.dataset_path,
+                                  train=False,
+                                  download=True,
+                                  transform=transform_fashion)
+
+    test_loader = torch.utils.data.DataLoader(dataset=test_dataset,
+                                              batch_size=config.batch_size,
+                                              shuffle=False,
+                                              num_workers=0,
                                               pin_memory=True if device.type == 'cuda' else False,
                                               drop_last=False
                                               )
@@ -108,47 +164,66 @@ def get_mnist_dataloaders(config: Config, device: torch.device)-> tuple[torch.ut
     return train_loader, test_loader
 
 
-def get_cifar10_dataloaders(config: Config):
-    num_workers = min(8, torch.get_num_threads())
+def get_cifar10_dataloaders(config: Config, device: torch.device) -> tuple[torch.utils.data.DataLoader, torch.utils.data.DataLoader]:
+    """
+    Load CIFAR-10 dataset and return training and test dataloaders.
 
-    transform_train = transforms.Compose([
-        transforms.RandomCrop(32, padding=4),
-        transforms.RandomHorizontalFlip(),
-        transforms.ToTensor(),
-        transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
-    ])
+    Args:
+        config (Config): Configuration object containing dataset path and batch size.
+        device (torch.device): Device to determine pin_memory setting.
+
+    Returns:
+        Tuple[DataLoader, DataLoader]: Training and test dataloaders.
+    """
+    # Mittelwert und Standardabweichung für CIFAR-10 (RGB-Kanäle)
+    mean = [0.4914, 0.4822, 0.4465]
+    std = [0.2470, 0.2435, 0.2616]
+
+    if config.augment_data:
+        transform_cifar10 = transforms.Compose([
+            transforms.RandomHorizontalFlip(),
+            transforms.RandomCrop(32, padding=4),
+            transforms.ToTensor(),
+            transforms.Normalize(mean, std)
+        ])
+    else:
+        transform_cifar10 = transforms.Compose([
+            transforms.ToTensor(),
+            transforms.Normalize(mean, std)
+        ])
 
     transform_test = transforms.Compose([
         transforms.ToTensor(),
-        transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
+        transforms.Normalize(mean, std)
     ])
 
     train_dataset = datasets.CIFAR10(root=config.dataset_path,
                                      train=True,
                                      download=True,
-                                     transform=transform_train)
+                                     transform=transform_cifar10)
+
+    train_loader = torch.utils.data.DataLoader(dataset=train_dataset,
+                                               batch_size=config.batch_size,
+                                               shuffle=True,
+                                               num_workers=0,
+                                               pin_memory=True if device.type == 'cuda' else False,
+                                               drop_last=True)
 
     test_dataset = datasets.CIFAR10(root=config.dataset_path,
                                     train=False,
                                     download=True,
                                     transform=transform_test)
 
-    train_loader = torch.utils.data.DataLoader(train_dataset,
-                                               batch_size=config.batch_size,
-                                               shuffle=True,
-                                               num_workers=num_workers,
-                                               pin_memory=True,
-                                               persistent_workers=True if num_workers > 0 else False,
-                                               prefetch_factor=2
-                                               )
-
-    test_loader = torch.utils.data.DataLoader(test_dataset,
+    test_loader = torch.utils.data.DataLoader(dataset=test_dataset,
                                               batch_size=config.batch_size,
                                               shuffle=False,
-                                              num_workers=min(2, os.cpu_count()),
-                                              pin_memory=True,
-                                              persistent_workers=True if num_workers > 0 else False
-                                              )
+                                              num_workers=0,
+                                              pin_memory=True if device.type == 'cuda' else False,
+                                              drop_last=False)
+
+    return train_loader, test_loader
+
+def get_cifar100_dataloaders(config: Config, device: torch.device) -> tuple[torch.utils.data.DataLoader, torch.utils.data.DataLoader]:
 
     return train_loader, test_loader
 

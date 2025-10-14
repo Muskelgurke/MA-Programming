@@ -5,15 +5,25 @@ from configuration.config_class import Config
 def get_model(config: Config) -> nn.Module:
     match config.dataset_name.lower():
         case "mnist" | "fashionmnist":
+            input_size = 28 * 28
             output_size = 10  # number of classes
 
             match config.model_type:
-                case "fc":
-                    return _build_fc_model(output_size)
-                case "conv":
-                    return _build_conv_model(output_size)
+                case "fc256":
+                    hidden_size = 256
+                    return NN_fc_for_MNIST(input_size=input_size,hidden_size=hidden_size, output_size=output_size)
+                case "fc1024":
+                    hidden_size = 1024
+                    return NN_fc_for_MNIST(input_size=input_size,hidden_size=hidden_size, output_size=output_size)
+                case "fc4096":
+                    hidden_size = 4096
+                    return NN_fc_for_MNIST(input_size=input_size, hidden_size=hidden_size, output_size=output_size)
+
+                case "cnn":
+                    return CNN_for_MNIST()
                 case _:
                     raise ValueError(f"Unknown model type: {config.model_type} for that Dataset")
+        #case "cifar10":
 
         case "demo_linear_regression":
             # Add implementation for linear regression model
@@ -27,41 +37,12 @@ def get_model(config: Config) -> nn.Module:
         case _:
             raise ValueError(f"Unknown dataset: {config.dataset_name}")
 
-def _fc_manual_calculation(input_size: int, output_size: int) -> nn.Module:
-    """Build fully connected model for manual calculation"""
-    return fc_manual_calculation_model(input_size, output_size)
 
 
-def _build_fc_model(output_size: int) -> nn.Module:
-    """Build fully connected model"""
-    input_size = 28 * 28  # picture size of MNIST only relevant for fully connected NN
-    # number of neurons in hidden layer
-    # Flügel nimmt -> hidden_size= [256,1024,4096]
-    hidden_size = 256
-    return NeuralNetwork_for_MNIST(input_size, hidden_size, output_size)
+class NN_fc_for_MNIST(nn.Module):
+    def __init__(self, input_size: int, hidden_size:int, output_size: int):
+        super(NN_fc_for_MNIST, self).__init__()
 
-def _build_conv_model(output_size: int) -> nn.Module:
-    """Build convolutional model"""
-    input_channels = 1    # number of channels (1 for grayscale)
-    return ConvNet_for_MNIST(input_channels, output_size)
-
-class fc_manual_calculation_model(nn.Module):
-    def __init__(self, input_size: int, output_size: int):
-        super(fc_manual_calculation_model, self).__init__()
-        self.flatten = nn.Flatten()
-        self.fc1 = nn.Linear(input_size, output_size)
-        self.fc1.weight.data = torch.tensor([[0.1, 0.2, 0.3, 0.4],
-                                             [0.5, 0.6, 0.7, 0.8]], dtype=torch.float32)
-        self.fc1.bias.data = torch.tensor([0.5, -0.5], dtype=torch.float32)
-
-    def forward(self, x):
-        x = self.flatten(x)
-        x = self.fc1(x)
-        return x
-
-class NeuralNetwork_for_MNIST(nn.Module):
-    def __init__(self, input_size: int, hidden_size: int, output_size: int):
-        super(NeuralNetwork_for_MNIST, self).__init__()
         # Original NN structure
         self.flatten = nn.Flatten()
         self.fc1 = nn.Linear(input_size, hidden_size)  # First hidden layer
@@ -69,7 +50,6 @@ class NeuralNetwork_for_MNIST(nn.Module):
         self.fc2 = nn.Linear(hidden_size, hidden_size)  # Second hidden layer
         self.relu2 = nn.ReLU()
         self.fc3 = nn.Linear(hidden_size, output_size)  # Output layer
-
 
     def forward(self, x):
         # Original NN structure
@@ -98,32 +78,57 @@ class linear_regression_model(nn.Module):
         return self.linear.weight.data, self.linear.bias.data
 
 
-class ConvNet_for_MNIST(nn.Module):
+class CNN_for_MNIST(nn.Module):
+    """Convolutional Neural Network for MNIST dataset
+    aus dem Paper BAYDIN et al. 2022
+    """
+    def __init__(self):
+        super(CNN_for_MNIST, self).__init__()
+
+        self.features = nn.Sequential(
+            # First conv block
+            nn.Conv2d(1, 64, kernel_size=3, padding=1),
+            nn.ReLU(),
+            nn.Conv2d(64, 64, kernel_size=3, padding=1),
+            nn.ReLU(),
+            nn.MaxPool2d(kernel_size=2, stride=2),
+
+            # Second conv block
+            nn.Conv2d(64, 64, kernel_size=3, padding=1),
+            nn.ReLU(),
+            nn.Conv2d(64, 64, kernel_size=3, padding=1),
+            nn.ReLU(),
+            nn.MaxPool2d(kernel_size=2, stride=2), # Output: 64 x 7 x 7
+        )
+
+        self.classifier = nn.Sequential(
+            nn.Linear(64 * 7 * 7, 1024),
+            nn.ReLU(),
+            nn.Linear(1024, 10) # Output: 10 Klassen
+        )
+
+    def forward(self, x):
+        x = self.features(x)
+        x = x.view(x.size(0), -1)
+        x = self.classifier(x)
+        return x
+
+
+def _fc_manual_calculation(input_size: int, output_size: int) -> nn.Module:
+    """Build fully connected model for manual calculation"""
+    return fc_manual_calculation_model(input_size, output_size)
+
+class fc_manual_calculation_model(nn.Module):
     def __init__(self, input_size: int, output_size: int):
-        """Standard Convolutional Network layers for the MNIST dataset.
+        super(fc_manual_calculation_model, self).__init__()
+        self.flatten = nn.Flatten()
+        self.fc1 = nn.Linear(input_size, output_size)
+        self.fc1.weight.data = torch.tensor([[0.1, 0.2, 0.3, 0.4],
+                                             [0.5, 0.6, 0.7, 0.8]], dtype=torch.float32)
+        self.fc1.bias.data = torch.tensor([0.5, -0.5], dtype=torch.float32)
 
-                Args:
-                    input_size (int): input size of the model.
-                    output_size (int): The number of output classes.
-
-        """
-        super(ConvNet_for_MNIST,self).__init__()
-        self.conv1 = torch.nn.Conv2d(input_size, 64, kernel_size=3, padding=1)
-        self.conv2 = torch.nn.Conv2d(64, 64, kernel_size=3, padding=1)
-        self.conv3 = torch.nn.Conv2d(64, 64, kernel_size=3, padding=1)
-        self.conv4 = torch.nn.Conv2d(64, 64, kernel_size=3, padding=1)
-        self.fc1 = torch.nn.Linear(3136, 1024)
-        self.fc2 = torch.nn.Linear(1024, output_size)
-
-    def forward(self,x:torch.Tensor)-> torch.Tensor:
-        x = torch.relu(self.conv1(x))
-        x = torch.relu(self.conv2(x))
-        x = torch.max_pool2d(x, 2)
-        x = torch.relu(self.conv3(x))
-        x = torch.relu(self.conv4(x))
-        x = torch.max_pool2d(x, 2)
-        x = x.view(x.shape[0], -1)
-        x = torch.relu(self.fc1(x))
-        x = self.fc2(x)
+    def forward(self, x):
+        x = self.flatten(x)
+        x = self.fc1(x)
         return x
 
