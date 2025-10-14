@@ -118,7 +118,7 @@ class Trainer:
 
             try:
                 with torch.amp.autocast('cuda'):
-                    #inputs, targets = inputs.to(self.device, non_blocking=True), targets.to(self.device)
+                    inputs, targets = inputs.to(self.device, non_blocking=True), targets.to(self.device)
 
                     self.optimizer.zero_grad()
                     self.model.train()

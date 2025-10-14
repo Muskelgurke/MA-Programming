@@ -24,11 +24,11 @@ def get_dataloaders(config: Config, device: torch.device):
     match config.dataset_name.lower():
         case "mnist":
             train_loader, test_loader = get_mnist_dataloaders(config, device)
-            if device == torch.device("cuda"):
-                train_loader, test_loader = _push_all_data_to_gpu(test_loader=test_loader,
-                                                                  train_loader=train_loader,
-                                                                  config=config,
-                                                                  device=device)
+            #if device == torch.device("cuda"):
+             #   train_loader, test_loader = _push_all_data_to_gpu(test_loader=test_loader,
+              #                                                    train_loader=train_loader,
+               #                                                   config=config,
+                #                                                  device=device)
         case "demo_linear_regression":
             train_loader, test_loader = get_linear_regression_dataloaders(config)
         case _:
