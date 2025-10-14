@@ -1,5 +1,7 @@
 import torch.utils.data
 import os
+
+from torch.utils.data import DataLoader
 from torchvision import datasets, transforms
 from configuration.config_class import Config
 
@@ -22,7 +24,11 @@ def get_dataloaders(config: Config, device: torch.device):
     match config.dataset_name.lower():
         case "mnist":
             train_loader, test_loader = get_mnist_dataloaders(config, device)
-
+            if device == torch.device("cuda"):
+                train_loader, test_loader = _push_all_data_to_gpu(test_loader=test_loader,
+                                                                  train_loader=train_loader,
+                                                                  config=config,
+                                                                  device=device)
         case "demo_linear_regression":
             train_loader, test_loader = get_linear_regression_dataloaders(config)
         case _:
@@ -143,5 +149,45 @@ def get_cifar10_dataloaders(config: Config):
                                               pin_memory=True,
                                               persistent_workers=True if num_workers > 0 else False
                                               )
+
+    return train_loader, test_loader
+
+def _push_all_data_to_gpu(test_loader: torch.utils.data.DataLoader,
+                          train_loader: torch.utils.data.DataLoader,
+                          config: Config,
+                          device: torch.device) -> torch.utils.data.DataLoader:
+    """
+    Push all data from the dataloader to GPU memory.
+
+    Args:
+        dataloader (DataLoader): DataLoader containing the dataset.
+        device (torch.device): Device to push the data to.
+
+    Returns:
+        DataLoader: DataLoader with all data pushed to GPU memory.
+    """
+    def get_dataset(dataloader:DataLoader) -> torch.utils.data.Tensordataset:
+        stack_x = list()
+        stack_y = list()
+        for idx, (x,y) in enumerate(dataloader):
+            stack_x.append(x)
+            stack_y.append(y)
+        x = torch.squeeze(torch.stack(stack_x),1).to(device)
+        y = torch.squeeze(torch.stack(stack_y),1).to(device)
+        dataset = torch.utils.data.TensorDataset(x,y)
+        return dataset
+
+    train_dataset = get_dataset(train_loader)
+    train_loader = torch.utils.data.DataLoader(train_dataset,
+                                               batch_size=config.batch_size,
+                                               pin_memory=False,
+                                               drop_last=True,
+                                               num_workers=0)
+    test_dataset = get_dataset(test_loader)
+    test_loader = torch.utils.data.DataLoader(test_dataset,
+                                                batch_size=config.batch_size,
+                                                pin_memory=False,
+                                                drop_last=False,
+                                                num_workers=0)
 
     return train_loader, test_loader
