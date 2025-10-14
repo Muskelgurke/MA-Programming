@@ -6,6 +6,7 @@ import datetime
 import statistics
 import time
 import torch
+import gc
 from torch import nn
 from torch.utils.tensorboard import SummaryWriter
 from typing import Dict, Any
@@ -126,6 +127,7 @@ def save_summary(results: list[Any], saver: TorchModelSaver):
 def run_all_combinations(configs: list[Config]) -> tuple[list[Any], TorchModelSaver]:
     results = []
     saver = None
+    
     for i, config in enumerate(configs):
         print(f"\n{'=' * 60}")
         print(f"Training {i + 1}/{len(configs)}")
@@ -171,6 +173,12 @@ def run_all_combinations(configs: list[Config]) -> tuple[list[Any], TorchModelSa
                 },
                 'error': str(e)
             })
+        finally:
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+                torch.cuda.synchronize()
+            gc.collect()
+
     return results, saver
 
 
@@ -241,9 +249,14 @@ def start_nn_run(config: Config,
                  device: torch.device,
                  run_number: int = 1)-> tuple[dict, TorchModelSaver]:
     """Startet einen einzelnen Trainingslauf basierend auf der gegebenen Konfiguration"""
+    train_loader = None
+    test_loader = None
+    model = None
+    tensorboard_writer = None
+    saver = None
 
-    train_loader, test_loader = datasets_helper.get_dataloaders(config, device)
     try:
+        train_loader, test_loader = datasets_helper.get_dataloaders(config, device)
         model = model_helper.get_model(config)
         model.to(device)
         print("-" * 60)
@@ -396,10 +409,59 @@ def start_nn_run(config: Config,
                 test_loader._iterator._shutdown_workers()
         except:
             pass
+        
+        if train_loader is not None:
+            cleanup_dataloader(train_loader)
+            del train_loader
+        if test_loader is not None:
+            cleanup_dataloader(test_loader)
+            del test_loader
+            
+        
+        if model is not None:
+            model.cpu()
+            del model
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+            torch.cuda.synchronize()
 
+        if saver:
+            saver.cleanup()
         # Close tensorboard writer
-        if 'tensorboard_writer' in locals():
-            tensorboard_writer.close()
+        if tensorboard_writer is not None:
+           tensorboard_writer.flush()
+           tensorboard_writer.close()
+           del tensorboard_writer
+        
+        gc.collect()
+        print("cleanup completed")
+           
+def cleanup_dataloader(dataloader: torch.utils.data.DataLoader) -> None:
+    """Umfassendes DataLoader Cleanup"""
+    if dataloader is None:
+        return
+
+    try:
+        # 1. Iterator shutdown
+        if hasattr(dataloader, '_iterator') and dataloader._iterator is not None:
+            if hasattr(dataloader._iterator, '_shutdown_workers'):
+                dataloader._iterator._shutdown_workers()
+            dataloader._iterator = None
+
+        # 2. Multiprocessing cleanup
+        if hasattr(dataloader, '_DataLoader__multiprocessing_context'):
+            dataloader._DataLoader__multiprocessing_context = None
+
+        # 3. Worker processes cleanup
+        if hasattr(dataloader, 'worker_init_fn'):
+            dataloader.worker_init_fn = None
+
+        # 4. Clear dataset references
+        if hasattr(dataloader, 'dataset'):
+            del dataloader.dataset
+
+    except Exception as e:
+        print(f"Warning: DataLoader cleanup error: {e}")
 
 def get_optimizer_and_lossfunction(config: Config, model: torch.nn.Module) -> tuple[torch.nn.Module, torch.optim.Optimizer]:
     loss_function = None

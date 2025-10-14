@@ -1,9 +1,10 @@
 import torch.utils.data
+import os
 from torchvision import datasets, transforms
 from configuration.config_class import Config
 
 
-def get_dataloaders(config: Config, device=None):
+def get_dataloaders(config: Config, device: torch.device):
     """
     Load dataset and return training and test dataloaders.
 
@@ -14,12 +15,13 @@ def get_dataloaders(config: Config, device=None):
         Tuple[DataLoader, DataLoader]: Training and test dataloaders.
         When device is 'cuda', the entire dataset is loaded to GPU memory.
     """
+
     train_loader = None
     test_loader = None
 
     match config.dataset_name.lower():
         case "mnist":
-            train_loader, test_loader = get_mnist_dataloaders(config)
+            train_loader, test_loader = get_mnist_dataloaders(config, device)
         case "demo_linear_regression":
             train_loader, test_loader = get_linear_regression_dataloaders(config)
         case _:
@@ -52,7 +54,7 @@ def get_linear_regression_dataloaders(config: Config) -> tuple[torch.utils.data.
     test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=config.batch_size, shuffle=False)
     return train_loader, test_loader
 
-def get_mnist_dataloaders(config: Config)-> tuple[torch.utils.data.DataLoader, torch.utils.data.DataLoader]:
+def get_mnist_dataloaders(config: Config, device: torch.device)-> tuple[torch.utils.data.DataLoader, torch.utils.data.DataLoader]:
     """
     Load MNIST dataset and return training and test dataloaders.
 
@@ -80,7 +82,7 @@ def get_mnist_dataloaders(config: Config)-> tuple[torch.utils.data.DataLoader, t
                                                batch_size=config.batch_size,
                                                shuffle=True,
                                                num_workers=num_workers,
-                                               pin_memory=True,
+                                               pin_memory=True if device.type == 'cuda' else False,
                                                persistent_workers=True if num_workers > 0 else False,
                                                prefetch_factor=4 if num_workers > 0 else None,
                                                drop_last=True
@@ -96,7 +98,7 @@ def get_mnist_dataloaders(config: Config)-> tuple[torch.utils.data.DataLoader, t
                                               batch_size=config.batch_size,
                                               shuffle=False,
                                               num_workers=num_workers,
-                                              pin_memory=True,
+                                              pin_memory=True if device.type == 'cuda' else False,
                                               persistent_workers=True if num_workers > 0 else False,
                                               )
 
@@ -140,7 +142,7 @@ def get_cifar10_dataloaders(config: Config):
     test_loader = torch.utils.data.DataLoader(test_dataset,
                                               batch_size=config.batch_size,
                                               shuffle=False,
-                                              num_workers=num_workers,
+                                              num_workers=min(2, os.cpu_count()),
                                               pin_memory=True,
                                               persistent_workers=True if num_workers > 0 else False
                                               )
