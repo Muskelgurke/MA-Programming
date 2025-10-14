@@ -14,6 +14,7 @@ class Config:
     model_type: str
     training_method: str # e.g., "backpropagation", "forward_gradient"
     optimizer: str # e.g., "SGD", "Adam"
+    loss_function: str # e.g., "CrossEntropy", "BCE"
     momentum: float
     early_stopping_delta: float
     early_stopping: bool = False

@@ -466,24 +466,24 @@ def cleanup_dataloader(dataloader: torch.utils.data.DataLoader) -> None:
 def get_optimizer_and_lossfunction(config: Config, model: torch.nn.Module) -> tuple[torch.nn.Module, torch.optim.Optimizer]:
     loss_function = None
     optimizer = None
-    match config.dataset_name:
-        case "demo_linear_regression":
-            optimizer = torch.optim.SGD(model.parameters(), lr=config.learning_rate)
-            loss_function = nn.MSELoss()
-        case "mnist" | "fashionmnist" | "small_mnist_for_manual_calculation":
-            if config.optimizer == "sgd":
-                optimizer = torch.optim.SGD(model.parameters(),
-                                            lr=config.learning_rate,
-                                            momentum=config.momentum)
-            if config.optimizer == "adam":
-                optimizer = torch.optim.Adam(model.parameters(),
-                                             lr=config.learning_rate)
-
-            loss_function = nn.CrossEntropyLoss()
+    match config.optimizer:
+        case "sgd":
+            optimizer = torch.optim.SGD(model.parameters(),
+                                        lr=config.learning_rate,
+                                        momentum=config.momentum)
+        case "adam":
+            optimizer = torch.optim.Adam(model.parameters(),
+                                         lr=config.learning_rate)
         case _:
             raise ValueError(f"Unknown dataset_name. Can´t load optimizer and loss_function: {config.dataset_name}")
 
-
+    match config.loss_function:
+        case "cross_entropy":
+            loss_function = nn.CrossEntropyLoss()
+        case "binary_cross_entropy":
+            loss_function = nn.BCELoss()
+        case _:
+            raise ValueError(f"Unknown loss_function: {config.loss_function}")
     return loss_function, optimizer
 
 
