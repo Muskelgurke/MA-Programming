@@ -22,6 +22,7 @@ def get_dataloaders(config: Config, device: torch.device):
     match config.dataset_name.lower():
         case "mnist":
             train_loader, test_loader = get_mnist_dataloaders(config, device)
+
         case "demo_linear_regression":
             train_loader, test_loader = get_linear_regression_dataloaders(config)
         case _:
@@ -64,8 +65,6 @@ def get_mnist_dataloaders(config: Config, device: torch.device)-> tuple[torch.ut
     Returns:
         Tuple[DataLoader, DataLoader]: Training and test dataloaders.
     """
-    num_workers = min(16, torch.get_num_threads())
-
     # Mittelwert und Standardabweichung für MNIST
     # mean = 0.1307
     # std = 0.3081
@@ -81,10 +80,8 @@ def get_mnist_dataloaders(config: Config, device: torch.device)-> tuple[torch.ut
     train_loader = torch.utils.data.DataLoader(dataset=train_dataset,
                                                batch_size=config.batch_size,
                                                shuffle=True,
-                                               num_workers=num_workers,
+                                               num_workers=0,
                                                pin_memory=True if device.type == 'cuda' else False,
-                                               persistent_workers=True if num_workers > 0 else False,
-                                               prefetch_factor=4 if num_workers > 0 else None,
                                                drop_last=True
                                                )
 
@@ -97,9 +94,9 @@ def get_mnist_dataloaders(config: Config, device: torch.device)-> tuple[torch.ut
     test_loader = torch.utils.data.DataLoader(dataset=test_dataset,
                                               batch_size=config.batch_size,
                                               shuffle=False,
-                                              num_workers=num_workers,
+                                              num_workers=0,
                                               pin_memory=True if device.type == 'cuda' else False,
-                                              persistent_workers=True if num_workers > 0 else False,
+                                              drop_last=False
                                               )
 
     return train_loader, test_loader
