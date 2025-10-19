@@ -107,7 +107,6 @@ def run_multi_training(config_path: str = None,
 
         save_summary(results, saver)
 
-
     except FileNotFoundError as e:
         print(f"Konfigurationsdatei nicht gefunden: {e}")
         print("Stelle sicher, dass config.yaml existiert und base_config sowie multi_params enthält.")
@@ -115,14 +114,13 @@ def run_multi_training(config_path: str = None,
         print(f"Fehler beim Laden der Konfiguration: {e}")
 
 
-def save_summary(results: list[Any], saver: TorchModelSaver):
+def save_summary(results: list[Any], saver: TorchModelSaver) -> None:
     saver_for_summary = None
     for result in results:
         if 'error' not in result:
             saver_for_summary = saver
             break
     print_save_session_summary(results, saver_for_summary)
-
 
 def run_all_combinations(configs: list[Config]) -> tuple[list[Any], TorchModelSaver]:
     results = []
@@ -149,13 +147,7 @@ def run_all_combinations(configs: list[Config]) -> tuple[list[Any], TorchModelSa
 
             results.append({
                 'run': i + 1,
-                'config': {
-                    'learning_rate': config.learning_rate,
-                    'training_method': config.training_method,
-                    'random_seed': config.random_seed,
-                    'batch_size': config.batch_size,
-                    'epoch_num': config.epoch_num
-                },
+                'config': config.to_dict(),
                 'final_train_acc': result.get('final_train_acc', 0),
                 'final_test_acc': result.get('final_test_acc', 0),
                 'final_train_loss': result.get('final_train_loss', 0),
@@ -167,9 +159,14 @@ def run_all_combinations(configs: list[Config]) -> tuple[list[Any], TorchModelSa
             results.append({
                 'run': i + 1,
                 'config': {
+                    'dataset_name':config.dataset_name,
                     'learning_rate': config.learning_rate,
                     'training_method': config.training_method,
-                    'random_seed': config.random_seed
+                    'random_seed': config.random_seed,
+                    'optimizer': config.optimizer,
+                    'model': config.model_type,
+                    'batch_size': config.batch_size,
+                    'epoch_num': config.epoch_num
                 },
                 'error': str(e)
             })
@@ -181,7 +178,6 @@ def run_all_combinations(configs: list[Config]) -> tuple[list[Any], TorchModelSa
 
     return results, saver
 
-
 def create_print_config_combinations(base_config: Config, multi_params: dict) -> list[Config]:
     configs = MultiParamLoader.generate_combinations(multi_params, base_config)
     print(f"\nGenerierte {len(configs)} Konfigurationen:")
@@ -191,7 +187,6 @@ def create_print_config_combinations(base_config: Config, multi_params: dict) ->
     if len(configs) > 5:
         print(f"  ... und {len(configs) - 5} weitere")
     return configs
-
 
 def create_config_for_combination(base_config: Config, param_names: list, combo: tuple) -> Config:
     """Erstellt eine neue Config mit den spezifischen Parameter-Werten"""
@@ -262,11 +257,9 @@ def start_nn_run(config: Config,
         print("-" * 60)
         print(model)
         print("-" * 60)
-        torch.backends.cudnn.benchmark = True
 
         loss_function, optimizer = get_optimizer_and_lossfunction(config=config,
                                                                   model=model)
-
         early_stopping = EarlyStopping(patience=config.early_stopping_patience,
                                        delta=config.early_stopping_delta) if config.early_stopping else None
 
@@ -496,6 +489,7 @@ if __name__ == "__main__":
 
     parser = setup_argument_parser()
     args = parser.parse_args()
+
 
     try:
         if args.mode == "single":

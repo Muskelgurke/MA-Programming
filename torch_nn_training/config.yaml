@@ -2,7 +2,7 @@
 base_config:
   random_seed: 43
   learning_rate: 0.00125
-  epoch_num: 10
+  epoch_num: 1
   training_method: fgd
   dataset_name: cifar10
   batch_size: 64

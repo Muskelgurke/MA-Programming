@@ -185,7 +185,11 @@ class TorchModelSaver:
             self._batch_file_handle.close()
             self._batch_file_handle = None
 
-
+    def write_tested_configurations(self, tested_configs: list) -> None:
+        """Save tested configurations to JSON file"""
+        configs_path = self.run_dir / "tested_configurations.json"
+        with open(configs_path, 'w') as f:
+            json.dump(tested_configs, f, indent=4)
     def write_multi_session_summary(self,
                                     successful_runs: list,
                                     failed_runs: list) -> None:
@@ -224,6 +228,7 @@ class TorchModelSaver:
                     row_data = {
                         'rank': rank,
                         'run_id': result['run'],
+                        'datset':config['dataset'],
                         'learning_rate': config['learning_rate'],
                         'training_method': config['training_method'],
                         'random_seed': config['random_seed'],
