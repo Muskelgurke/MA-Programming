@@ -49,7 +49,6 @@ multi_params:
     - fashionmnist
     - cifar10
     - cifar100
-
   training_method:
     - fgd
 

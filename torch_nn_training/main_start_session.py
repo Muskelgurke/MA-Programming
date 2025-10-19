@@ -158,16 +158,7 @@ def run_all_combinations(configs: list[Config]) -> tuple[list[Any], TorchModelSa
             print(f"Fehler beim Training {i + 1}: {e}")
             results.append({
                 'run': i + 1,
-                'config': {
-                    'dataset_name':config.dataset_name,
-                    'learning_rate': config.learning_rate,
-                    'training_method': config.training_method,
-                    'random_seed': config.random_seed,
-                    'optimizer': config.optimizer,
-                    'model': config.model_type,
-                    'batch_size': config.batch_size,
-                    'epoch_num': config.epoch_num
-                },
+                'config': config.to_dict(),
                 'error': str(e)
             })
         finally:
@@ -269,7 +260,7 @@ def start_nn_run(config: Config,
         # Erweiterte Namensgebung für Multi-Parameter-Training
         run_path = f'runs/{today}/{timestamp}_run{run_number}_{config.dataset_name}_{config.model_type}_{config.training_method}_lr{config.learning_rate}_seed{config.random_seed}'
         tensorboard_writer = SummaryWriter(log_dir=run_path)
-        saver = TorchModelSaver(tensorboard_writer.log_dir) # eigener Saver gebaut. Plotting etc.
+        saver = TorchModelSaver(tensorboard_writer.log_dir) # eigener Saver gebaut
 
         trainer = Trainer(config_file=config,
                           model=model,
@@ -373,13 +364,11 @@ def start_nn_run(config: Config,
         print(f"Durchschnittliche Zeit pro Epoch: {statistics.mean(epoch_times_per_epoch):.2f}s")
         print("-" * 60)
 
-        saver.save_session(config= config,
-                           model= model,
-                           save_full_model= True)
-
+        saver.save_session_after_epoch(config= config,
+                                       model= model,
+                                       save_full_model= True)
 
         # Für Multi-Parameter-Training: Ergebnisse zurückgeben
-
 
         return {
             'final_train_acc': train_accs_per_epoch[-1] if train_accs_per_epoch else 0.0,
@@ -478,7 +467,6 @@ def get_optimizer_and_lossfunction(config: Config, model: torch.nn.Module) -> tu
         case _:
             raise ValueError(f"Unknown loss_function: {config.loss_function}")
     return loss_function, optimizer
-
 
 def load_config_File(config_path: str)->Config:
     """Lade Config für Single-Training aus der kombinierten YAML-Datei"""

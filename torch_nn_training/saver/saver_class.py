@@ -185,11 +185,7 @@ class TorchModelSaver:
             self._batch_file_handle.close()
             self._batch_file_handle = None
 
-    def write_tested_configurations(self, tested_configs: list) -> None:
-        """Save tested configurations to JSON file"""
-        configs_path = self.run_dir / "tested_configurations.json"
-        with open(configs_path, 'w') as f:
-            json.dump(tested_configs, f, indent=4)
+
     def write_multi_session_summary(self,
                                     successful_runs: list,
                                     failed_runs: list) -> None:
@@ -209,6 +205,7 @@ class TorchModelSaver:
             fieldnames = [
                 'rank',
                 'run_id',
+                'dataset',
                 'learning_rate',
                 'training_method',
                 'random_seed',
@@ -216,6 +213,7 @@ class TorchModelSaver:
                 'final_test_acc',
                 'final_train_loss',
                 'final_test_loss',
+                'optimizer',
                 'total_training_time'
             ]
 
@@ -228,7 +226,7 @@ class TorchModelSaver:
                     row_data = {
                         'rank': rank,
                         'run_id': result['run'],
-                        'datset':config['dataset'],
+                        'dataset':config['dataset_name'],
                         'learning_rate': config['learning_rate'],
                         'training_method': config['training_method'],
                         'random_seed': config['random_seed'],
@@ -236,6 +234,7 @@ class TorchModelSaver:
                         'final_test_acc': result['final_test_acc'],
                         'final_train_loss': result['final_train_loss'],
                         'final_test_loss': result['final_test_loss'],
+                        'optimizer': config['optimizer'],
                         'total_training_time': result.get('total_training_time', '')
                     }
                     writer.writerow(row_data)
@@ -296,23 +295,10 @@ class TorchModelSaver:
         else:
             torch.save(model, filepath.with_suffix('.pt'))
 
-    def load_torch_model(self, filepath: Path, model_class=None,
-                         model_kwargs: Dict = None) -> torch.nn.Module:
-        """Load PyTorch model from file"""
-        if filepath.suffix == '.pth':
-            # Loading state dict requires model class
-            if model_class is None:
-                raise ValueError("model_class required when loading state dict")
-            model = model_class(**(model_kwargs or {}))
-            model.load_state_dict(torch.load(filepath, map_location='cpu'))
-            return model
-        else:
-            # Loading full model
-            return torch.load(filepath, map_location='cpu')
 
-    def save_session(self,config: Config,
-                     model: torch.nn.Module,
-                     save_full_model: bool = False) -> Path:
+    def save_session_after_epoch(self, config: Config,
+                                 model: torch.nn.Module,
+                                 save_full_model: bool = False) -> Path:
         """
         Save complete PyTorch training session including model, metrics, and configuration.
 
@@ -353,32 +339,10 @@ class TorchModelSaver:
         return self.run_dir
 
 
-    def load_training_session(self, training_dir: Path,
-                              model_class=None,
-                              model_kwargs: Dict = None) -> Dict[str, Any]:
-        """Load complete training session"""
-        # Load configuration
-        with open(training_dir / "config.json", 'r') as f:
-            config = json.load(f)
-
-        # Load training info
-        with open(training_dir / "training_info.yaml", 'r') as f:
-            training_info = yaml.load(f)
-
-        # Load model
-        model_dir = training_dir / "model"
-        model = None
-
-        if (model_dir / "full_model.pt").exists():
-            model = torch.load(model_dir / "full_model.pt", map_location='cpu')
-        elif (model_dir / "model_state_dict.pth").exists():
-            if model_class is not None:
-                model = model_class(**(model_kwargs or {}))
-                model.load_state_dict(torch.load(model_dir / "model_state_dict.pth", map_location='cpu'))
-
-        return {
-            "model": model,
-            "config": config,
-            "training_info": training_info,
-            "training_dir": training_dir
-        }
+    ##########################################################
+    # not in use
+    def write_tested_configurations(self, tested_configs: list) -> None:
+        """Save tested configurations to JSON file"""
+        configs_path = self.run_dir / "tested_configurations.json"
+        with open(configs_path, 'w') as f:
+            json.dump(tested_configs, f, indent=4)
