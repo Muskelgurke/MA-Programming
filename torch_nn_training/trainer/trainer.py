@@ -77,7 +77,8 @@ class Trainer:
         try:
             match self.config.training_method:
                 case "fgd":
-                        self._train_epoch_forward_gradient_and_true_gradient()
+                        self.train_epoch_fgd()
+                        #self._train_epoch_forward_gradient_and_true_gradient()
                         #self._train_epoch_forward_gradient()
                 case "bp":
                     self._backpropaggation()
@@ -89,6 +90,135 @@ class Trainer:
 
             gc.collect()
         return self.metrics
+
+    def train_epoch_fgd (self)-> None:
+        sum_loss = 0
+        sum_correct_samples = 0
+        sum_total_samples = 0
+        n_correct_samples = 0
+        total_amount_of_samples = 0
+
+        pbar = tqdm(self.data_loader, desc=f'Trai Epoch {self.epoch_num}/{self.total_epochs}')
+
+        torch.cuda.empty_cache()
+
+        for batch_idx, (inputs, targets) in enumerate(self.data_loader):
+            try:
+                inputs, targets = inputs.to(self.device, non_blocking=True), targets.to(self.device)
+                self.optimizer.zero_grad()
+                self.model.train()
+                # Forward
+
+                # Get parameters as tuple
+                named_params = dict(self.model.named_parameters())
+                params = tuple(named_params.values())
+                names = tuple(named_params.keys())
+
+                # Sample perturbation vectors for every parameter
+                v_params = tuple([torch.randn_like(p) for p in params])
+
+                # Define loss function for functional call
+                def loss_fn(params_tuple, inputs, targets):
+                    # Reconstruct parameter dict from tuple
+                    params_dict = dict(zip(names, params_tuple))
+                    output = torch.func.functional_call(self.model, params_dict, inputs)
+                    return nn.functional.cross_entropy(output, targets)
+
+                outputs = self.model(inputs)
+                _, predicted = torch.max(outputs.data, 1)
+                total_amount_of_samples += targets.size(0)
+                n_correct_samples += (predicted == targets).sum().item()
+
+                # Compute JVP (Forward AD)
+                loss_esti, dir_der = torch.func.jvp(
+                    lambda params: loss_fn(params, inputs, targets),
+                    (params,),
+                    (v_params,)
+                )
+
+                last_valid_loss = loss_esti.item()
+
+                if torch.isnan(loss_esti):
+                    print(f"\n NaN loss detected in batch {batch_idx}")
+                    if last_valid_loss is not None:
+                        print(f"Using last valid loss: {last_valid_loss}")
+                        loss_esti = last_valid_loss
+                    else:
+                        print("No valid loss available, stopping training")
+                    print("stopping training due to NaN loss")
+                    early_stop_info = {
+                        "reason": "nan_loss_detected",
+                        "stopped_at_epoch": self.epoch_num,
+                        "stopped_at_batch": batch_idx,
+                        "last_valid_loss": last_valid_loss
+                    }
+                    self.early_stopping.set_break_info(info=early_stop_info)
+                    self.early_stopping.stop_nan_train_loss()
+                    break
+
+                estimated_gradients = []
+                # Set gradients: gradient = v * jvp (scalar multiplication)
+                with torch.no_grad():
+                    for j, param in enumerate(self.model.parameters()):
+                        estimated_grad = dir_der * v_params[j]
+                        param.grad = estimated_grad
+                        estimated_gradients.append(estimated_grad)
+
+                sum_loss += loss_esti.item()
+
+                # torch.nn.utils.clip_grad_norm_(self.model.parameters(), max_norm=5.0)
+
+                self.optimizer.step()
+
+                # Calculate metrics
+                sum_correct_samples += n_correct_samples
+                sum_total_samples += total_amount_of_samples
+
+                # Save batch metrics to CSV
+                self.saver.write_batch_metrics(
+                    epoch=self.epoch_num,
+                    batch_idx=batch_idx,
+                    loss=loss_esti.item(),
+                    accuracy=0,
+                    cosine_similarity=0,
+                    mse_grads=0,
+                    mae_grads=0,
+                    std_difference=0,
+                    std_estimated=0,
+                    var_estimated=0,
+                    std_true=0,
+                    var_true=0
+                )
+
+                if torch.cuda.is_available():
+                    if batch_idx % 100 == 0:
+                        if cuda.memory_allocated() > 0.8 * cuda.get_device_properties(self.device).total_memory:
+                            torch.cuda.empty_cache()
+
+                # Update progress bar
+                pbar.update(1)
+                pbar.set_postfix({
+                    'Loss': f' {loss_esti.item():.4f}',
+                    'ACC': f' {100. * n_correct_samples / total_amount_of_samples:.2f}%'
+                })
+
+            except Exception as e:
+                print(f'Error in batch {batch_idx}: {e}')
+
+
+        self.metrics.epoch_train_acc = (
+                sum_correct_samples / sum_total_samples * 100
+        )
+
+        self.metrics.epoch_avg_train_loss = (
+                sum_loss / len(self.data_loader)
+        )
+
+        self.metrics.num_batches = len(self.data_loader)
+
+        pbar.close()
+
+        self.metrics.clear_batch_metrics()
 
     def _train_epoch_forward_gradient_and_true_gradient(self) -> None:
         sum_loss = 0
@@ -139,7 +269,6 @@ class Trainer:
                         output = torch.func.functional_call(self.model, params_dict, inputs)
                         return nn.functional.cross_entropy(output, targets)
 
-
                     # calculate true gradient with backprop
                     with torch.enable_grad():
                         outputs_true = self.model(inputs)
@@ -153,8 +282,7 @@ class Trainer:
 
                         true_grads_flat = torch.cat([g.view(-1) for g in true_grads])
 
-                        del outputs_true, loss_true, true_grads
-
+                        del loss_true, true_grads
 
                     _, predicted = torch.max(outputs_true.data, 1)
                     total_amount_of_samples += targets.size(0)
@@ -234,9 +362,6 @@ class Trainer:
 
                     # torch.nn.utils.clip_grad_norm_(self.model.parameters(), max_norm=5.0)
 
-
-
-
                     self.optimizer.step()
 
                 # Calculate metrics
@@ -270,7 +395,7 @@ class Trainer:
                                                            unique_increasing_counter)
 
                     del true_grads_flat, estimated_gradients, estimated_grads_flat, gradient_diff
-                    del outputs, predicted, v_params, dir_der
+                    del predicted, v_params, dir_der
 
                     # Save batch metrics to CSV
                     self.saver.write_batch_metrics(

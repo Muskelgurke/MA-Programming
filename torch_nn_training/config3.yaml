@@ -2,12 +2,12 @@
 base_config:
   random_seed: 43
   learning_rate: 0.00125
-  epoch_num: 2
+  epoch_num: 1
   training_method: fgd
   dataset_name: cifar10
   batch_size: 64
   augment_data: false
-  model_type: fc256
+  model_type: cnn
   optimizer: adam
   momentum: 0.9
   loss_function: cross_entropy
@@ -22,21 +22,9 @@ base_config:
 
 multi_params:
   learning_rate:
-    - 0.0000001
-    - 0.0000005
-    - 0.000001
-    - 0.0000025
-    - 0.000005
-    - 0.0000075
-    - 0.00001
-    - 0.000025
-    - 0.00005
-    - 0.000075
-    - 0.005
-    - 0.01
-    - 0.05
-    - 0.075
-    - 0.1
+    - 0.000175
+    - 0.00015
+    - 0.0002
 
   model_type:
     - cnn
