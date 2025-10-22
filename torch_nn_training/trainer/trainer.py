@@ -12,7 +12,8 @@ from torch.utils.tensorboard import SummaryWriter
 from trainer.training_metrics_class import TrainingMetrics
 from saver.saver_class import TorchModelSaver
 from helpers.early_stopping import EarlyStopping
-import ForwardGradient as FG
+from . import ForwardGradient as FG
+
 
 class Trainer:
     """
@@ -1063,7 +1064,9 @@ class Trainer:
             outputs = self.model(inputs)
             loss = self.loss_function(outputs, targets)
             loss.backward()
+
             self.optimizer.step()
+
             accumulated_running_loss_over_all_batches += loss.item()
 
             # statistics

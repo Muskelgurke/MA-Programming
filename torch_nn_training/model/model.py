@@ -19,6 +19,8 @@ def get_model(config: Config) -> nn.Module:
                     return NN_fc(input_size=input_size, hidden_size=hidden_size, output_size=output_size)
                 case "cnn":
                     return CNN_for_MNIST()
+                case "leenet5":
+                    return LeeNet5_MNIST()
                 case _:
                     raise ValueError(f"Unknown model type: {config.model_type} for that Dataset")
 
@@ -37,6 +39,7 @@ def get_model(config: Config) -> nn.Module:
                     return NN_fc(input_size=input_size, hidden_size=hidden_size, output_size=output_size)
                 case "cnn":
                     return CNN_for_CIFAR(output_size=output_size)
+
                 case _:
                     raise ValueError(f"Fully connected models not implemented for CIFAR-10")
 
@@ -55,6 +58,7 @@ def get_model(config: Config) -> nn.Module:
                     return NN_fc(input_size=input_size, hidden_size=hidden_size, output_size=output_size)
                 case "cnn":
                     return CNN_for_CIFAR(output_size=output_size)
+
                 case _:
                     raise ValueError(f"Fully connected models not implemented for CIFAR-10")
 
@@ -146,6 +150,30 @@ class CNN_for_CIFAR(nn.Module):
         x = self.classifier(x)
         return x
 
+def get_CNN_for_MNIST() -> nn.Module:
+    """Convolutional Neural Network for MNIST/FashionMnist dataset
+    aus dem Paper BAYDIN et al. 2022
+    """
+    return nn.Sequential(
+            # First conv block
+            nn.Conv2d(1, 64, kernel_size=3, padding=1),
+            nn.ReLU(),
+            nn.Conv2d(64, 64, kernel_size=3, padding=1),
+            nn.ReLU(),
+            nn.MaxPool2d(kernel_size=2, stride=2),
+
+            # Second conv block
+            nn.Conv2d(64, 64, kernel_size=3, padding=1),
+            nn.ReLU(),
+            nn.Conv2d(64, 64, kernel_size=3, padding=1),
+            nn.ReLU(),
+            nn.MaxPool2d(kernel_size=2, stride=2), # Output: 64 x 7 x 7,
+            nn.Flatten(),
+            nn.Linear(64 * 7 * 7, 1024),
+            nn.ReLU(),
+            nn.Linear(1024, 10) # Output: 10 Klassen
+        )
+
 
 class CNN_for_MNIST(nn.Module):
     """Convolutional Neural Network for MNIST/FashionMnist dataset
@@ -181,6 +209,33 @@ class CNN_for_MNIST(nn.Module):
         x = x.view(x.size(0), -1)
         x = self.classifier(x)
         return x
+
+class LeeNet5_MNIST(nn.Module):
+    """LeNet-5 Convolutional Neural Network for MNIST dataset"""
+    def __init__(self):
+        super(LeeNet5_MNIST, self).__init__()
+        self.conv1 = nn.Conv2d(1, 6, kernel_size=5,padding=2)
+        self.pool1 = nn.AvgPool2d(kernel_size=2, stride=2)
+
+        self.conv2 = nn.Conv2d(6, 16, kernel_size=5)
+        self.pool2 = nn.AvgPool2d(kernel_size=2, stride=2)
+        self.flatten = nn.Flatten()
+
+        self.fc1 = nn.Linear(400, 120)
+        self.fc2 = nn.Linear(120, 84)
+        self.fc3 = nn.Linear(84, 10)
+
+    def forward(self, x):
+        x = torch.sigmoid(self.conv1(x))
+        x = self.pool1(x)
+        x = torch.sigmoid(self.conv2(x))
+        x = self.pool2(x)
+        x = self.flatten(x)
+        x = torch.sigmoid(self.fc1(x))
+        x = torch.sigmoid(self.fc2(x))
+        x = self.fc3(x)
+        return x
+
 
 
 def _fc_manual_calculation(input_size: int, output_size: int) -> nn.Module:
