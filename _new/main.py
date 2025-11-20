@@ -2,16 +2,17 @@ import torch
 import sys
 from helpers.config_class import MultiParamLoader, Config
 from helpers.torch_model_saver import TorchModelSaver
+from helpers.singlerun_manager import SingleRunManager
 from pathlib import Path
 import datetime
 
 
 def start_nn_run(config_file: Config, device: torch.device, run_number: int) -> dict:
     print(f"Start {run_number} NN Lauf...")
-    #manager = SingleRunManager(config = config_file, device=device)
+    manager = SingleRunManager(config = config_file, device=device, run_number=run_number)
 
-    #results = manager.run()
-    results = {}
+    results = manager.run()
+    #}
     return results
 
 def start_training(config_path: str, device: torch.device):
@@ -28,7 +29,7 @@ def start_training(config_path: str, device: torch.device):
     saver = None
 
     print(f"Starte insgesamt {len(configs)} Läufe...")
-    today = datetime.datetime.now().strftime("%Y_%m_%d")
+
     for i, config in enumerate(configs):
         run_number = i + 1
         print(f"\n{'=' * 40}")
@@ -36,10 +37,10 @@ def start_training(config_path: str, device: torch.device):
         print(f"Config: LR={config.learning_rate}, Method={config.training_method}")
         print(f"Gerät: {device}")
 
-        timestamp = datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
-        run_path = f'runs/start{today}/run{run_number}_time{timestamp}_{config.dataset_name}_{config.model_type}_{config.training_method}'
-        saver = TorchModelSaver(run_path)
+
+
         try:
+
             run_metrics = start_nn_run(config_file=config,
                                        device=device,
                                        run_number=run_number)

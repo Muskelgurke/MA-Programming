@@ -2,9 +2,10 @@
 
 import torch
 import time
-import statistics
+import datetime
 import gc
-
+from _new.helpers.torch_model_saver import TorchModelSaver
+from _new.helpers.config_class import Config
 
 
 # Importiere Trainer, Tester, EarlyStopping, TorchModelSaver, etc.
@@ -18,11 +19,16 @@ class SingleRunManager:
         self.device = device
         self.start_time = time.time()
 
-        # Initialisierung von Ladern, Modell, Optimierer, Logger, Saver, Early Stopping
+        # Initialisierung von Laden, Modell, Optimierer, Logger, Saver, Early Stopping
         self._setup_run()
 
     def _setup_run(self):
         # Lade Daten, Modell, Optimierer, Loss-Funktion (wie in get_optimizer_and_lossfunction)
+        today = datetime.datetime.now().strftime("%Y_%m_%d")
+        timestamp = datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
+        run_path = f'runs/start{today}/run{self.run_number}_time{timestamp}_{self.config.dataset_name}_{self.config.model_type}_{self.config.training_method}'
+        self.saver = TorchModelSaver(run_path)
+
         self.train_loader, self.test_loader = datasets_helper.get_dataloaders(self.config, self.device)
         self.model = model_helper.get_model(self.config).to(self.device)
         self.loss_function, self.optimizer = get_optimizer_and_lossfunction(self.config, self.model)
