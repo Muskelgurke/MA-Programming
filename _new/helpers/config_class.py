@@ -39,17 +39,31 @@ class Config:
 
 class MultiParamLoader:
     """Hilfsklasse zum Laden und Verarbeiten von Multi-Parameter-Konfigurationen"""
+    def __init__(self,
+                 config_path: str):
+        self.config_path = config_path
+        self.base_config = None
+        self.multi_params = None
 
-    @staticmethod
-    def load_combined_config(yaml_path: str) -> tuple[dict, dict]:
-        """Lade kombinierte Config mit base_config und multi_params"""
-        with open(yaml_path, 'r') as file:
+    def initialize(self) -> None:
+        """Initialisiere den MultiParamLoader """
+
+
+        base_config = Config.from_dict(base_config)
+
+        configs = self.generate_combinations(multi_params, base_config)
+
+        self.print_overview_of_config(multi_params, base_config.to_dict())
+
+
+    def load_combined_config(self):
+        """Lädt die Conifg Datei und trennt base_config und multi_params."""
+        with open(self.config_path, 'r') as file:
             full_config = yaml.safe_load(file)
 
-        base_config = full_config.get('base_config', {})
-        multi_params = full_config.get('multi_params', {})
+        self.base_config = full_config.get('base_config', {})
+        self.multi_params = full_config.get('multi_params', {})
 
-        return base_config, multi_params
 
     @staticmethod
     def load_multi_params(yaml_path: str) -> dict:

@@ -53,12 +53,6 @@ class MultiParamLoader:
         return base_config, multi_params
 
     @staticmethod
-    def load_multi_params(yaml_path: str) -> dict:
-        """Lade Multi-Parameter aus YAML-Datei (Legacy-Unterstützung)"""
-        _, multi_params = MultiParamLoader.load_combined_config(yaml_path)
-        return multi_params
-
-    @staticmethod
     def generate_combinations(multi_params: dict, base_config: Config) -> List[Config]:
         """Generiere alle Kombinationen aus Multi-Parameter-Config"""
         # Separate Parameter in Listen und Einzelwerte

@@ -1,6 +1,6 @@
 import torch
 import sys
-import os
+from helpers.config_class import MultiParamLoader
 from pathlib import Path
 
 
@@ -21,6 +21,13 @@ def start_training(config_path: str, device: torch.device):
     print(f"Lade Konfiguration von: {config_path}")
 
     # Konfiguration laden
+    configLoader = MultiParamLoader(config_path)
+    configLoader.initialize()
+
+
+
+
+
     base_config_dict, multi_params = MultiParamLoader.load_combined_config(config_path)
     base_config = Config.from_dict(base_config_dict)
 
