@@ -4,7 +4,7 @@ import torch
 import time
 import statistics
 import gc
-from configuration.config_class import Config
+
 
 
 # Importiere Trainer, Tester, EarlyStopping, TorchModelSaver, etc.
