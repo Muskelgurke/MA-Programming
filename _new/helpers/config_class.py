@@ -42,18 +42,20 @@ class MultiParamLoader:
     def __init__(self,
                  config_path: str):
         self.config_path = config_path
-        self.base_config = None
-        self.multi_params = None
+        self.base_config = dict
+        self.multi_params = dict
+        self.configs = List[Config]
 
     def initialize(self) -> None:
-        """Initialisiere den MultiParamLoader """
+        """Initialisiere den MultiParamLoader
+        Lädt die Config File aus dem PATH und erzeugt alle Kombinationen
+        aus Basic_config und Multi_params. Abrufbar über self.configs."""
+        self.load_combined_config()
+        self.base_config = Config.from_dict(self.base_config)
 
+        self.configs = self.generate_combinations(self.multi_params, self.base_config)
 
-        base_config = Config.from_dict(base_config)
-
-        configs = self.generate_combinations(multi_params, base_config)
-
-        self.print_overview_of_config(multi_params, base_config.to_dict())
+        self.print_overview_of_config(self.multi_params, self.base_config.to_dict())
 
 
     def load_combined_config(self):
@@ -65,11 +67,6 @@ class MultiParamLoader:
         self.multi_params = full_config.get('multi_params', {})
 
 
-    @staticmethod
-    def load_multi_params(yaml_path: str) -> dict:
-        """Lade Multi-Parameter aus YAML-Datei (Legacy-Unterstützung)"""
-        _, multi_params = MultiParamLoader.load_combined_config(yaml_path)
-        return multi_params
 
     @staticmethod
     def generate_combinations(multi_params: dict, base_config: Config) -> List[Config]:

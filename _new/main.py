@@ -1,16 +1,15 @@
 import torch
 import sys
-from helpers.config_class import MultiParamLoader
+from helpers.config_class import MultiParamLoader, Config
 from pathlib import Path
 
 
-def start_nn_run(config_path: str, device: torch.device):
-    print("Initializing training...")
-    print(f"Starting training with config: {config_path} on device: {device}")
-    manager = SingleRunManager(config = Config.from_dict(base_config_dict), run_number=1, device=device)
+def start_nn_run(config_file: Config, device: torch.device, run_number: int) -> dict:
+    print(f"Start {run_number} NN Lauf...")
+    #manager = SingleRunManager(config = config_file, device=device)
 
-    results = manager.run()
-
+    #results = manager.run()
+    results = {}
     return results
 
 def start_training(config_path: str, device: torch.device):
@@ -19,26 +18,14 @@ def start_training(config_path: str, device: torch.device):
     """
     print("=== MULTI-RUN KOORDINATOR STARTET ===")
     print(f"Lade Konfiguration von: {config_path}")
-
-    # Konfiguration laden
-    configLoader = MultiParamLoader(config_path)
-    configLoader.initialize()
-
-
-
-
-
-    base_config_dict, multi_params = MultiParamLoader.load_combined_config(config_path)
-    base_config = Config.from_dict(base_config_dict)
-
-    # Alle Kombinationen generieren
-    configs = MultiParamLoader.generate_combinations(multi_params, base_config)
-
-    MultiParamLoader.print_overview_of_config(multi_params, base_config_dict)
+    config_loader = MultiParamLoader(config_path)
+    config_loader.initialize()
+    configs = config_loader.configs
 
     all_results = []
-
-    # Iteration über alle generierten Konfigurationen
+    saver = None
+    saver = TorchModelSaver()
+    print(f"Starte insgesamt {len(configs)} Läufe...")
     for i, config in enumerate(configs):
         run_number = i + 1
         print(f"\n{'=' * 40}")
@@ -47,8 +34,9 @@ def start_training(config_path: str, device: torch.device):
         print(f"Gerät: {device}")
 
         try:
-            # Aufruf der Delegationsfunktion
-            run_metrics = start_nn_run(config=config, device=device, run_number=run_number)
+            run_metrics = start_nn_run(config_file=config,
+                                       device=device,
+                                       run_number=run_number)
 
             # Ergebnis speichern
             all_results.append({
