@@ -6,7 +6,9 @@ import datetime
 import gc
 from _new.helpers.torch_model_saver import TorchModelSaver
 from _new.helpers.config_class import Config
-
+from _new.helpers.early_stopping_class import EarlyStopping
+import datasets as datsets_helper
+import model as model_helper
 
 # Importiere Trainer, Tester, EarlyStopping, TorchModelSaver, etc.
 
@@ -23,36 +25,36 @@ class SingleRunManager:
         self._setup_run()
 
     def _setup_run(self):
-        # Lade Daten, Modell, Optimierer, Loss-Funktion (wie in get_optimizer_and_lossfunction)
+        # Saver Setup
         today = datetime.datetime.now().strftime("%Y_%m_%d")
         timestamp = datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
         run_path = f'runs/start{today}/run{self.run_number}_time{timestamp}_{self.config.dataset_name}_{self.config.model_type}_{self.config.training_method}'
         self.saver = TorchModelSaver(run_path)
 
-        self.train_loader, self.test_loader = datasets_helper.get_dataloaders(self.config, self.device)
+        # Daten
+        self.train_loader, self.test_loader = datsets_helper.get_dataloaders(self.config, self.device)
+        # Modell
         self.model = model_helper.get_model(self.config).to(self.device)
+        # Optiimzer Loss Function
         self.loss_function, self.optimizer = get_optimizer_and_lossfunction(self.config, self.model)
 
-        # Setup Logging und Saving
-        timestamp = datetime.datetime.now().strftime("%H_%M_%S")
-        today = datetime.datetime.now().strftime("%Y_%m_%d")
-        run_path = f'runs/{today}/{timestamp}_run{self.run_number}_...'  # Kürze den Pfad
-        self.writer = SummaryWriter(log_dir=run_path)
-        self.saver = TorchModelSaver(self.writer.log_dir)
 
         # Setup Early Stopping
-        self.early_stopping = EarlyStopping(
-            patience=self.config.early_stopping_patience,
-            delta=self.config.early_stopping_delta
-        ) if self.config.early_stopping else None
+        self.early_stopping = EarlyStopping(patience=self.config.early_stopping_patience,
+                                            delta=self.config.early_stopping_delta
+                                            ) if self.config.early_stopping else None
 
         # Initialisiere Trainer und Tester
-        self.trainer = Trainer(
-            config_file=self.config, model=self.model, data_loader=self.train_loader,
-            loss_function=self.loss_function, optimizer=self.optimizer,
-            device=self.device, total_epochs=self.config.epoch_num,
-            seed=self.config.random_seed, tensorboard_writer=self.writer,
-            saver_class=self.saver, early_stopping_class=self.early_stopping
+        self.trainer = Trainer(config_file=self.config,
+                               model=self.model,
+                               data_loader=self.train_loader,
+                               loss_function=self.loss_function,
+                               optimizer=self.optimizer,
+                               device=self.device,
+                               total_epochs=self.config.epoch_num,
+                               seed=self.config.random_seed,
+                               saver_class=self.saver,
+                               early_stopping_class=self.early_stopping
         )
         self.tester = Tester(...)  # Fülle die Parameter für Tester aus
 
