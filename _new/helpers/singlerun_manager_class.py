@@ -3,8 +3,9 @@ import time
 import datetime
 from _new.helpers.saver_class import TorchModelSaver
 from _new.helpers.config_class import Config
-from _new.trainer.trainer_class import BaseTrainer
-from _new.tester.tester_class import Tester
+from _new.helpers.trainer_class import BaseTrainer
+from _new.methods.backprop_trainer import BackpropTrainer
+from _new.methods.fg_trainer import ForwardGradientTrainer
 
 class SingleRunManager:
     """Verwaltet einen einzelnen Trainingslauf von A bis Z."""
@@ -40,9 +41,9 @@ class SingleRunManager:
                                               device=self.device,
                                               saver=self.saver)
             case "bp":
-                return BackpropagationTrainer(config=self.config,
-                                              device=self.device,
-                                              saver=self.saver)
+                return BackpropTrainer(config=self.config,
+                                       device=self.device,
+                                       saver=self.saver)
             case _:
                 raise ValueError(f"Unknown Training - Method: {self.config.training_method}")
 
