@@ -1,16 +1,10 @@
-# singlerun_manager.py
-
 import torch
 import time
 import datetime
-import gc
-from _new.helpers.torch_model_saver import TorchModelSaver
+from _new.helpers.saver_class import TorchModelSaver
 from _new.helpers.config_class import Config
-from _new.helpers.early_stopping_class import EarlyStopping
-import datasets as datsets_helper
-import model as model_helper
-
-# Importiere Trainer, Tester, EarlyStopping, TorchModelSaver, etc.
+from _new.trainer.trainer_class import Trainer
+from _new.tester.tester_class import Tester
 
 class SingleRunManager:
     """Verwaltet einen einzelnen Trainingslauf von A bis Z."""
@@ -21,7 +15,6 @@ class SingleRunManager:
         self.device = device
         self.start_time = time.time()
 
-        # Initialisierung von Laden, Modell, Optimierer, Logger, Saver, Early Stopping
         self._setup_run()
 
     def _setup_run(self):
@@ -31,31 +24,13 @@ class SingleRunManager:
         run_path = f'runs/start{today}/run{self.run_number}_time{timestamp}_{self.config.dataset_name}_{self.config.model_type}_{self.config.training_method}'
         self.saver = TorchModelSaver(run_path)
 
-        # Daten
-        self.train_loader, self.test_loader = datsets_helper.get_dataloaders(self.config, self.device)
-        # Modell
-        self.model = model_helper.get_model(self.config).to(self.device)
-        # Optiimzer Loss Function
-        self.loss_function, self.optimizer = get_optimizer_and_lossfunction(self.config, self.model)
 
-
-        # Setup Early Stopping
-        self.early_stopping = EarlyStopping(patience=self.config.early_stopping_patience,
-                                            delta=self.config.early_stopping_delta
-                                            ) if self.config.early_stopping else None
 
         # Initialisiere Trainer und Tester
         self.trainer = Trainer(config_file=self.config,
-                               model=self.model,
-                               data_loader=self.train_loader,
-                               loss_function=self.loss_function,
-                               optimizer=self.optimizer,
                                device=self.device,
-                               total_epochs=self.config.epoch_num,
-                               seed=self.config.random_seed,
-                               saver_class=self.saver,
-                               early_stopping_class=self.early_stopping
-        )
+                               saver_class=self.saver)
+
         self.tester = Tester(...)  # Fülle die Parameter für Tester aus
 
     def run(self) -> dict:
@@ -99,8 +74,6 @@ class SingleRunManager:
         except Exception as e:
             # Fehlerbehandlung
             raise e
-        finally:
-            self._cleanup()
 
     def _save_early_stop_summary(self, training_results, test_accs_per_epoch, epoch):
         run_time = time.time() - self.start_time
@@ -113,11 +86,3 @@ class SingleRunManager:
             'final_train_acc': train_losses[-1] if train_losses else 0.0,
             # ...
         }
-
-    def _cleanup(self):
-        # Logik zum Aufräumen von DataLoadern, Modell, GPU-Speicher (aus main_start_session.py)
-        if self.writer:
-            self.writer.flush()
-            self.writer.close()
-        # ... (restliches Cleanup) ...
-        gc.collect()

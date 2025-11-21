@@ -4,13 +4,13 @@ from _new.helpers.config_class import Config
 
 def get_dataloaders(config: Config, device: torch.device) -> tuple[torch.utils.data.DataLoader, torch.utils.data.DataLoader]:
     """
-    Load dataset and return training and test dataloaders.
+    Load dataset and return TRAIN and TEST dataloaders.
 
     Args:
         config (Config): Configuration object containing dataset and batch size.
         device (torch.device): Device to use.
     Returns:
-        Tuple[DataLoader, DataLoader]: Training and test dataloaders.
+        Tuple[DataLoader, DataLoader]: Training and Test dataloaders.
         When device is 'cuda', the entire dataset is loaded to GPU memory.
     """
 

@@ -1,7 +1,7 @@
 import torch
 import sys
 from helpers.config_class import MultiParamLoader, Config
-from helpers.torch_model_saver import TorchModelSaver
+from helpers.saver_class import TorchModelSaver
 from helpers.singlerun_manager_class import SingleRunManager
 from pathlib import Path
 import datetime
