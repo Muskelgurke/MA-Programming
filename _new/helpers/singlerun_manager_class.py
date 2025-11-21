@@ -3,7 +3,7 @@ import time
 import datetime
 from _new.helpers.saver_class import TorchModelSaver
 from _new.helpers.config_class import Config
-from _new.trainer.trainer_class import Trainer
+from _new.trainer.trainer_class import BaseTrainer
 from _new.tester.tester_class import Tester
 
 class SingleRunManager:
@@ -19,19 +19,32 @@ class SingleRunManager:
 
     def _setup_run(self):
         # Saver Setup
+        run_path = self._create_path()
+
+        self.saver = TorchModelSaver(run_path)
+
+        self.trainer = self._create_trainer()
+
+        self.tester = Tester(...)  # Fülle die Parameter für Tester aus
+
+    def _create_path(self) -> str:
         today = datetime.datetime.now().strftime("%Y_%m_%d")
         timestamp = datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
         run_path = f'runs/start{today}/run{self.run_number}_time{timestamp}_{self.config.dataset_name}_{self.config.model_type}_{self.config.training_method}'
-        self.saver = TorchModelSaver(run_path)
+        return run_path
+    def _create_trainer(self) -> BaseTrainer:
 
-
-
-        # Initialisiere Trainer und Tester
-        self.trainer = Trainer(config_file=self.config,
-                               device=self.device,
-                               saver_class=self.saver)
-
-        self.tester = Tester(...)  # Fülle die Parameter für Tester aus
+        match self.config.training_method:
+            case "fgd":
+                return ForwardGradientTrainer(config=self.config,
+                                              device=self.device,
+                                              saver=self.saver)
+            case "bp":
+                return BackpropagationTrainer(config=self.config,
+                                              device=self.device,
+                                              saver=self.saver)
+            case _:
+                raise ValueError(f"Unknown Training - Method: {self.config.training_method}")
 
     def run(self) -> dict:
         """Führt die Haupt-Epochen-Schleife durch und gibt die Ergebnisse zurück."""

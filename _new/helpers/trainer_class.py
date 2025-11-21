@@ -9,18 +9,20 @@ from _new.helpers.config_class import Config
 from _new.helpers.early_stopping_class import EarlyStopping
 from _new.helpers.saver_class import TorchModelSaver
 from _new.helpers.training_metrics_class import TrainingMetrics
+from abc import ABC, abstractmethod
+from tqdm import tqdm
 
-class Trainer:
+class BaseTrainer(ABC):
 
-    def __init(self, config_file= Config, device: torch.device, saver_class = TorchModelSaver):
+    def __init(self, config_file= Config, device= torch.device, saver_class = TorchModelSaver):
         self.config = config_file
         self.device = device
         self.start_time = time.time()
         self.saver = saver_class
         # Initialisierung von Laden, Modell, Optimierer, Logger, Saver, Early Stopping
-        self._initialize()
+        self._initialize_components()
 
-    def _initialize(self):
+    def _initialize_components(self):
         self.model = model_helper.get_model(config=self.config).to(self.device)
         self.train_loader, xx = datsets_helper.get_dataloaders(config=self.config,device=self.device)
         self.loss_function = loss_function_helper.get_loss_function(config=self.config)
@@ -35,9 +37,38 @@ class Trainer:
         self.seed = self.config.random_seed
 
 
-    def train_epoch(self, epoch_num: int) -> dict:
+    def train_epoch(self, epoch_num: int) -> TrainingMetrics:
+        """"Trainiert das Modell für eine Epoche und gibt die Trainingsmetriken zurück."""
         self.epoch_num = epoch_num + 1
         self.model.train()
+        self.metrics.clear_batch_metrics()
+
+        self._train_epoch_impl()
+
+        return self.metrics
+
+    @abstractmethod
+    def _train_epoch_impl(self):
+
+        pass
+
+    def _update_metrics(self, loss: float, outputs: torch.Tensor, targets: torch.Tensor):
+        """Update training metrics."""
+        _, predicted = torch.max(outputs.data, 1)
+        total = targets.size(0)
+        correct = (predicted == targets).sum().item()
+        accuracy = 100.0 * correct / total
+
+        return loss, correct, total, accuracy
+
+    def _create_progress_bar(self, desc: str = None) -> tqdm:
+        """Create standardized progress bar."""
+        if desc is None:
+            desc = f'Epoch {self.epoch_num}/{self.total_epochs}'
+        return tqdm(self.train_loader, desc=desc)
+
+
+
 
 
 

@@ -6,7 +6,7 @@ import datetime
 from pathlib import Path
 from typing import Dict, TextIO, Optional
 from _new.helpers.config_class import Config
-from _new.helpers.training_metrics import TrainingMetrics
+from _new.helpers.training_metrics_class import TrainingMetrics
 
 class TorchModelSaver:
     """Class for saving and loading PyTorch model training sessions"""
