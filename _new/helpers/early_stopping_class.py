@@ -13,7 +13,7 @@ class EarlyStopping:
         self.max_loss_threshold = max_loss_threshold
         self.best_score: Optional[float] = None
         self.counter = 0
-        self.should_stop = False
+        self.early_stop = False
         self.best_model_state: Optional[Dict] = None
         self.stop_info: Dict[str, Any] = {}
 
@@ -42,7 +42,7 @@ class EarlyStopping:
     def _check_invalid_train_loss(self, train_loss: float, epoch: int) -> bool:
         """Prüft ob Train Loss NaN ist oder Schwellenwert überschreitet"""
         if train_loss is None or torch.isnan(torch.tensor(train_loss)):
-            self.should_stop = True
+            self.early_stop = True
             self.stop_info = {
                 "reason": "nan_train_loss",
                 "stopped_at_epoch": epoch,
@@ -51,7 +51,7 @@ class EarlyStopping:
             return True
 
         if train_loss > self.max_loss_threshold:
-            self.should_stop = True
+            self.early_stop = True
             self.stop_info = {
                 "reason": "train_loss_exploded",
                 "stopped_at_epoch": epoch,
@@ -65,7 +65,7 @@ class EarlyStopping:
     def _check_invalid_val_loss(self, val_loss: float, epoch: int) -> bool:
         """Prüft ob Validation Loss ungültig ist (NaN oder explodiert)"""
         if val_loss is None or torch.isnan(torch.tensor(val_loss)):
-            self.should_stop = True
+            self.early_stop = True
             self.stop_info = {
                 "reason": "nan_val_loss",
                 "stopped_at_epoch": epoch,
@@ -74,7 +74,7 @@ class EarlyStopping:
             return True
 
         if val_loss > self.max_loss_threshold:
-            self.should_stop = True
+            self.early_stop = True
             self.stop_info = {
                 "reason": "val_loss_exploded",
                 "stopped_at_epoch": epoch,
@@ -97,7 +97,7 @@ class EarlyStopping:
         if score <= self.best_score + self.delta:
             self.counter += 1
             if self.counter >= self.patience:
-                self.should_stop = True
+                self.early_stop = True
                 self.stop_info = {
                     "reason": "patience_exceeded",
                     "stopped_at_epoch": epoch,
@@ -124,7 +124,7 @@ class EarlyStopping:
         """Setzt alle Zustände zurück"""
         self.best_score = None
         self.counter = 0
-        self.should_stop = False
+        self.early_stop = False
         self.best_model_state = None
         self.stop_info = {}
 

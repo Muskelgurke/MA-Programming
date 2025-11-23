@@ -6,7 +6,9 @@ import datetime
 from pathlib import Path
 from typing import Dict, TextIO, Optional
 from _new.helpers.config_class import Config
-from _new.helpers.training_metrics_class import TrainingMetrics
+from _new.helpers.training_metrics_class import TrainMetrics
+from _new.helpers.tester_metrics_class import TestMetrics
+
 
 class TorchModelSaver:
     """Class for saving and loading PyTorch model training sessions"""
@@ -25,10 +27,10 @@ class TorchModelSaver:
         """Initialisiert die Epoch CSV-Datei falls nötig"""
         if not self.epoch_csv_initialized:
             fieldnames = [
-                'epoch', 'avg_train_loss', 'train_accuracy', 'avg_test_loss',
-                'test_accuracy', 'avg_cosine_similarity', 'avg_mse_grads',
-                'avg_mae_grads', 'avg_std_difference', 'avg_std_estimated',
-                'avg_var_estimated', 'avg_std_true', 'avg_var_true', 'num_batches'
+                'epoch',
+                'train_loss','train_accuracy',
+                'test_loss','test_accuracy',
+                'num_batches'
             ]
 
             with open(self.epoch_metrics_file, 'w', newline='') as csvfile:
@@ -52,10 +54,9 @@ class TorchModelSaver:
 
 
     def write_epoch_metrics(self,
-                            training_metrics: TrainingMetrics,
-                            test_loss: float = None,
-                            test_accuracy: float = None,
-                            epoch: int = 0) -> None:
+                            train_metrics: TrainMetrics,
+                            test_metrics: TestMetrics,
+                            epoch_idx: int) -> None:
         """Save metrics in a plotting-friendly CSV format with one row per epoch"""
 
         self._ensure_epoch_csv_ready()
@@ -63,37 +64,21 @@ class TorchModelSaver:
         # Define fieldnames optimized for plotting
         fieldnames = [
             'epoch',
-            'avg_train_loss',
+            'train_loss',
             'train_accuracy',
-            'avg_test_loss',
+            'test_loss',
             'test_accuracy',
-            'avg_cosine_similarity',
-            'avg_mse_grads',
-            'avg_mae_grads',
-            'avg_std_difference',
-            'avg_std_estimated',
-            'avg_var_estimated',
-            'avg_std_true',
-            'avg_var_true',
             'num_batches'
         ]
 
         # Write one row per epoch with all relevant metrics
         row_data = {
-            'epoch': epoch + 1,
-            'avg_train_loss': training_metrics.loss_per_epoch,
-            'train_accuracy': training_metrics.acc_per_epoch,
-            'avg_test_loss': test_loss if test_loss is not None else 'csv_save=None',
-            'test_accuracy': test_accuracy if test_accuracy is not None else 'csv_save=None',
-            'avg_cosine_similarity': training_metrics.epoch_avg_cosine_similarity,
-            'avg_mse_grads': training_metrics.epoch_avg_mse_grads,
-            'avg_mae_grads': training_metrics.epoch_avg_mae_grads,
-            'avg_std_difference': training_metrics.epoch_avg_std_difference,
-            'avg_std_estimated': training_metrics.epoch_avg_std_estimated,
-            'avg_std_true': training_metrics.epoch_avg_std_true,
-            'avg_var_estimated': training_metrics.epoch_avg_var_estimated,
-            'avg_var_true': training_metrics.epoch_avg_var_true,
-            'num_batches': training_metrics.num_batches
+            'epoch': epoch_idx + 1,
+            'avg_train_loss': train_metrics.loss_per_epoch,
+            'train_accuracy': train_metrics.acc_per_epoch,
+            'avg_test_loss': test_metrics.loss_per_epoch if test_metrics.loss_per_epoch is not None else 'csv_save=None',
+            'test_accuracy': test_metrics.acc_per_epoch if test_metrics.acc_per_epoch  is not None else 'csv_save=None',
+            'num_batches': train_metrics.num_batches
         }
 
         with open(self.epoch_metrics_file, 'a', newline='') as csvfile:
@@ -294,9 +279,11 @@ class TorchModelSaver:
             torch.save(model, filepath.with_suffix('.pt'))
 
 
-    def save_session_after_epoch(self, config: Config,
-                                 model: torch.nn.Module,
-                                 save_full_model: bool = False) -> Path:
+    def save_session_after_epochs(self, config: Config,
+                                  model: torch.nn.Module,
+                                  save_full_model: bool = False,
+                                  stop_info: Dict
+                                  ) -> None:
         """
         Save complete PyTorch training session including model, metrics, and configuration.
 
@@ -310,11 +297,11 @@ class TorchModelSaver:
             Path to the created training directory
         """
        # Prepare training data for yaml
-        training_config = config.to_dict()
+        config_dict = config.to_dict()
 
-        yaml_path = self.run_dir / "training_info.yaml"
+        yaml_path = self.run_dir / "config.yaml"
         with open(yaml_path, 'w') as f:
-            yaml.dump(training_config, f)
+            yaml.dump(config_dict, f)
 
         # Save PyTorch model
         model_dir = self.run_dir / "model"

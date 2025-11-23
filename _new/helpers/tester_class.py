@@ -3,9 +3,9 @@ import datasets as datesets_helper
 import model as model_helper
 import loss_function as loss_function_helper
 import optimizer as optimizer_helper
-import tqdm
 
-from _new.helpers.tester_metrics_class import TesterMetrics
+from tqdm import tqdm
+from _new.helpers.tester_metrics_class import TestMetrics
 from _new.helpers.saver_class import TorchModelSaver
 from _new.helpers.config_class import Config
 
@@ -33,9 +33,9 @@ class Tester():
         self.seed = self.config.random_seed
         self.epoch_num = 0
         self.total_epochs = self.config.epoch_total
-        self.metrics = TesterMetrics()
+        self.metrics = TestMetrics()
 
-    def validate_epoch(self, epoch_num: int) -> TesterMetrics:
+    def validate_epoch(self, epoch_num: int) -> TestMetrics:
         self.epoch_num = epoch_num + 1
         self.metrics.clear_test_metrics()
 
@@ -45,7 +45,8 @@ class Tester():
 
     def _validate(self):
         self.model.eval()
-        pbar = tqdm(self.test_loader, desc=f'Validating{self.epoch_num}/{self.total_epochs}')
+        pbar = self._create_progress_bar(desc=f'Validating{self.epoch_num}/{self.total_epochs}')
+
         with torch.no_grad():
             sum_loss = 0
             sum_correct = 0
@@ -58,18 +59,22 @@ class Tester():
                 sum_loss += loss.item()
                 _ , predicted = torch.max(outputs.data,1)
                 correct = (predicted == targets).sum().item()
-                batch_size = targets.size(0)
 
                 sum_correct += correct
-                sum_size += batch_size
 
                 pbar.set_postfix({
                     'Val Loss': f'{sum_loss / (batch_idx + 1):.4f}',
                     'Val Acc': f'{100.0 * sum_correct / sum_size:.2f}%'
                 })
-            self.metrics.loss_per_epoch = sum_loss / sum_size
-            self.metrics.acc_per_epoch = 100.0 * sum_correct / sum_size
 
+            self.metrics.loss_per_epoch = sum_loss / len(self.test_loader)
+            self.metrics.acc_per_epoch = 100.0 * sum_correct / len(self.test_loader)
+
+    def _create_progress_bar(self, desc: str = None) -> tqdm:
+        """Create standardized progress bar."""
+        if desc is None:
+            desc = f'Epoch {self.epoch_num}/{self.total_epochs}'
+        return tqdm(self.test_loader, desc=desc)
 
 
 

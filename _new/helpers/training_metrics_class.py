@@ -3,10 +3,11 @@ from typing import List
 
 
 @dataclass
-class TrainingMetrics:
+class TrainMetrics:
     """Dataclass to store training metrics for each epoch"""
     loss_per_epoch: float = 0.0
     acc_per_epoch: float = 0.0
+    num_batches: int = 0
 
     def to_dict(self) -> dict:
         return asdict(self)

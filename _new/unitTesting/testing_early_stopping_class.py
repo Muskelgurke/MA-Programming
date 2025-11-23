@@ -36,7 +36,7 @@ class TestEarlyStopping(unittest.TestCase):
         self.assertEqual(self.early_stopping.max_loss_threshold, 10000.0)
         self.assertIsNone(self.early_stopping.best_score)
         self.assertEqual(self.early_stopping.counter, 0)
-        self.assertFalse(self.early_stopping.should_stop)
+        self.assertFalse(self.early_stopping.early_stop)
         self.assertIsNone(self.early_stopping.best_model_state)
         self.assertEqual(self.early_stopping.stop_info, {})
 
@@ -49,7 +49,7 @@ class TestEarlyStopping(unittest.TestCase):
             epoch=0
         )
 
-        self.assertTrue(self.early_stopping.should_stop)
+        self.assertTrue(self.early_stopping.early_stop)
         self.assertEqual(self.early_stopping.stop_info['reason'], 'nan_train_loss')
         self.assertEqual(self.early_stopping.stop_info['stopped_at_epoch'], 0)
 
@@ -62,7 +62,7 @@ class TestEarlyStopping(unittest.TestCase):
             epoch=2
         )
 
-        self.assertTrue(self.early_stopping.should_stop)
+        self.assertTrue(self.early_stopping.early_stop)
         self.assertEqual(self.early_stopping.stop_info['reason'], 'nan_val_loss')
         self.assertEqual(self.early_stopping.stop_info['stopped_at_epoch'], 2)
 
@@ -75,7 +75,7 @@ class TestEarlyStopping(unittest.TestCase):
             epoch=5
         )
 
-        self.assertTrue(self.early_stopping.should_stop)
+        self.assertTrue(self.early_stopping.early_stop)
         self.assertEqual(self.early_stopping.stop_info['reason'], 'train_loss_exploded')
         self.assertEqual(self.early_stopping.stop_info['train_loss'], 15000.0)
         self.assertEqual(self.early_stopping.stop_info['threshold'], 10000.0)
@@ -89,7 +89,7 @@ class TestEarlyStopping(unittest.TestCase):
             epoch=3
         )
 
-        self.assertTrue(self.early_stopping.should_stop)
+        self.assertTrue(self.early_stopping.early_stop)
         self.assertEqual(self.early_stopping.stop_info['reason'], 'val_loss_exploded')
         self.assertEqual(self.early_stopping.stop_info['val_loss'], 20000.0)
 
@@ -97,14 +97,14 @@ class TestEarlyStopping(unittest.TestCase):
         """Test: Patience wird nach mehreren Epochen ohne Verbesserung überschritten"""
         # Erste Epoch: Beste Loss
         self.early_stopping.check_and_update(1.0, 1.0, self.model, 0)
-        self.assertFalse(self.early_stopping.should_stop)
+        self.assertFalse(self.early_stopping.early_stop)
         self.assertEqual(self.early_stopping.counter, 0)
 
         # Weitere Epochen ohne Verbesserung
         for epoch in range(1, 4):
             self.early_stopping.check_and_update(1.0, 1.0, self.model, epoch)
 
-        self.assertTrue(self.early_stopping.should_stop)
+        self.assertTrue(self.early_stopping.early_stop)
         self.assertEqual(self.early_stopping.stop_info['reason'], 'patience_exceeded')
         self.assertEqual(self.early_stopping.counter, 3)
 
@@ -121,7 +121,7 @@ class TestEarlyStopping(unittest.TestCase):
         # Epoch 3: Verbesserung
         self.early_stopping.check_and_update(0.5, 0.5, self.model, 3)
         self.assertEqual(self.early_stopping.counter, 0)
-        self.assertFalse(self.early_stopping.should_stop)
+        self.assertFalse(self.early_stopping.early_stop)
 
     def test_best_model_state_saved(self):
         """Test: Bestes Modell wird gespeichert"""
@@ -192,7 +192,7 @@ class TestEarlyStopping(unittest.TestCase):
         # Prüfe Rücksetzen
         self.assertIsNone(self.early_stopping.best_score)
         self.assertEqual(self.early_stopping.counter, 0)
-        self.assertFalse(self.early_stopping.should_stop)
+        self.assertFalse(self.early_stopping.early_stop)
         self.assertIsNone(self.early_stopping.best_model_state)
         self.assertEqual(self.early_stopping.stop_info, {})
 
@@ -218,7 +218,7 @@ class TestEarlyStopping(unittest.TestCase):
             epoch=1
         )
 
-        self.assertTrue(self.early_stopping.should_stop)
+        self.assertTrue(self.early_stopping.early_stop)
         self.assertEqual(self.early_stopping.stop_info['reason'], 'nan_train_loss')
 
     def test_none_val_loss(self):
@@ -230,7 +230,7 @@ class TestEarlyStopping(unittest.TestCase):
             epoch=1
         )
 
-        self.assertTrue(self.early_stopping.should_stop)
+        self.assertTrue(self.early_stopping.early_stop)
         self.assertEqual(self.early_stopping.stop_info['reason'], 'nan_val_loss')
 
     def test_model_on_gpu_if_available(self):
@@ -260,7 +260,7 @@ class TestEarlyStopping(unittest.TestCase):
 
         for epoch, loss in enumerate(losses):
             self.early_stopping.check_and_update(loss, loss, self.model, epoch)
-            self.assertFalse(self.early_stopping.should_stop)
+            self.assertFalse(self.early_stopping.early_stop)
             self.assertEqual(self.early_stopping.counter, 0)
 
         self.assertEqual(self.early_stopping.best_score, -0.6)

@@ -1,4 +1,6 @@
 from _new.helpers.trainer_class import BaseTrainer
+import torch
+
 
 class BackpropTrainer(BaseTrainer):
     """Trainer-Klasse für Backpropagation-basiertes Training."""
@@ -6,7 +8,7 @@ class BackpropTrainer(BaseTrainer):
     def _train_epoch_impl(self):
         sum_loss = 0
         sum_correct = 0
-        sum_total = 0
+        sum_size = 0
 
         pbar = self._create_progress_bar(desc=f'BP Epoch {self.epoch_num}/{self.total_epochs}')
 
@@ -16,21 +18,24 @@ class BackpropTrainer(BaseTrainer):
 
             outputs = self.model(inputs)
             loss = self.loss_function(outputs, targets)
+            sum_loss += loss
             loss.backward()
             self.optimizer.step()
 
             # Metriken aktualisieren
-            loss_val, correct, total, train_acc = self._update_metrics(loss.item(), outputs, targets)
-            sum_loss += loss_val
+            _, predicted = torch.max(outputs.data, 1)
+            total = targets.size(0)
+            correct = (predicted == targets).sum().item()
+
             sum_correct += correct
-            sum_total += total
+            sum_size += total
+            accuracy = 100.0 * correct / total
 
             pbar.set_postfix({
-                'Loss': f'{sum_loss / (batch_idx + 1):.4f}',
-                'Acc': f'{100.0 * sum_correct / sum_total:.2f}%'
+                'Loss': f'{loss:.4f}',
+                'Acc': f'{accuracy:.2f}%'
             })
 
-        # Epoch-Metriken speichern
-        self.metrics.acc_per_epoch = 100. * sum_correct / sum_total
+        self.metrics.acc_per_epoch = 100. * sum_correct / len(self.train_loader)
         self.metrics.loss_per_epoch = sum_loss / len(self.train_loader)
         self.metrics.num_batches = len(self.train_loader)

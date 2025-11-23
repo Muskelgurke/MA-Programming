@@ -3,7 +3,7 @@ from typing import List
 
 
 @dataclass
-class TesterMetrics:
+class TestMetrics:
     """Dataclass to store training metrics for each epoch"""
     loss_per_epoch: float = 0.0
     acc_per_epoch: float = 0.0
