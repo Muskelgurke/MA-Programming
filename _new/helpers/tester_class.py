@@ -1,13 +1,13 @@
 import torch
-import datasets as datesets_helper
-import model as model_helper
-import loss_function as loss_function_helper
-import optimizer as optimizer_helper
+import _new.helpers.datasets as datesets_helper
+import helpers.model as model_helper
+import helpers.loss_function as loss_function_helper
+import helpers.optimizer as optimizer_helper
 
 from tqdm import tqdm
-from _new.helpers.tester_metrics_class import TestMetrics
-from _new.helpers.saver_class import TorchModelSaver
-from _new.helpers.config_class import Config
+from helpers.tester_metrics_class import TestMetrics
+from helpers.saver_class import TorchModelSaver
+from helpers.config_class import Config
 
 
 class Tester():

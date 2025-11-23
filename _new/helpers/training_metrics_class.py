@@ -9,6 +9,7 @@ class TrainMetrics:
     acc_per_epoch: float = 0.0
     num_batches: int = 0
 
+
     def to_dict(self) -> dict:
         return asdict(self)
 

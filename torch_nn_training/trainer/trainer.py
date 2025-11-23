@@ -150,7 +150,7 @@ class Trainer:
                 sum_total_samples += total_amount_of_samples
 
                 # Save batch metrics to CSV
-                self.saver.write_batch_metrics(
+                self.saver.write_batch_metrics_csv(
                     epoch=self.epoch_num,
                     batch_idx=batch_idx,
                     loss=loss_esti.item(),
@@ -279,7 +279,7 @@ class Trainer:
                 sum_total_samples += total_amount_of_samples
 
                 # Save batch metrics to CSV
-                self.saver.write_batch_metrics(
+                self.saver.write_batch_metrics_csv(
                     epoch=self.epoch_num,
                     batch_idx=batch_idx,
                     loss=loss_esti.item(),
@@ -498,7 +498,7 @@ class Trainer:
                                                        unique_increasing_counter)
 
                 # Save batch metrics to CSV
-                self.saver.write_batch_metrics(
+                self.saver.write_batch_metrics_csv(
                     epoch=self.epoch_num,
                     batch_idx=batch_idx,
                     loss=loss_esti.item(),

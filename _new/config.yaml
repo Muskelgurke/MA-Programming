@@ -20,21 +20,7 @@ base_config:
 # Wenn ein Parameter hier definiert ist, wird er für Multi-Training verwendet
 # Wenn nicht, wird der Wert aus base_config genommen
 
-multi_params:
-  learning_rate:
-
-
-  model_type:
-
-
-  dataset_name:
-
-
-  training_method:
-
-
-  optimizer:
-
+ss
 
   #momentum:
   #  - 0.8

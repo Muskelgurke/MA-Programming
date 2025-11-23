@@ -1,19 +1,20 @@
 import torch
 import sys
+
 from helpers.config_class import MultiParamLoader, Config
-from helpers.saver_class import TorchModelSaver
+
 from helpers.singlerun_manager_class import SingleRunManager
 from pathlib import Path
 import datetime
 
 
-def start_nn_run(config_file: Config, device: torch.device, run_number: int) -> dict:
-    print(f"Start {run_number} NN Lauf...")
-    manager = SingleRunManager(config = config_file, device=device, run_number=run_number)
 
-    results = manager.run()
 
-    return results
+def start_nn_run(config_file: Config, device: torch.device, run_number: int, base_path= str) -> None:
+    print(f"Start {run_number} Run")
+    manager = SingleRunManager(config = config_file, device=device, run_number=run_number, base_path=base_path)
+    manager.run()
+
 
 def start_training(config_path: str, device: torch.device):
     """
@@ -25,11 +26,11 @@ def start_training(config_path: str, device: torch.device):
     config_loader.initialize()
     configs = config_loader.configs
 
-    all_results = []
-    saver = None
-
     print(f"Starte insgesamt {len(configs)} Läufe...")
 
+    timestamp = datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
+    base_path = f'runs/{timestamp}'
+    
     for i, config in enumerate(configs):
         run_number = i + 1
         print(f"\n{'=' * 40}")
@@ -37,37 +38,24 @@ def start_training(config_path: str, device: torch.device):
         print(f"Config: LR={config.learning_rate}, Method={config.training_method}")
         print(f"Gerät: {device}")
 
-
-
         try:
 
-            run_metrics = start_nn_run(config_file=config,
-                                       device=device,
-                                       run_number=run_number)
+            start_nn_run(config_file=config,
+                         device=device,
+                         run_number=run_number,
+                         base_path=base_path)
 
-            # Ergebnis speichern
-            all_results.append({
-                'run_id': run_number,
-                'config': config.to_dict(),
-                'metrics': run_metrics
-            })
+            print(f"✅ Lauf {run_number} abgeschlossen.")
 
         except Exception as e:
             print(f"❌ Fehler bei Lauf {run_number}: {e}")
-            all_results.append({
-                'run_id': run_number,
-                'config': config.to_dict(),
-                'error': str(e)
-            })
 
-    print(f"\n=== MULTI-RUN ABGESCHLOSSEN (Ergebnisse: {len(all_results)}) ===")
-    # Hier könnte die Zusammenfassung gespeichert werden (z.B. write_multi_session_summary)
+    print(f"\n=== MULTI-RUN ABGESCHLOSSEN ===")
 
 def get_device()->torch.device:
     """Gibt das Gerät zurück, auf dem das Training durchgeführt werden soll."""
     if torch.cuda.is_available() and torch.cuda.device_count() >= 3:
         device = torch.device("cuda:2")
-
     else:
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     return device

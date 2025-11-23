@@ -12,23 +12,24 @@ from _new.helpers.early_stopping_class import EarlyStopping
 class SingleRunManager:
     """Verwaltet einen einzelnen Trainingslauf von A bis Z."""
 
-    def __init__(self, config: Config, run_number: int, device: torch.device):
+    def __init__(self, config: Config, run_number: int, device: torch.device, base_path: str):
         self.config = config
         self.run_number = run_number
         self.device = device
-        self.start_time = time.time()
+        self.total_time = 0
+        self.base_path = base_path
 
         self._setup_run()
 
     def _setup_run(self):
-        # Saver Setup
-        run_path = self._create_path()
+        run_path = self._create_run_path()
 
-        self.saver = TorchModelSaver(run_path)
+        self.saver = TorchModelSaver(base_path=self.base_path,
+                                     run_path=run_path)
 
         self.trainer = self._create_trainer()
 
-        self.tester = self._create_tester()  # Fülle die Parameter für Tester aus
+        self.tester = self._create_tester()
 
         self.model = None
 
@@ -38,11 +39,10 @@ class SingleRunManager:
             delta=self.config.early_stopping_delta
         ) if self.config.early_stopping else None
 
-    def _create_path(self) -> str:
-        today = datetime.datetime.now().strftime("%Y_%m_%d")
+    def _create_run_path(self,) -> str:
         timestamp = datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
-        run_path = f'runs/start{today}/run{self.run_number}_time{timestamp}_{self.config.dataset_name}_{self.config.model_type}_{self.config.training_method}'
-        return run_path
+        run_path = f'/run{self.run_number}_time{timestamp}_{self.config.dataset_name}_{self.config.model_type}_{self.config.training_method}'
+        return self.base_path + run_path
 
     def _create_tester(self):
         return Tester(config_file=self.config,
@@ -66,16 +66,17 @@ class SingleRunManager:
     def run(self) -> dict:
         """Führt die Haupt-Epochen-Schleife durch und gibt die Ergebnisse zurück."""
         try:
+            train_metrics = None
+            test_metrics = None
             for epoch in range(self.config.epoch_total):
-                start_epoch_time = time.time()
-
+                start_training_time = time.time()
                 train_metrics, self.model = self.trainer.train_epoch(epoch_num=epoch)
 
                 test_metrics = self.tester.validate_epoch(epoch_num=epoch)
 
-                self.saver.write_epoch_metrics(train_metrics=train_metrics,
-                                               test_metrics=test_metrics,
-                                               epoch_idx=epoch)
+                self.saver.write_epoch_metrics_csv(train_metrics=train_metrics,
+                                                   test_metrics=test_metrics,
+                                                   epoch_idx=epoch)
 
                 if self.early_stopping:
                     self.early_stopping.check_and_update(
@@ -85,27 +86,33 @@ class SingleRunManager:
                         epoch=epoch
                     )
                     if self.early_stopping.early_stop:
+                        self.total_time = time.time() - start_training_time
+                        self.saver.write_run_yaml_summary(config=self.config,
+                                                          total_training_time=self.total_time,
+                                                          train_metrics=train_metrics,
+                                                          test_metrics=test_metrics,
+                                                          early_stop_info=self.early_stopping.get_stop_info()
+                                                          )
+                        self.saver.write_epoch_metrics_csv(epoch_idx=epoch,
+                                                           early_stop_reason=self.early_stopping.get_stop_info()
+                                                           )
+
                         break
 
-            self.saver.save_session_after_epochs(config=self.config,
-                                                 model=self.model ,
-                                                 save_full_model=True,
-                                                 stop_info= self.early_stopping.get_stop_info() if self.early_stopping else None)
+            self.saver.save_model_and_config_after_epochs(config=self.config,
+                                                          model=self.model,
+                                                          save_full_model=True
+                                                          )
+            self.saver.write_multi_run_results_csv(config=self.config,
+                                                   total_training_time=self.total_time,
+                                                   train_metrics=train_metrics,
+                                                   test_metrics=test_metrics,
+                                                   early_stop_info=self.early_stopping.get_stop_info() if self.early_stopping else None,
+                                                   run_number=self.run_number)
 
-            return self._finalize_results(train_losses_per_epoch, test_accs_per_epoch)
+
+            return train_metrics, test_metrics
 
         except Exception as e:
             # Fehlerbehandlung
             raise e
-
-    def _save_early_stop_summary(self, training_results, test_accs_per_epoch, epoch):
-        run_time = time.time() - self.start_time
-        # Die Logik zum Schreiben des run_summary hier einfügen
-        # ...
-
-    def _finalize_results(self, train_losses, test_accs):
-        # Erstelle das endgültige Ergebnis-Dict
-        return {
-            'final_train_acc': train_losses[-1] if train_losses else 0.0,
-            # ...
-        }

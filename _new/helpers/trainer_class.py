@@ -1,14 +1,12 @@
 import torch
-import time
-import datasets as datsets_helper
-import optimizer as optimizer_helper
-import loss_function as loss_function_helper
-import model as model_helper
+import helpers.datasets as datesets_helper
+import helpers.model as model_helper
+import helpers.loss_function as loss_function_helper
+import helpers.optimizer as optimizer_helpers
 
-from _new.helpers.config_class import Config
-from _new.helpers.early_stopping_class import EarlyStopping
-from _new.helpers.saver_class import TorchModelSaver
-from _new.helpers.training_metrics_class import TrainMetrics
+from helpers.config_class import Config
+from helpers.saver_class import TorchModelSaver
+from helpers.training_metrics_class import TrainMetrics
 from abc import ABC, abstractmethod
 from tqdm import tqdm
 
