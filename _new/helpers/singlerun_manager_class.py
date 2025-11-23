@@ -26,13 +26,18 @@ class SingleRunManager:
 
         self.trainer = self._create_trainer()
 
-        self.tester = Tester(...)  # Fülle die Parameter für Tester aus
+        self.tester = self._create_tester()  # Fülle die Parameter für Tester aus
+
 
     def _create_path(self) -> str:
         today = datetime.datetime.now().strftime("%Y_%m_%d")
         timestamp = datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
         run_path = f'runs/start{today}/run{self.run_number}_time{timestamp}_{self.config.dataset_name}_{self.config.model_type}_{self.config.training_method}'
         return run_path
+
+    def _create_tester(self):
+
+
     def _create_trainer(self) -> BaseTrainer:
 
         match self.config.training_method:
@@ -51,10 +56,9 @@ class SingleRunManager:
         """Führt die Haupt-Epochen-Schleife durch und gibt die Ergebnisse zurück."""
         train_losses_per_epoch = []
         test_accs_per_epoch = []
-        # ... weitere Listen für Metriken ...
 
         try:
-            for epoch in range(self.config.epoch_num):
+            for epoch in range(self.config.epoch_total):
                 start_epoch_time = time.time()
 
                 # 1. Training
@@ -70,12 +74,12 @@ class SingleRunManager:
                 # 3. Speichern und Logging
                 self.saver.write_epoch_metrics(...)
                 # Füge Metriken zu Listen hinzu
-                train_losses_per_epoch.append(training_results.epoch_avg_train_loss)
-                test_accs_per_epoch.append(tester_results.test_acc_per_epoch)
+                train_losses_per_epoch.append(training_results.loss_per_epoch)
+                test_accs_per_epoch.append(tester_results.acc_per_epoch)
 
                 # 4. Early Stopping Check
                 if self.early_stopping:
-                    self.early_stopping.check_validation(tester_results.test_loss_per_epoch, self.model)
+                    self.early_stopping.check_validation(tester_results.loss_per_epoch, self.model)
                     if self.early_stopping.early_stop:
                         # Schreibe Early-Stop-Zusammenfassung und beende die Schleife
                         self.save_early_stop_summary(training_results, test_accs_per_epoch, epoch)

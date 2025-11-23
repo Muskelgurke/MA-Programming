@@ -83,8 +83,8 @@ class TorchModelSaver:
         # Write one row per epoch with all relevant metrics
         row_data = {
             'epoch': epoch + 1,
-            'avg_train_loss': training_metrics.epoch_avg_train_loss,
-            'train_accuracy': training_metrics.epoch_train_acc,
+            'avg_train_loss': training_metrics.loss_per_epoch,
+            'train_accuracy': training_metrics.acc_per_epoch,
             'avg_test_loss': test_loss if test_loss is not None else 'csv_save=None',
             'test_accuracy': test_accuracy if test_accuracy is not None else 'csv_save=None',
             'avg_cosine_similarity': training_metrics.epoch_avg_cosine_similarity,

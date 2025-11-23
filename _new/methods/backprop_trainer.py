@@ -31,6 +31,6 @@ class BackpropTrainer(BaseTrainer):
             })
 
         # Epoch-Metriken speichern
-        self.metrics.epoch_train_acc = 100. * sum_correct / sum_total
-        self.metrics.epoch_avg_train_loss = sum_loss / len(self.train_loader)
+        self.metrics.acc_per_epoch = 100. * sum_correct / sum_total
+        self.metrics.loss_per_epoch = sum_loss / len(self.train_loader)
         self.metrics.num_batches = len(self.train_loader)

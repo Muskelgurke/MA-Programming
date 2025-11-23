@@ -3,7 +3,7 @@ import torch
 from tqdm import tqdm
 from torch.utils.tensorboard import SummaryWriter
 from configuration.config_class import Config
-from tester.tester_metrics_class import TesterMetrics
+from tester_old.tester_metrics_class import TesterMetrics
 
 class Tester:
     def __init__(self,
@@ -116,9 +116,9 @@ class Tester:
             pbar.close()
 
             # calculating Acc and Loss
-            self.metrics.test_acc_per_epoch = sum_correct_samples / sum_total_samples * 100
+            self.metrics.acc_per_epoch = sum_correct_samples / sum_total_samples * 100
 
-            self.metrics.test_loss_per_epoch = sum_loss / len(self.test_loader)
+            self.metrics.loss_per_epoch = sum_loss / len(self.test_loader)
 
 
     def eval_linearRegression(self):

@@ -175,11 +175,11 @@ class Trainer:
             except Exception as e:
                 print(f'Error in batch {batch_idx}: {e}')
 
-        self.metrics.epoch_train_acc = (
+        self.metrics.acc_per_epoch = (
                 sum_correct_samples / sum_total_samples * 100
         )
 
-        self.metrics.epoch_avg_train_loss = (
+        self.metrics.loss_per_epoch = (
                 sum_loss / len(self.data_loader)
         )
 
@@ -310,11 +310,11 @@ class Trainer:
                 print(f'Error in batch {batch_idx}: {e}')
 
 
-        self.metrics.epoch_train_acc = (
+        self.metrics.acc_per_epoch = (
                 sum_correct_samples / sum_total_samples * 100
         )
 
-        self.metrics.epoch_avg_train_loss = (
+        self.metrics.loss_per_epoch = (
                 sum_loss / len(self.data_loader)
         )
 
@@ -532,11 +532,11 @@ class Trainer:
                     torch.cuda.empty_cache()
 
 
-        self.metrics.epoch_train_acc = (
+        self.metrics.acc_per_epoch = (
                 sum_correct_samples / sum_total_samples * 100
         )
 
-        self.metrics.epoch_avg_train_loss = (
+        self.metrics.loss_per_epoch = (
                 sum_loss / len(self.data_loader)
         )
 
@@ -552,7 +552,7 @@ class Trainer:
         self.metrics.num_batches = len(self.data_loader)
         # Writer Logging per Epoch
         self.tensorboard_writer.add_scalar('Train/Accuracy - Epoch',
-                                           self.metrics.epoch_train_acc,
+                                           self.metrics.acc_per_epoch,
                                            self.epoch_num)
         self.tensorboard_writer.add_scalar('Train/Avg. Cosine_Esti_True - Epoch',
                                            float(np.mean(
@@ -560,7 +560,7 @@ class Trainer:
                                )),
                                            self.epoch_num)
         self.tensorboard_writer.add_scalar('Train/Loss - Epoch',
-                                           self.metrics.epoch_avg_train_loss,
+                                           self.metrics.loss_per_epoch,
                                            self.epoch_num)
         pbar.close()
 
@@ -1100,9 +1100,9 @@ class Trainer:
         self.tensorboard_writer.add_scalar('Train/Accuracy - Epoch',
                                            train_acc,
                                            self.epoch_num)
-        self.metrics.epoch_train_acc = train_acc
+        self.metrics.acc_per_epoch = train_acc
 
-        self.metrics.epoch_avg_train_loss = avg_train_loss
+        self.metrics.loss_per_epoch = avg_train_loss
 
     def _calculation_acc_of_batch(self, inputs: torch.Tensor, targets: torch.Tensor) -> float:
         """Calculate accuracy for a batch"""

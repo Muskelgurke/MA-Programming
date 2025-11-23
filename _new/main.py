@@ -12,7 +12,7 @@ def start_nn_run(config_file: Config, device: torch.device, run_number: int) -> 
     manager = SingleRunManager(config = config_file, device=device, run_number=run_number)
 
     results = manager.run()
-    #}
+
     return results
 
 def start_training(config_path: str, device: torch.device):

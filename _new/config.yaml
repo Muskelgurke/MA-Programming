@@ -2,7 +2,7 @@
 base_config:
   random_seed: 43
   learning_rate: 0.001
-  epoch_num: 50
+  epoch_total: 50
   training_method: bp
   dataset_name: mnist
   batch_size: 64

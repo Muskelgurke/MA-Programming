@@ -15,7 +15,7 @@ from configuration.config_class import Config, MultiParamLoader
 from saver.saver_class import TorchModelSaver
 from helpers.early_stopping import EarlyStopping
 from trainer.trainer import Trainer
-from tester.tester import Tester
+from tester.tester_old import Tester
 import dataset.datasets as datasets_helper
 import model.model as model_helper
 
@@ -302,15 +302,15 @@ def start_nn_run(config: Config,
             epoch_times_per_epoch.append(epoch_time)
 
             saver.write_epoch_metrics(training_metrics=training_results,
-                                      test_loss=tester_results.test_loss_per_epoch,
-                                      test_accuracy=tester_results.test_acc_per_epoch,
+                                      test_loss=tester_results.loss_per_epoch,
+                                      test_accuracy=tester_results.acc_per_epoch,
                                       epoch=epoch)
 
             train_losses_per_epoch.append(training_results.epoch_avg_train_loss)
             train_accs_per_epoch.append(training_results.epoch_train_acc)
 
-            test_losses_per_epoch.append(tester_results.test_loss_per_epoch)
-            test_accs_per_epoch.append(tester_results.test_acc_per_epoch)
+            test_losses_per_epoch.append(tester_results.loss_per_epoch)
+            test_accs_per_epoch.append(tester_results.acc_per_epoch)
 
             if tensorboard_writer is not None:
                 tensorboard_writer.add_scalar('Train/Loss - Epoch',
@@ -319,11 +319,11 @@ def start_nn_run(config: Config,
                 tensorboard_writer.add_scalar('Train/Accuracy - Epoch',
                                   training_results.epoch_train_acc)
                 tensorboard_writer.add_scalar('Test/Loss - Epoch',
-                                  tester_results.test_loss_per_epoch,
-                                  epoch)
+                                              tester_results.loss_per_epoch,
+                                              epoch)
                 tensorboard_writer.add_scalar('Test/Accuracy - Epoch',
-                                  tester_results.test_acc_per_epoch,
-                                  epoch)
+                                              tester_results.acc_per_epoch,
+                                              epoch)
 
             if early_stopping.early_stop_nan_train_loss:
                 run_time = time.time() - start_time
@@ -337,7 +337,7 @@ def start_nn_run(config: Config,
                 break
 
 
-            early_stopping.check_validation(tester_results.test_loss_per_epoch, model)
+            early_stopping.check_validation(tester_results.loss_per_epoch, model)
 
             if early_stopping.early_stop:
                 run_time = time.time() - start_time

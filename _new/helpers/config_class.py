@@ -8,7 +8,7 @@ class Config:
     random_seed: int
     dataset_name: str
     learning_rate: float
-    epoch_num: int
+    epoch_total: int
     batch_size: int
     dataset_path: str
     model_type: str
