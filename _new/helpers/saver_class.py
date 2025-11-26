@@ -22,6 +22,9 @@ class TorchModelSaver:
         self.epoch_csv_initialized = False
         self.batch_csv_initialized = False
 
+        self.base_dir.mkdir(parents=True, exist_ok=True)
+        self.run_dir.mkdir(parents=True, exist_ok=True)
+
     def _ensure_epoch_csv_ready(self):
         """Initialisiert die Epoch CSV-Datei falls nötig"""
         if not self.epoch_csv_initialized:
@@ -51,8 +54,8 @@ class TorchModelSaver:
             self.batch_csv_initialized = True
 
     def write_epoch_metrics_csv(self,
-                                train_metrics: TrainMetrics=None,
-                                test_metrics: TestMetrics=None,
+                                train_metrics: TrainMetrics,
+                                test_metrics: TestMetrics,
                                 epoch_idx: int=0,
                                 early_stop_reason: dict='') -> None:
         """Save metrics in a plotting-friendly CSV format with one row per epoch.

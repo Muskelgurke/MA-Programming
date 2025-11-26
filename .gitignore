@@ -6,3 +6,5 @@ __pycache__/
 /torch_nn_training/runs/
 /.venv*
 /torch_nn_training/_Dataset/
+/_new/runs/
+/_new/_Dataset/

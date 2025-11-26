@@ -10,7 +10,7 @@ class BackpropTrainer(BaseTrainer):
         sum_correct = 0
         sum_size = 0
 
-        pbar = self._create_progress_bar(desc=f'BP Epoch {self.epoch_num}/{self.total_epochs}')
+        pbar = self._create_progress_bar(desc=f'BP - Train: {self.epoch_num}/{self.total_epochs}')
 
         for batch_idx, (inputs, targets) in enumerate(pbar):
             inputs, targets = inputs.to(self.device), targets.to(self.device)
@@ -18,7 +18,7 @@ class BackpropTrainer(BaseTrainer):
 
             outputs = self.model(inputs)
             loss = self.loss_function(outputs, targets)
-            sum_loss += loss
+            sum_loss += loss.item()
             loss.backward()
             self.optimizer.step()
 
@@ -29,13 +29,12 @@ class BackpropTrainer(BaseTrainer):
 
             sum_correct += correct
             sum_size += total
-            accuracy = 100.0 * correct / total
+            accuracy = 100.0 * sum_correct / sum_size
 
             pbar.set_postfix({
                 'Loss': f'{loss:.4f}',
                 'Acc': f'{accuracy:.2f}%'
             })
-
-        self.metrics.acc_per_epoch = 100. * sum_correct / len(self.train_loader)
-        self.metrics.loss_per_epoch = sum_loss / len(self.train_loader)
-        self.metrics.num_batches = len(self.train_loader)
+        self.metrics.loss_per_epoch = sum_loss / sum_size
+        self.metrics.acc_per_epoch = 100. * sum_correct / sum_size
+        self.metrics.num_batches = sum_size

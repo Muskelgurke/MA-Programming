@@ -7,6 +7,15 @@ from helpers.singlerun_manager_class import SingleRunManager
 from pathlib import Path
 import datetime
 
+def get_config()->str:
+    """Gibt den config.yaml Pfad zurück"""
+    script_dir = Path(__file__).parent
+    config_in_script_dir = script_dir / "config.yaml" # change here quickly the config
+    if config_in_script_dir.exists():
+        return str(config_in_script_dir)
+    else:
+        print("'config.yaml' not found in script directory. Please provide the correct path.")
+        sys.exit(1)
 
 
 
@@ -28,9 +37,10 @@ def start_training(config_path: str, device: torch.device):
 
     print(f"Starte insgesamt {len(configs)} Läufe...")
 
-    timestamp = datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
+    timestamp = datetime.datetime.now().strftime("%m%d_%H%M%S")
     base_path = f'runs/{timestamp}'
-    
+    print(f"base_path: {base_path}")
+
     for i, config in enumerate(configs):
         run_number = i + 1
         print(f"\n{'=' * 40}")
@@ -60,15 +70,7 @@ def get_device()->torch.device:
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     return device
 
-def get_config()->str:
-    """Gibt den config.yaml Pfad zurück"""
-    script_dir = Path(__file__).parent
-    config_in_script_dir = script_dir / "config.yaml"
-    if config_in_script_dir.exists():
-        return str(config_in_script_dir)
-    else:
-        print("'config.yaml' not found in script directory. Please provide the correct path.")
-        sys.exit(1)
+
 
 if __name__ == "__main__":
 

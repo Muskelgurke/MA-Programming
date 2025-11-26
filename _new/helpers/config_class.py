@@ -39,23 +39,29 @@ class Config:
 
 class MultiParamLoader:
     """Hilfsklasse zum Laden und Verarbeiten von Multi-Parameter-Konfigurationen"""
-    def __init__(self,
-                 config_path: str):
+    def __init__(self,config_path: str):
         self.config_path = config_path
-        self.base_config = dict
-        self.multi_params = dict
-        self.configs = List[Config]
+        self.base_config = {}
+        self.multi_params = {}
+        self.configs =  []
 
     def initialize(self) -> None:
         """Initialisiere den MultiParamLoader
         Lädt die Config File aus dem PATH und erzeugt alle Kombinationen
         aus Basic_config und Multi_params. Abrufbar über self.configs."""
         self.load_combined_config()
-        self.base_config = Config.from_dict(self.base_config)
+        multi_params_exists = bool(self.multi_params)
+        if not multi_params_exists:
+            # Keine Multi-Parameter vorhanden
+            self.configs = [Config.from_dict(self.base_config)]
 
-        self.configs = self.generate_combinations(self.multi_params, self.base_config)
+        else:
+            # Multi-Parameter vorhanden
+            base_config_obj = Config.from_dict(self.base_config)
+            self.configs = self.generate_combinations(self.multi_params, base_config_obj)
 
-        self.print_overview_of_config(self.multi_params, self.base_config.to_dict())
+
+        self.print_overview_of_config(self.multi_params, self.base_config)
 
 
     def load_combined_config(self):
@@ -63,7 +69,7 @@ class MultiParamLoader:
         with open(self.config_path, 'r') as file:
             full_config = yaml.safe_load(file)
 
-        self.base_config = full_config.get('base_config', {})
+        self.base_config = full_config.get('base_config', full_config)
         self.multi_params = full_config.get('multi_params', {})
 
 
@@ -112,6 +118,8 @@ class MultiParamLoader:
     @staticmethod
     def get_combination_count(multi_params: dict) -> int:
         """Berechne die Anzahl der Kombinationen"""
+        if not multi_params:
+            return 1
         count = 1
         for value in multi_params.values():
             if isinstance(value, list):
@@ -123,6 +131,15 @@ class MultiParamLoader:
         """Zeige eine Übersicht der Parameter-Kombinationen"""
         print("Multi-Parameter Übersicht:")
         print("-" * 40)
+
+        if not multi_params:
+            print("Single-Config Modus (keine multi_params)")
+            if base_config:
+                for key, value in base_config.items():
+                    print(f"  {key:18}: {value}")
+            print(f"\nGesamte Kombinationen: 1")
+            print("-" * 40)
+            return
 
         if base_config:
             print("Base Config Parameter:")

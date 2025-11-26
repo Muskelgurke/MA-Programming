@@ -1,6 +1,7 @@
 import torch
 import time
 import datetime
+from pathlib import Path
 from _new.helpers.saver_class import TorchModelSaver
 from _new.helpers.config_class import Config
 from _new.helpers.tester_class import Tester
@@ -8,6 +9,8 @@ from _new.helpers.trainer_class import BaseTrainer
 from _new.methods.backprop_trainer import BackpropTrainer
 from _new.methods.fg_trainer import ForwardGradientTrainer
 from _new.helpers.early_stopping_class import EarlyStopping
+
+
 
 class SingleRunManager:
     """Verwaltet einen einzelnen Trainingslauf von A bis Z."""
@@ -22,7 +25,9 @@ class SingleRunManager:
         self._setup_run()
 
     def _setup_run(self):
-        run_path = self._create_run_path()
+        timestamp = datetime.datetime.now().strftime("%m%d_%H%M%S")
+        run_name = f'run{self.run_number}_time{timestamp}_{self.config.dataset_name}_{self.config.model_type}_{self.config.training_method}'
+        run_path = Path(self.base_path) / run_name
 
         self.saver = TorchModelSaver(base_path=self.base_path,
                                      run_path=run_path)
@@ -31,18 +36,13 @@ class SingleRunManager:
 
         self.tester = self._create_tester()
 
-        self.model = None
+        self.trained_model = None
 
         # Initialize early stopping at the manager level
         self.early_stopping = EarlyStopping(
             patience=self.config.early_stopping_patience,
             delta=self.config.early_stopping_delta
         ) if self.config.early_stopping else None
-
-    def _create_run_path(self,) -> str:
-        timestamp = datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
-        run_path = f'/run{self.run_number}_time{timestamp}_{self.config.dataset_name}_{self.config.model_type}_{self.config.training_method}'
-        return self.base_path + run_path
 
     def _create_tester(self):
         return Tester(config_file=self.config,
@@ -70,9 +70,10 @@ class SingleRunManager:
             test_metrics = None
             for epoch in range(self.config.epoch_total):
                 start_training_time = time.time()
-                train_metrics, self.model = self.trainer.train_epoch(epoch_num=epoch)
 
-                test_metrics = self.tester.validate_epoch(epoch_num=epoch)
+                train_metrics, self.trained_model = self.trainer.train_epoch(epoch_num=epoch)
+
+                test_metrics = self.tester.validate_epoch(epoch_num=epoch, model = self.trained_model)
 
                 self.saver.write_epoch_metrics_csv(train_metrics=train_metrics,
                                                    test_metrics=test_metrics,
@@ -82,7 +83,7 @@ class SingleRunManager:
                     self.early_stopping.check_and_update(
                         train_loss=train_metrics.loss_per_epoch,
                         val_loss=test_metrics.loss_per_epoch,
-                        model=self.trainer.model,
+                        model=self.trained_model,
                         epoch=epoch
                     )
                     if self.early_stopping.early_stop:
@@ -93,14 +94,11 @@ class SingleRunManager:
                                                           test_metrics=test_metrics,
                                                           early_stop_info=self.early_stopping.get_stop_info()
                                                           )
-                        self.saver.write_epoch_metrics_csv(epoch_idx=epoch,
-                                                           early_stop_reason=self.early_stopping.get_stop_info()
-                                                           )
 
                         break
 
             self.saver.save_model_and_config_after_epochs(config=self.config,
-                                                          model=self.model,
+                                                          model=self.trained_model,
                                                           save_full_model=True
                                                           )
             self.saver.write_multi_run_results_csv(config=self.config,
