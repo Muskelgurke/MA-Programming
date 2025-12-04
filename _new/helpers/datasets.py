@@ -31,27 +31,27 @@ def get_dataloaders(config: Config, device: torch.device) -> tuple[torch.utils.d
         case "cifar100":
             train_loader, test_loader = get_cifar100_dataloaders(config,device)
 
-        case "StanfordCars":
+        case "cars":
             train_loader, test_loader = get_standCars_dataloaders(config,device)
 
-        case "Flower102":
+        case "flower":
             train_loader, test_loader = get_flower102_dataloaders(config, device)
 
-        case "Food101":
+        case "food":
             train_loader, test_loader = get_food101_dataloaders(config, device)
 
-        case "OxfordIIITPet":
+        case "pet":
             train_loader, test_loader = get_oxfordPet_dataloaders(config,device)
 
         case "yes_no":
             # TorchAudio
             train_loader, test_loader = get_yesNo_dataloaders(config, device)
 
-        case "SpeechCommands":
+        case "speechCommands":
             # TorchAudio
             train_loader, test_loader = get_speechCom_dataloaders(config, device)
 
-        case "DaLiAc":
+        case "daliact":
             # LOW Prio -> wäre cool
             # wichtiger als cwru
             raise ValueError(f"Unknown dataset-name: {config.dataset_name}")
@@ -60,10 +60,6 @@ def get_dataloaders(config: Config, device: torch.device) -> tuple[torch.utils.d
             # MaschineDataset
             # LOW Prio -> wäre cool
             raise ValueError(f"Unknown dataset-name: {config.dataset_name}")
-
-
-        case "demo_linear_regression":
-            train_loader, test_loader = get_linear_regression_dataloaders(config)
 
         case _:
             raise ValueError(f"Unknown dataset-name: {config.dataset_name}")

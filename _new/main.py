@@ -1,4 +1,5 @@
 import torch
+import pytest
 import sys
 
 from helpers.config_class import MultiParamLoader, Config
@@ -70,8 +71,17 @@ def get_device()->torch.device:
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     return device
 
+def testing():
+    # Run tests first
+    print("Running tests...")
+    test_result = pytest.main(["_new/unitTesting", "-v"])
 
+    if test_result != 0:
+        print("Tests failed! Aborting execution.")
+        return
+
+    print("Tests passed! Starting main program...")
 
 if __name__ == "__main__":
-
+    testing()
     start_training(config_path = get_config(), device = get_device())
