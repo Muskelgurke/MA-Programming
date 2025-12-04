@@ -1,8 +1,4 @@
 import torch
-import pytest
-from _new.helpers.model import get_model
-from _new.helpers.config_class import Config
-
 
 def test_sample_batch_dimensions_mnist():
     """Test that MNIST batch dimensions are correctly extracted"""

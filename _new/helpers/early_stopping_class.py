@@ -28,7 +28,6 @@ class EarlyStopping:
         Prüft Train- und Validation-Loss und entscheidet über Early Stop
         Setzt self.should_stop = True wenn Training gestoppt werden soll
         """
-        epoch = epoch + 1
         # 1. Prüfe auf NaN oder explodierte Loss in Train Loss
         if self._check_invalid_train_loss(train_loss, epoch):
             return

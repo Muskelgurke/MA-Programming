@@ -216,10 +216,32 @@ def get_mnist_dataloaders(config: Config, device: torch.device)-> tuple[torch.ut
     Returns:
         Tuple[DataLoader, DataLoader]: Training and test dataloaders.
     """
-    # Mittelwert und Standardabweichung für MNIST
-
-    pin_memory = False
-    transform_mnist = transforms.Compose([transforms.ToTensor(),transforms.Normalize(mean=(0.1307,),std=(0.3081,))])
+    mean = 0.1307
+    std = 0.3081
+    match config.model_type:
+        case "densenet":
+            transform_mnist = transforms.Compose([
+                transforms.Resize((56, 56)),  # 2x von 28x28
+                transforms.ToTensor(),
+                transforms.Normalize((mean,), (std,))
+            ])
+        case "alexnet":
+            transform_mnist = transforms.Compose([
+                transforms.Resize((84, 84)),  # 3x von 28x28
+                transforms.ToTensor(),
+                transforms.Normalize((mean,), (std,))
+            ])
+        case "vgg16":
+            transform_mnist = transforms.Compose([
+                transforms.Resize((84, 84)),  # 3x von 28x28
+                transforms.ToTensor(),
+                transforms.Normalize((mean,), (std,))
+            ])
+        case _:
+            transform_mnist = transforms.Compose([
+                transforms.ToTensor(),
+                transforms.Normalize((mean,), (std,))
+            ])
 
     # Load training dataset
     train_dataset = datasets.MNIST(root=config.dataset_path,train=True,download=True,transform=transform_mnist)
@@ -243,7 +265,30 @@ def get_fashion_mnist_dataloaders(config: Config, device: torch.device)-> tuple[
     mean = 0.2860
     std = 0.3530
 
-    transform_fashion = transforms.Compose([transforms.ToTensor(),transforms.Normalize((mean,), (std,))])
+    match config.model_type:
+        case "densenet":
+            transform_fashion = transforms.Compose([
+                transforms.Resize((56, 56)),  # 2x von 28x28
+                transforms.ToTensor(),
+                transforms.Normalize((mean,), (std,))
+            ])
+        case "alexnet":
+            transform_fashion = transforms.Compose([
+                transforms.Resize((84, 84)),  # 3x von 28x28
+                transforms.ToTensor(),
+                transforms.Normalize((mean,), (std,))
+            ])
+        case "vgg16":
+            transform_fashion = transforms.Compose([
+                transforms.Resize((84, 84)),  # 3x von 28x28
+                transforms.ToTensor(),
+                transforms.Normalize((mean,), (std,))
+            ])
+        case _:
+            transform_fashion = transforms.Compose([
+                transforms.ToTensor(),
+                transforms.Normalize((mean,), (std,))
+            ])
 
     train_dataset = datasets.FashionMNIST(root=config.dataset_path,train=True,download=True,transform=transform_fashion)
 
