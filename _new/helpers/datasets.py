@@ -1,7 +1,6 @@
 import torch.utils.data
 from torchvision import datasets, transforms
-from torchaudio import datasets as audio_datasets
-from torchaudio import transforms as audio_transforms
+from torchaudio import datasets as datasets_audio
 from _new.helpers.config_class import Config
 
 def get_dataloaders(config: Config, device: torch.device) -> tuple[torch.utils.data.DataLoader, torch.utils.data.DataLoader]:
@@ -46,18 +45,21 @@ def get_dataloaders(config: Config, device: torch.device) -> tuple[torch.utils.d
 
         case "yes_no":
             # TorchAudio
+            train_loader, test_loader = get_yesNo_dataloaders(config, device)
 
         case "SpeechCommands":
-            # TorchAudio - Warden
+            # TorchAudio
+            train_loader, test_loader = get_speechCom_dataloaders(config, device)
+
         case "DaLiAc":
-            # https://www.mad.tf.fau.de/research/activitynet/daliac-daily-life-activities/
             # LOW Prio -> wäre cool
             # wichtiger als cwru
+            raise ValueError(f"Unknown dataset-name: {config.dataset_name}")
 
         case "cwru":
             # MaschineDataset
             # LOW Prio -> wäre cool
-
+            raise ValueError(f"Unknown dataset-name: {config.dataset_name}")
 
 
         case "demo_linear_regression":
@@ -87,6 +89,47 @@ def _create_dataloaders(train_dataset: torch.utils.data.Dataset,test_dataset: to
                                               drop_last=False
                                               )
     return train_loader, test_loader
+def get_speechCom_dataloaders(config: Config, device: torch.device)-> tuple[torch.utils.data.DataLoader, torch.utils.data.DataLoader]:
+    """
+        Load SpeechCommands dataset from TorchAudio and return training and test dataloaders.
+
+        Args:
+            config (Config): Configuration object containing dataset path and batch size.
+
+        Returns:
+            Tuple[DataLoader, DataLoader]: Training and test dataloaders.
+
+        """
+    full_dataset = datasets_audio.SPEECHCOMMANDS(root=config.dataset_path,download=True)
+    train_ratio = 0.8
+    dataset_size = len(full_dataset)
+    train_size = int(train_ratio * dataset_size)
+    test_size = dataset_size - train_size
+
+    train_dataset, test_dataset = torch.utils.data.random_split(dataset=full_dataset,lengths= [train_size, test_size])
+
+    return _create_dataloaders(train_dataset, test_dataset, config, device)
+
+def get_yesNo_dataloaders(config: Config, device: torch.device)-> tuple[torch.utils.data.DataLoader, torch.utils.data.DataLoader]:
+    """
+        Load YesNo dataset from TorchAudio and return training and test dataloaders.
+
+        Args:
+            config (Config): Configuration object containing dataset path and batch size.
+
+        Returns:
+            Tuple[DataLoader, DataLoader]: Training and test dataloaders.
+
+        """
+    full_dataset = datasets_audio.YESNO(root=config.dataset_path,download=True)
+    train_ratio = 0.8
+    dataset_size = len(full_dataset)
+    train_size = int(train_ratio * dataset_size)
+    test_size = dataset_size - train_size
+
+    train_dataset, test_dataset = torch.utils.data.random_split(dataset=full_dataset,lengths= [train_size, test_size])
+
+    return _create_dataloaders(train_dataset, test_dataset, config, device)
 
 def get_oxfordPet_dataloaders(config: Config, device: torch.device)-> tuple[torch.utils.data.DataLoader, torch.utils.data.DataLoader]:
     """
