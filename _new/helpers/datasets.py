@@ -1,4 +1,5 @@
 import torch.utils.data
+import torchaudio.transforms as T
 from torchvision import datasets, transforms
 from torchaudio import datasets as datasets_audio
 from _new.helpers.config_class import Config
@@ -14,7 +15,6 @@ def get_dataloaders(config: Config, device: torch.device) -> tuple[torch.utils.d
         Tuple[DataLoader, DataLoader]: Training and Test dataloaders.
         When device is 'cuda', the entire dataset is loaded to GPU memory.
     """
-
     train_loader = None
     test_loader = None
 
@@ -43,11 +43,11 @@ def get_dataloaders(config: Config, device: torch.device) -> tuple[torch.utils.d
         case "pet":
             train_loader, test_loader = get_oxfordPet_dataloaders(config,device)
 
-        case "yes_no":
+        case "yesno":
             # TorchAudio
             train_loader, test_loader = get_yesNo_dataloaders(config, device)
 
-        case "speechCommands":
+        case "speechcommands":
             # TorchAudio
             train_loader, test_loader = get_speechCom_dataloaders(config, device)
 
@@ -85,6 +85,18 @@ def _create_dataloaders(train_dataset: torch.utils.data.Dataset,test_dataset: to
                                               drop_last=False
                                               )
     return train_loader, test_loader
+def get_audio_transform(sample_rate: int=16000, n_mels: int=64, target_length: int= 100):
+    """Create Tranform pipeline for audio to mel-spectrogram conversion"""
+
+    transform = transforms.Compose([T.MelSpectrogram(sample_rate=sample_rate,n_fft=1024,hop_length=512, n_mels=n_mels),
+                                   T.AmplitudeToDB(),
+                                   transforms.Lambda(lambda x: x.unsqueeze(0) if x.dim() == 2 else x),# Add channel dimension
+                                   transforms.Lambda(lambda x: x.repeat(3, 1, 1) if x.size(0) == 1 else x), # Convert grayscale to RGB
+                                   transforms.Resize((224, 224)),  # Resize to standard vision model input
+                                   transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+                                   ])
+    return transform
+
 def get_speechCom_dataloaders(config: Config, device: torch.device)-> tuple[torch.utils.data.DataLoader, torch.utils.data.DataLoader]:
     """
         Load SpeechCommands dataset from TorchAudio and return training and test dataloaders.
@@ -96,7 +108,12 @@ def get_speechCom_dataloaders(config: Config, device: torch.device)-> tuple[torc
             Tuple[DataLoader, DataLoader]: Training and test dataloaders.
 
         """
-    full_dataset = datasets_audio.SPEECHCOMMANDS(root=config.dataset_path,download=True)
+    audio_transform = get_audio_transform(sample_rate=16000, n_mels=64)
+
+    data = datasets_audio.SPEECHCOMMANDS(root=config.dataset_path,download=True)
+
+    full_dataset = SpeechCommandsDataset(data, audio_transform)
+
     train_ratio = 0.8
     dataset_size = len(full_dataset)
     train_size = int(train_ratio * dataset_size)
@@ -117,7 +134,12 @@ def get_yesNo_dataloaders(config: Config, device: torch.device)-> tuple[torch.ut
             Tuple[DataLoader, DataLoader]: Training and test dataloaders.
 
         """
+    audio_transform = get_audio_transform(sample_rate=8000, n_mels=64)
+
     full_dataset = datasets_audio.YESNO(root=config.dataset_path,download=True)
+
+    full_dataset = YesNoDataset(full_dataset, audio_transform)
+
     train_ratio = 0.8
     dataset_size = len(full_dataset)
     train_size = int(train_ratio * dataset_size)
@@ -371,3 +393,34 @@ def get_linear_regression_dataloaders(config: Config) -> tuple[torch.utils.data.
     train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=config.batch_size, shuffle=False)
     test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=config.batch_size, shuffle=False)
     return train_loader, test_loader
+
+
+class YesNoDataset(torch.utils.data.Dataset):
+    """YesNo Dataset returns: waveforms sample_rate label"""
+    def __init__(self, audio_dataset, transform):
+        self.dataset = audio_dataset
+        self.transform = transform
+
+    def __len__(self):
+        return len(self.dataset)
+
+    def __getitem__(self, idx):
+        waveform, sample_rate, label = self.dataset[idx]
+        transformed = self.transform(waveform)
+        return transformed, label
+
+class SpeechCommandsDataset(torch.utils.data.Dataset):
+    """SpeechCommand dataset returns:
+    waveform, smaple_rate, label, speaker_id, utterance_number
+    """
+    def __init__(self, audio_dataset, transform):
+        self.dataset = audio_dataset
+        self.transform = transform
+
+    def __len__(self):
+        return len(self.dataset)
+
+    def __getitem__(self, idx):
+        waveform, sample_rate, label, speaker_id, utterance_number = self.dataset[idx]
+        transformed = self.transform(waveform)
+        return transformed, label

@@ -2,12 +2,12 @@
 base_config:
   random_seed: 43
   learning_rate: 0.001
-  epoch_total: 50
+  epoch_total: 10
   training_method: bp
-  dataset_name: mnist
+  dataset_name: yesno
   batch_size: 64
   augment_data: false
-  model_type: fc256
+  model_type: alexnet
   optimizer: adam
   momentum: 0.9
   loss_function: cross_entropy
@@ -19,8 +19,12 @@ base_config:
 # Multi-Parameter Configuration: Parameter für Grid-Search
 # Wenn ein Parameter hier definiert ist, wird er für Multi-Training verwendet
 # Wenn nicht, wird der Wert aus base_config genommen
+multi_params:
+  dataset_name:
+    - yesno
+    - speechcommands
 
-#momentum:
+  #momentum:
   #  - 0.8
   #  - 0.9
   #  - 0.95

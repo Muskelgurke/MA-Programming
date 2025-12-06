@@ -3,10 +3,6 @@ import torch
 import torchvision.models as models
 from _new.helpers.config_class import Config
 
-
-
-
-
 def get_model(config: Config, sample_batch: tuple) -> nn.Module:
     """get model based on config and automatically set input and output sizes from sample batch
     Args:
@@ -40,60 +36,14 @@ def get_model(config: Config, sample_batch: tuple) -> nn.Module:
             return get_adapted_model(models.resnet34 ,specs)
         case "resnet50":
             return get_adapted_model(models.resnet50 ,specs)
-        case "mobilenet_v2":
+        case "mobilenet":
             return get_adapted_model(models.mobilenet_v2 ,specs)
         case "densenet":
             return get_adapted_model(models.densenet121 ,specs)
-        case "efficientnet_v2_s":
+        case "efficientnet":
             return get_adapted_model(models.efficientnet_v2_s ,specs)
         case _:
             raise ValueError(f"Unknown model type: {config.model_type}")
-
-
-    match config.dataset_name.lower():
-        case "mnist" | "fashionmnist":
-            input_size = 28 * 28
-            output_size = 10
-
-        case "cifar10":
-            input_size = 32 * 32 * 3
-            output_size = 10
-
-        case "cifar100":
-            input_size = 32 * 32 * 3
-            output_size = 100
-
-        case "cars":
-            input_size = 224 * 224 * 3
-            output_size = 196
-
-        case "flowers":
-            input_size = 224 * 224 * 3
-            output_size = 102
-
-        case "food":
-            input_size = 224 * 224 * 3
-            output_size = 101
-
-        case "pets":
-            input_size = 224 * 224 * 3
-            output_size = 37
-
-        case "yes_no":
-            raise ValueError(f"Unknown dataset: {config.dataset_name}")
-
-        case "speechCommands":
-            raise ValueError(f"Unknown dataset: {config.dataset_name}")
-
-        case "daliact":
-            raise ValueError(f"Unknown dataset: {config.dataset_name}")
-
-        case "cwru":
-            raise ValueError(f"Unknown dataset: {config.dataset_name}")
-
-        case _:
-            raise ValueError(f"Unknown dataset: {config.dataset_name}")
-
 
 def get_adapted_model(model_fn= type[nn.Module], specs= dict):
     model = model_fn(weights=None)

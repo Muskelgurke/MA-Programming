@@ -87,7 +87,7 @@ class TestGetAdaptedModel:
         assert last_linear.out_features == 10
 
         # Forward-Pass testen
-        dummy_input = torch.randn(2, 1, 63, 63)
+        dummy_input = torch.randn(2, 1, 84, 84)
         output = model(dummy_input)
         assert output.shape == (2, 10)
 
@@ -107,7 +107,7 @@ class TestGetAdaptedModel:
         assert last_linear.out_features == 10
 
         # Forward-Pass testen
-        dummy_input = torch.randn(2, 1, 32, 32)
+        dummy_input = torch.randn(2, 1, 56, 56)
         output = model(dummy_input)
         assert output.shape == (2, 10)
 
@@ -161,7 +161,7 @@ class TestGetAdaptedModel:
         assert model.classifier.out_features == 10
 
         # Forward-Pass testen
-        dummy_input = torch.randn(2, 1, 32, 32)
+        dummy_input = torch.randn(2, 1, 56, 56)
         output = model(dummy_input)
         assert output.shape == (2, 10)
 

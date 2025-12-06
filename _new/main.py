@@ -1,12 +1,10 @@
 import torch
-import pytest
 import sys
+import datetime
 
 from helpers.config_class import MultiParamLoader, Config
-
 from helpers.singlerun_manager_class import SingleRunManager
 from pathlib import Path
-import datetime
 
 def get_config()->str:
     """Gibt den config.yaml Pfad zurück"""
@@ -18,13 +16,10 @@ def get_config()->str:
         print("'config.yaml' not found in script directory. Please provide the correct path.")
         sys.exit(1)
 
-
-
 def start_nn_run(config_file: Config, device: torch.device, run_number: int, base_path= str) -> None:
     print(f"Start {run_number} Run")
     manager = SingleRunManager(config = config_file, device=device, run_number=run_number, base_path=base_path)
     manager.run()
-
 
 def start_training(config_path: str, device: torch.device):
     """
