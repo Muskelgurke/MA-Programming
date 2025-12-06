@@ -17,7 +17,6 @@ def get_config()->str:
         sys.exit(1)
 
 def start_nn_run(config_file: Config, device: torch.device, run_number: int, base_path= str) -> None:
-    print(f"Start {run_number} Run")
     manager = SingleRunManager(config = config_file, device=device, run_number=run_number, base_path=base_path)
     manager.run()
 
@@ -41,29 +40,51 @@ def start_training(config_path: str, device: torch.device):
         run_number = i + 1
         print(f"\n{'=' * 40}")
         print(f"Lauf {run_number}/{len(configs)}: Starte Experiment")
+        print(f"Data: {config.dataset_name}, Model: {config.model_type}")
         print(f"Config: LR={config.learning_rate}, Method={config.training_method}")
         print(f"Gerät: {device}")
 
-        try:
+        #try:
 
-            start_nn_run(config_file=config,
-                         device=device,
-                         run_number=run_number,
-                         base_path=base_path)
+        start_nn_run(config_file=config,device=device,run_number=run_number,base_path=base_path)
 
-            print(f"✅ Lauf {run_number} abgeschlossen.")
+        print(f"✅ Lauf {run_number} abgeschlossen.")
 
-        except Exception as e:
-            print(f"❌ Fehler bei Lauf {run_number}: {e}")
+        #except Exception as e:
+        #    print(f"❌ Fehler bei Lauf {run_number}: {e}")
 
     print(f"\n=== MULTI-RUN ABGESCHLOSSEN ===")
 
 def get_device()->torch.device:
     """Gibt das Gerät zurück, auf dem das Training durchgeführt werden soll."""
-    if torch.cuda.is_available() and torch.cuda.device_count() >= 3:
-        device = torch.device("cuda:2")
+
+    # Prüfe ob CUDA verfügbar ist (NVIDIA GPUs)
+    if torch.cuda.is_available():
+        gpu_count = torch.cuda.device_count()
+
+        # GPU Cluster mit 3 NVIDIA GPUs
+        if gpu_count >= 3:
+            device = torch.device("cuda:2")
+            print(f"GPU Cluster erkannt: Nutze {torch.cuda.get_device_name(2)}")
+            print(f"Verfügbare GPUs: {gpu_count}")
+        # Einzelne NVIDIA GPU
+        else:
+            device = torch.device("cuda:0")
+            print(f"Einzelne GPU erkannt: {torch.cuda.get_device_name(0)}")
+
+    # Fallback auf CPU (z.B. Intel Arc Laptop)
     else:
-        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        device = torch.device("cpu")
+        print(f"Keine CUDA-GPU verfügbar. Nutze CPU.")
+
+        # Optional: Prüfe auf Intel Extension
+        try:
+            import intel_extension_for_pytorch as ipex
+            print("Intel Extension für PyTorch gefunden (nicht aktiviert).")
+        except ImportError:
+            pass
+
+
     return device
 
 if __name__ == "__main__":

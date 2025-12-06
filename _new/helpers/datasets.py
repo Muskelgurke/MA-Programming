@@ -70,12 +70,14 @@ def _create_dataloaders(train_dataset: torch.utils.data.Dataset,test_dataset: to
                         config: Config,
                         device: torch.device) -> tuple[torch.utils.data.DataLoader, torch.utils.data.DataLoader]:
     """ Private helper function to create dataloaders from datasets. """
+    train_drop_last = len(train_dataset) > config.batch_size
+
     train_loader = torch.utils.data.DataLoader(dataset=train_dataset,
                                                batch_size=config.batch_size,
                                                shuffle=True,
                                                num_workers=0,
                                                pin_memory=True if device.type == 'cuda' else False,
-                                               drop_last=True
+                                               drop_last=train_drop_last
                                                )
     test_loader = torch.utils.data.DataLoader(dataset=test_dataset,
                                               batch_size=config.batch_size,

@@ -20,9 +20,19 @@ class BaseTrainer(ABC):
         self._initialize_components()
 
     def _initialize_components(self):
-        self.model = model_helper.get_model(config=self.config).to(self.device)
+
+
         self.train_loader, xx = datasets_helper.get_dataloaders(config=self.config,
                                                                device=self.device)
+        if len(self.train_loader) == 0:
+            raise ValueError(
+                f"Train DataLoader ist leer! "
+                f"Dataset-Größe < Batch-Size ({self.config.batch_size})"
+            )
+
+        sample_batch = next(iter(self.train_loader))
+
+        self.model = model_helper.get_model(config=self.config,sample_batch= sample_batch).to(self.device)
         self.loss_function = loss_function_helper.get_loss_function(config=self.config)
         self.optimizer = optimizer_helper.get_optimizer(config=self.config,
                                                         model=self.model)
