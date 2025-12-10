@@ -39,7 +39,8 @@ class SingleRunManager:
         # Initialize early stopping at the manager level
         self.early_stopping = EarlyStopping(
             patience=self.config.early_stopping_patience,
-            delta=self.config.early_stopping_delta
+            delta=self.config.early_stopping_delta,
+            max_loss_threshold= 10000
         ) if self.config.early_stopping else None
 
     def _create_tester(self):
