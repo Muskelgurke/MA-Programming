@@ -24,7 +24,7 @@ multi_params:
     - 0.001
     - 0.0001 # bester FGD LR
     - 0.00001
-  optimier:
+  optimizer:
     - adam
     - sgd
   model:
