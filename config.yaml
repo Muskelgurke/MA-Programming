@@ -19,7 +19,10 @@ base_config:
 # Multi-Parameter Configuration: Parameter für Grid-Search
 # Wenn ein Parameter hier definiert ist, wird er für Multi-Training verwendet
 # Wenn nicht, wird der Wert aus base_config genommen
-#multi_params:
+multi_params:
+  learning_rate:
+    - 0.0001
+    - 0.00001
 #  dataset_name:
 #    - flower
 #    - food
