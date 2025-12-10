@@ -1,5 +1,5 @@
 import torch
-from _new.helpers.config_class import Config
+from helpers.config_class import Config
 
 def get_optimizer (config: Config, model: torch.nn.Module)-> torch.optim.Optimizer:
     """"Returns a Pytorch Optimizer based on the Config-File settings."""

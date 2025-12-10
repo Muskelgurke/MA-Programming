@@ -1,5 +1,4 @@
-from _new.helpers.trainer_class import BaseTrainer
-from torch.profiler import profile, ProfilerActivity, record_function
+from helpers.trainer_class import BaseTrainer
 import torch
 
 

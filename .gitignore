@@ -1,10 +1,10 @@
 /.idea/workspace.xml
 /_Dataset/
 /jax_nn_training/training_runs/
-/torch_nn_training/training_runs/
+/old/torch_nn_training/training_runs/
 __pycache__/
-/torch_nn_training/runs/
+/old/torch_nn_training/runs/
 /.venv*
-/torch_nn_training/_Dataset/
+/old/torch_nn_training/_Dataset/
 /_new/runs/
 /_new/_Dataset/

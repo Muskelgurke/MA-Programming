@@ -1,7 +1,7 @@
 import pytest
 import torch
 import torch.nn as nn
-from _new.helpers.early_stopping_class import EarlyStopping
+from helpers import EarlyStopping
 
 
 class SimpleModel(nn.Module):

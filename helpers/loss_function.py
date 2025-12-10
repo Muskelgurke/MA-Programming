@@ -1,5 +1,5 @@
 import torch
-from _new.helpers.config_class import Config
+from helpers.config_class import Config
 
 def get_loss_function(config: Config) -> torch.nn.Module:
     """Returns a Pytorch Loss Function based on the Config-File settings."""

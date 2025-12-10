@@ -3,7 +3,7 @@ import torchaudio
 import torchaudio.transforms as T
 from torchvision import datasets, transforms
 from torchaudio import datasets as datasets_audio
-from _new.helpers.config_class import Config
+from helpers.config_class import Config
 
 torchaudio.set_audio_backend("soundfile")
 

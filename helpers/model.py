@@ -1,7 +1,7 @@
 import torch.nn as nn
 import torch
 import torchvision.models as models
-from _new.helpers.config_class import Config
+from helpers.config_class import Config
 
 def get_model(config: Config, sample_batch: tuple) -> nn.Module:
     """get model based on config and automatically set input and output sizes from sample batch

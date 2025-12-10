@@ -2,7 +2,7 @@ import pytest
 import torch
 import torch.nn as nn
 from torchvision import models
-from _new.helpers.model import get_adapted_model
+from helpers.model import get_adapted_model
 
 
 class TestGetAdaptedModel:

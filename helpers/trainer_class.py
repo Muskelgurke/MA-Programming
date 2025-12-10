@@ -1,11 +1,11 @@
 import torch
-from _new.helpers.config_class import Config
-from _new.helpers.saver_class import TorchModelSaver
-from _new.helpers.training_metrics_class import TrainMetrics
-import _new.helpers.datasets as datasets_helper
-import _new.helpers.model as model_helper
-import _new.helpers.loss_function as loss_function_helper
-import _new.helpers.optimizer as optimizer_helper
+from helpers.config_class import Config
+from helpers.saver_class import TorchModelSaver
+from helpers.training_metrics_class import TrainMetrics
+import helpers.datasets as datasets_helper
+import helpers.model as model_helper
+import helpers.loss_function as loss_function_helper
+import helpers.optimizer as optimizer_helper
 from abc import ABC, abstractmethod
 from tqdm import tqdm
 

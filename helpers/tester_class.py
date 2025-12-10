@@ -1,14 +1,14 @@
 import torch
 from torch.fx.experimental.migrate_gradual_types.constraint_transformation import valid_index
 
-import _new.helpers.optimizer as optimizer_helper
-import _new.helpers.datasets as datasets_helper
-import _new.helpers.model as model_helper
-import _new.helpers.loss_function as loss_function_helper
+import helpers.optimizer as optimizer_helper
+import helpers.datasets as datasets_helper
+import helpers.model as model_helper
+import helpers.loss_function as loss_function_helper
 
-from _new.helpers.saver_class import TorchModelSaver
-from _new.helpers.config_class import Config
-from _new.helpers.tester_metrics_class import TestMetrics
+from helpers.saver_class import TorchModelSaver
+from helpers.config_class import Config
+from helpers.tester_metrics_class import TestMetrics
 from tqdm import tqdm
 
 

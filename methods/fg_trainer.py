@@ -1,6 +1,6 @@
 import torch
 from torch import nn
-from _new.helpers.trainer_class import BaseTrainer
+from helpers.trainer_class import BaseTrainer
 
 class ForwardGradientTrainer(BaseTrainer):
     """Trainer-Klasse für Backpropagation-basiertes Training."""
