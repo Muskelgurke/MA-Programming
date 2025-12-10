@@ -1,0 +1,79 @@
+# Base Configuration: Grundeinstellungen für alle Trainings
+base_config:
+  random_seed: 43
+  learning_rate: 0.001
+  epoch_total: 5
+  training_method: fgd #bp fg
+  dataset_name: mnist
+  batch_size: 64
+  augment_data: false
+  model_type: alexnet
+  optimizer: adam
+  momentum: 0.9
+  loss_function: cross_entropy
+  early_stopping: true
+  early_stopping_patience: 8
+  early_stopping_delta: 0.01
+  dataset_path: _Dataset
+
+# Multi-Parameter Configuration: Parameter für Grid-Search
+# Wenn ein Parameter hier definiert ist, wird er für Multi-Training verwendet
+# Wenn nicht, wird der Wert aus base_config genommen
+multi_params:
+  learning_rate:
+    - 0.001
+    - 0.0001 # bester FGD LR
+    - 0.00001
+  optimizer:
+    - adam
+    - sgd
+  model_type:
+    - alexnet
+    - vgg16
+    - resnet18
+    - resnet34
+    - mobilenet
+    - densenet
+    - efficientnet
+  dataset_name:
+    - mnist
+    - fashionmnist
+    - cifar10
+    - cifar100
+#  dataset_name:
+#    - flower
+#    - food
+#    - pet
+
+  #momentum:
+  #  - 0.8
+  #  - 0.9
+  #  - 0.95
+  #  - 0.99
+  #batch_size:
+  #  - 50
+  #  - 64
+  #  - 100
+  #  - 128
+  #  - 200
+  #  - 256
+  # Optional: Weitere Parameter
+  # batch_size:
+  #   - 32
+  #   - 64
+
+  # epoch_num:
+  #   - 5
+  #   - 10
+
+# Beispiel für verschiedene Setups:
+# 1. Nur Learning Rate testen:
+#    learning_rate: [0.001, 0.0001]
+#    # Alle anderen aus base_config
+#
+# 2. Vollständiger Grid-Search:
+#    learning_rate: [0.01, 0.001, 0.0001]
+#    training_method: [bp, fgd]
+#    random_seed: [42, 43, 44]
+#    batch_size: [32, 64]
+#    # = 3 × 2 × 3 × 2 = 36 Kombinationen

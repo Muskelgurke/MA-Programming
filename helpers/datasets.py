@@ -343,7 +343,7 @@ def get_cifar10_dataloaders(config: Config, device: torch.device) -> tuple[torch
             transform_cifar10 = transforms.Compose([
                 transforms.Resize((64, 64)),  # 2x von 32x32
                 transforms.ToTensor(),
-                transforms.Normalize((mean,), (std,))
+                transforms.Normalize(mean, std)
             ])
         case _:
             transform_cifar10 = transforms.Compose([
@@ -378,7 +378,7 @@ def get_cifar100_dataloaders(config: Config, device: torch.device) -> tuple[torc
             transform_cifar100 = transforms.Compose([
                 transforms.Resize((64, 64)),  # 2x von 32x32
                 transforms.ToTensor(),
-                transforms.Normalize((mean,), (std,))
+                transforms.Normalize(mean, std)
             ])
         case _:
             transform_cifar100 = transforms.Compose([
