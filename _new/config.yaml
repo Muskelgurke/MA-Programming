@@ -8,7 +8,7 @@ base_config:
   batch_size: 64
   augment_data: false
   model_type: alexnet
-  optimizer: adam
+  optimizer: sgd
   momentum: 0.9
   loss_function: cross_entropy
   early_stopping: true

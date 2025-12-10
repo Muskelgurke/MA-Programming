@@ -2,15 +2,13 @@ import torch
 import time
 import datetime
 from pathlib import Path
-from _new.helpers.saver_class import TorchModelSaver
-from _new.helpers.config_class import Config
-from _new.helpers.tester_class import Tester
-from _new.helpers.trainer_class import BaseTrainer
-from _new.methods.backprop_trainer import BackpropTrainer
-from _new.methods.fg_trainer import ForwardGradientTrainer
-from _new.helpers.early_stopping_class import EarlyStopping
-
-
+from helpers.saver_class import TorchModelSaver
+from helpers.config_class import Config
+from helpers.tester_class import Tester
+from helpers.trainer_class import BaseTrainer
+from methods.backprop_trainer import BackpropTrainer
+from methods.fg_trainer import ForwardGradientTrainer
+from helpers.early_stopping_class import EarlyStopping
 
 class SingleRunManager:
     """Verwaltet einen einzelnen Trainingslauf von A bis Z."""
