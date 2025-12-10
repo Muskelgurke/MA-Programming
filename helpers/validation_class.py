@@ -4,7 +4,7 @@ import helpers.loss_function as loss_function_helper
 
 from helpers.saver_class import TorchModelSaver
 from helpers.config_class import Config
-from helpers.tester_metrics_class import TestMetrics
+from helpers.validation_metrics_class import TestMetrics
 from tqdm import tqdm
 
 

@@ -4,7 +4,7 @@ import datetime
 from pathlib import Path
 from helpers.saver_class import TorchModelSaver
 from helpers.config_class import Config
-from helpers.tester_class import Tester
+from helpers.validation_class import Tester
 from helpers.trainer_class import BaseTrainer
 from methods.backprop_trainer import BackpropTrainer
 from methods.fg_trainer import ForwardGradientTrainer

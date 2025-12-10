@@ -4,7 +4,7 @@ import yaml
 from pathlib import Path
 from helpers.config_class import Config
 from helpers.training_metrics_class import TrainMetrics
-from helpers.tester_metrics_class import TestMetrics
+from helpers.validation_metrics_class import TestMetrics
 
 
 class TorchModelSaver:
