@@ -27,7 +27,7 @@ multi_params:
   optimizer:
     - adam
     - sgd
-  model:
+  model_type:
     - alexnet
     - vgg16
     - resnet18
