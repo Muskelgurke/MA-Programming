@@ -53,7 +53,7 @@ def get_dataloaders(config: Config, device: torch.device) -> tuple[torch.utils.d
 
         case "speechcommands":
             # TorchAudio
-            train_loader, test_loader = get_speechCom_dataloaders(config, device)
+            raise ValueError(f"Unknown dataset-name: {config.dataset_name}")
 
         case "daliact":
             # LOW Prio -> wäre cool
@@ -338,7 +338,19 @@ def get_cifar10_dataloaders(config: Config, device: torch.device) -> tuple[torch
     mean = [0.4914, 0.4822, 0.4465]
     std = [0.2470, 0.2435, 0.2616]
 
-    transform_cifar10 = transforms.Compose([transforms.ToTensor(),transforms.Normalize(mean, std)])
+    match config.model_type:
+        case "alexnet":
+            transform_cifar10 = transforms.Compose([
+                transforms.Resize((64, 64)),  # 2x von 32x32
+                transforms.ToTensor(),
+                transforms.Normalize((mean,), (std,))
+            ])
+        case _:
+            transform_cifar10 = transforms.Compose([
+                transforms.ToTensor(),
+                transforms.Normalize(mean, std)
+            ])
+
 
     train_dataset = datasets.CIFAR10(root=config.dataset_path,train=True,download=True,transform=transform_cifar10)
 
@@ -361,16 +373,22 @@ def get_cifar100_dataloaders(config: Config, device: torch.device) -> tuple[torc
     mean = [0.5071, 0.4867, 0.4408]
     std = [0.2675, 0.2565, 0.2761]
 
-    if config.augment_data:
-        transform_cifar100 = transforms.Compose([transforms.RandomHorizontalFlip(),transforms.RandomCrop(32, padding=4),
-                                                 transforms.ToTensor(),transforms.Normalize(mean, std)])
-    else:
-        transform_cifar100 = transforms.Compose([transforms.ToTensor(),transforms.Normalize(mean, std)])
-    transform_test = transforms.Compose([transforms.ToTensor(),transforms.Normalize(mean, std)])
+    match config.model_type:
+        case "alexnet":
+            transform_cifar100 = transforms.Compose([
+                transforms.Resize((64, 64)),  # 2x von 32x32
+                transforms.ToTensor(),
+                transforms.Normalize((mean,), (std,))
+            ])
+        case _:
+            transform_cifar100 = transforms.Compose([
+                transforms.ToTensor(),
+                transforms.Normalize(mean, std)
+            ])
 
     train_dataset = datasets.CIFAR100(root= config.dataset_path,train=True,download=True,transform=transform_cifar100)
 
-    test_dataset = datasets.CIFAR100(root= config.dataset_path,train=False,download=True,transform=transform_test)
+    test_dataset = datasets.CIFAR100(root= config.dataset_path,train=False,download=True,transform=transform_cifar100)
 
     return _create_dataloaders(train_dataset, test_dataset, config, device)
 
