@@ -12,12 +12,42 @@ def get_model(config: Config, sample_batch: tuple) -> nn.Module:
     Returns:
         nn.Module: model
     """
-
+    num_classes = 0
     inputs, targets = sample_batch
 
     input_channels = inputs.shape[1]
     input_size = inputs.shape[2]
-    num_classes = len(torch.unique(targets)) if targets.dim() == 1 else targets.shape[1]
+    # for Torchaudio datasets (yes_no)
+    if isinstance(targets, list):
+        targets = torch.tensor(targets)
+
+    # Bestimme Anzahl der Klassen aus dem gesamten Dataset, nicht nur aus dem Batch
+    match config.dataset_name.lower():
+        case "mnist":
+            num_classes = 10
+
+        case "fashionmnist":
+            num_classes = 10
+
+        case "cifar10":
+            num_classes = 10
+
+        case "cifar100":
+            num_classes = 100
+
+        case "flower":
+           num_classes = 102
+
+        case "food":
+            num_classes = 101  # Food101 hat 101 Klassen
+
+        case "pet":
+            num_classes = 37  # OxfordPet hat 37 Klassen
+
+        case _:
+            num_classes = int(targets.max().item()) + 1
+
+
 
     specs = {
         "input_channels": input_channels,

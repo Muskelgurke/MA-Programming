@@ -1,8 +1,12 @@
 import torch.utils.data
+import torchaudio
 import torchaudio.transforms as T
 from torchvision import datasets, transforms
 from torchaudio import datasets as datasets_audio
 from _new.helpers.config_class import Config
+
+torchaudio.set_audio_backend("soundfile")
+
 
 def get_dataloaders(config: Config, device: torch.device) -> tuple[torch.utils.data.DataLoader, torch.utils.data.DataLoader]:
     """
@@ -111,8 +115,7 @@ def get_speechCom_dataloaders(config: Config, device: torch.device)-> tuple[torc
 
         """
     audio_transform = get_audio_transform(sample_rate=16000, n_mels=64)
-
-    data = datasets_audio.SPEECHCOMMANDS(root=config.dataset_path,download=True)
+    data = datasets_audio.SPEECHCOMMANDS(root=config.dataset_path, download=True)
 
     full_dataset = SpeechCommandsDataset(data, audio_transform)
 
@@ -398,31 +401,79 @@ def get_linear_regression_dataloaders(config: Config) -> tuple[torch.utils.data.
 
 
 class YesNoDataset(torch.utils.data.Dataset):
-    """YesNo Dataset returns: waveforms sample_rate label"""
+    """YesNo Dataset returns: transformed_waveform, label_index"""
+
     def __init__(self, audio_dataset, transform):
         self.dataset = audio_dataset
         self.transform = transform
+        # Erstelle Mapping für alle möglichen Label-Kombinationen
+        self._create_label_mapping()
+
+    def _create_label_mapping(self):
+        """Erstelle Mapping von Label-Tupeln zu Klassen-Indizes"""
+        unique_labels = set()
+        for idx in range(len(self.dataset)):
+            # Laden der Labels ohne Index-Fehler zu vermeiden
+            try:
+                _, _, label = self.dataset[idx]
+                unique_labels.add(tuple(label))
+            except IndexError:
+                # Handle potential issue with dataset indexing if len(self.dataset) is not the actual size
+                continue
+
+        # Sortiere für konsistentes Mapping
+        # Im Falle von YESNO sind die Labels Tupel aus 1/0
+        self.label_to_idx = {label: idx for idx, label in enumerate(sorted(unique_labels))}
+        # Für YESNO ist das Label-Tupel 'yes' oder 'no'. Der Index ist 0 oder 1.
 
     def __len__(self):
         return len(self.dataset)
 
     def __getitem__(self, idx):
-        waveform, sample_rate, label = self.dataset[idx]
+        # waveform: [C, L], sample_rate: int, label: List[int]
+        waveform, sample_rate, label_list = self.dataset[idx]
+
+        # 1. Transformiere die Wellenform in ein Mel-Spektrogramm (224x224 RGB)
         transformed = self.transform(waveform)
-        return transformed, label
+
+        # 2. Konvertiere Label-Liste/Tupel zu Klassen-Index
+        label_idx = self.label_to_idx[tuple(label_list)]
+
+        # Das zurückgegebene Label muss ein Tensor sein
+        return transformed, torch.tensor(label_idx, dtype=torch.long)
+
 
 class SpeechCommandsDataset(torch.utils.data.Dataset):
-    """SpeechCommand dataset returns:
-    waveform, smaple_rate, label, speaker_id, utterance_number
-    """
+    """SpeechCommand dataset returns: transformed_waveform, label_index"""
+
     def __init__(self, audio_dataset, transform):
         self.dataset = audio_dataset
         self.transform = transform
+        self._create_label_mapping()
+
+    def _create_label_mapping(self):
+        """Erstelle Mapping von String-Label zu Klassen-Indizes"""
+        # Holen Sie sich alle eindeutigen String-Labels
+        labels = sorted(list(set(item[2] for item in self.dataset._walker)))
+
+        # Erstellen Sie das Mapping
+        self.label_to_idx = {label: idx for idx, label in enumerate(labels)}
+
+        # Das Attribut `self.dataset._walker` ist eine Liste von Pfaden,
+        # die zur Abfrage der Labels dient.
+        self.labels = labels
 
     def __len__(self):
         return len(self.dataset)
 
     def __getitem__(self, idx):
-        waveform, sample_rate, label, speaker_id, utterance_number = self.dataset[idx]
+        # waveform: [C, L], sample_rate: int, label: str, speaker_id: str, utterance_number: int
+        waveform, sample_rate, label_str, speaker_id, utterance_number = self.dataset[idx]
+
+        # 1. Transformiere die Wellenform in ein Mel-Spektrogramm (224x224 RGB)
         transformed = self.transform(waveform)
-        return transformed, label
+
+        # 2. Konvertiere String-Label zu Klassen-Index
+        label_idx = self.label_to_idx[label_str]
+
+        return transformed, torch.tensor(label_idx, dtype=torch.long)

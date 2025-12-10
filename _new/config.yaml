@@ -2,9 +2,9 @@
 base_config:
   random_seed: 43
   learning_rate: 0.001
-  epoch_total: 10
-  training_method: bp
-  dataset_name: yesno
+  epoch_total: 5
+  training_method: bp #bp fg
+  dataset_name: mnist
   batch_size: 64
   augment_data: false
   model_type: alexnet
@@ -19,10 +19,11 @@ base_config:
 # Multi-Parameter Configuration: Parameter für Grid-Search
 # Wenn ein Parameter hier definiert ist, wird er für Multi-Training verwendet
 # Wenn nicht, wird der Wert aus base_config genommen
-multi_params:
-  dataset_name:
-    - yesno
-    - speechcommands
+#multi_params:
+#  dataset_name:
+#    - flower
+#    - food
+#    - pet
 
   #momentum:
   #  - 0.8

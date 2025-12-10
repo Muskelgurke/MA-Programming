@@ -1,5 +1,7 @@
 from _new.helpers.trainer_class import BaseTrainer
+from torch.profiler import profile, ProfilerActivity, record_function
 import torch
+
 
 
 class BackpropTrainer(BaseTrainer):
@@ -20,6 +22,8 @@ class BackpropTrainer(BaseTrainer):
             loss = self.loss_function(outputs, targets)
             sum_loss += loss.item()
             loss.backward()
+
+
             self.optimizer.step()
 
             # Metriken aktualisieren

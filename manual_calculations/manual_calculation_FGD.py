@@ -41,8 +41,7 @@ params = tuple(named_params.values())
 names = tuple(named_params.keys())
 
 #v_params = tuple([torch.randn_like(p) for p in params])
-v_params = tuple([torch.tensor([[0.4617, 0.2674, 0.5349], # Gewichte für Output 1)
-                                         [0.8094, 1.1103, -1.6898]]),  # Gewichte für Output 2
+v_params = tuple([torch.tensor([[0.4617, 0.2674, 0.5349],[0.8094, 1.1103, -1.6898]]),  # Gewichte für Output 2
                       torch.tensor([-0.9890, 0.9580])])           # Bias-Werte
 print(f'v_params = {v_params}\n')
 
