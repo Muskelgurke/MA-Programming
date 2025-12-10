@@ -10,7 +10,7 @@ class ForwardGradientTrainer(BaseTrainer):
         sum_correct = 0
         sum_size = 0
 
-        pbar = self._create_progress_bar(desc=f'BP - Train: {self.epoch_num}/{self.total_epochs}')
+        pbar = self._create_progress_bar(desc=f'FGD- Train: {self.epoch_num}/{self.total_epochs}')
 
         for batch_idx, (inputs, targets) in enumerate(pbar):
             inputs, targets = inputs.to(self.device), targets.to(self.device)

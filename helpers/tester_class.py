@@ -1,9 +1,5 @@
 import torch
-from torch.fx.experimental.migrate_gradual_types.constraint_transformation import valid_index
-
-import helpers.optimizer as optimizer_helper
 import helpers.datasets as datasets_helper
-import helpers.model as model_helper
 import helpers.loss_function as loss_function_helper
 
 from helpers.saver_class import TorchModelSaver
