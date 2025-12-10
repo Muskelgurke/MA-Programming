@@ -39,8 +39,9 @@ def start_training(config_path: str, device: torch.device):
     for i, config in enumerate(configs):
         run_number = i + 1
         print(f"\n{'=' * 40}")
-        print(f"Lauf {run_number}/{len(configs)}: Data: {config.dataset_name}, Model: {config.model_type}")
-        print(f"Config: LR={config.learning_rate}, Method={config.training_method}")
+        print(f"Lauf {run_number}/{len(configs)}: ")
+        print(f"Data: {config.dataset_name}, Model: {config.model_type}, Method:{config.training_method}")
+        print(f"Config: LR={config.learning_rate}, Opt={config.optimizer}, Batch={config.batch_size}")
         print(f"Gerät: {device}")
 
         #try:
