@@ -22,7 +22,7 @@ class ForwardGradientTrainer(BaseTrainer):
                 self.model.train()
                 # Warmup forward pass to ensure buffers are initialized
                 self.model(inputs)
-                self.model.eval()
+                #self.model.eval()
 
                 buffers = {k: v.to(self.device) for k, v in named_buffers.items()}
 
