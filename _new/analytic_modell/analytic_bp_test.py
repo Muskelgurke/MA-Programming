@@ -58,7 +58,8 @@ def measure_real_memory(model, input_tensor):
     device = torch.device("cuda")
     model.to(device)
     input_tensor = input_tensor.to(device)
-
+    # Warm-up Lauf damit CUDA initialisiert ist
+    _ = model(input_tensor)
     # Garbage Collection & Cache leeren für sauberen Start
     import gc
     gc.collect()
