@@ -15,61 +15,60 @@ class ForwardGradientTrainer(BaseTrainer):
         names = tuple(named_params.keys())
         named_buffers = dict(self.model.named_buffers())
 
-        for batch_idx, (inputs, targets) in enumerate(pbar):
-            inputs, targets = inputs.to(self.device), targets.to(self.device)
-            self.optimizer.zero_grad()
-            self.model.train()
-            # Warmup forward pass to ensure buffers are initialized
-            with torch.no_grad():
+        with torch.no_grad():
+            for batch_idx, (inputs, targets) in enumerate(pbar):
+                inputs, targets = inputs.to(self.device), targets.to(self.device)
+                self.optimizer.zero_grad()
+                self.model.train()
+                # Warmup forward pass to ensure buffers are initialized
                 self.model(inputs)
-            self.model.eval()
+                self.model.eval()
 
-            buffers = {k: v.to(self.device) for k, v in named_buffers.items()}
+                buffers = {k: v.to(self.device) for k, v in named_buffers.items()}
 
-            params = tuple(named_params.values())
+                params = tuple(named_params.values())
 
-            # Pertubation Vektor
-            v_params = tuple(torch.randn_like(p) for p in params)
+                # Pertubation Vektor
+                v_params = tuple(torch.randn_like(p) for p in params)
 
-            # Define loss function for functional call
-            def loss_fn(params_tuple, inputs, targets):
-                # Reconstruct parameter dict from tuple
-                params_dict = dict(zip(names, params_tuple))
-                state_dict = {**params_dict, **buffers} # vorher nur params_dict jetzt mit buffers
-                output = torch.func.functional_call(self.model, state_dict, inputs)
-                loss = nn.functional.cross_entropy(output, targets)
-                return loss, output
+                # Define loss function for functional call
+                def loss_fn(params_tuple, inputs, targets):
+                    # Reconstruct parameter dict from tuple
+                    params_dict = dict(zip(names, params_tuple))
+                    state_dict = {**params_dict, **buffers} # vorher nur params_dict jetzt mit buffers
+                    output = torch.func.functional_call(self.model, state_dict, inputs)
+                    loss = nn.functional.cross_entropy(output, targets)
+                    return loss, output
 
-            # Forward Pass mit JVP
-            loss, dir_der, outputs = torch.func.jvp(lambda params: loss_fn(params, inputs, targets),
-                                                     (params,),
-                                                     (v_params,),
-                                                     has_aux=True)
-            sum_loss += loss.item()
+                # Forward Pass mit JVP
+                loss, dir_der, outputs = torch.func.jvp(lambda params: loss_fn(params, inputs, targets),
+                                                         (params,),
+                                                         (v_params,),
+                                                         has_aux=True)
+                sum_loss += loss.item()
 
-            # set Gradients = v*jvp (scalar multiplication)
-            with torch.no_grad():
+                # set Gradients = v*jvp (scalar multiplication)
                 for j, param in enumerate(self.model.parameters()):
                     estimated_gradient = dir_der * v_params[j]
                     param.grad = estimated_gradient
 
 
 
-            self.optimizer.step()
+                self.optimizer.step()
 
-            # Metriken aktualisieren
-            _, predicted = torch.max(outputs.data, 1)
-            total = targets.size(0)
-            correct = (predicted == targets).sum().item()
+                # Metriken aktualisieren
+                _, predicted = torch.max(outputs.data, 1)
+                total = targets.size(0)
+                correct = (predicted == targets).sum().item()
 
-            sum_correct += correct
-            sum_size += total
-            accuracy = 100.0 * sum_correct / sum_size
+                sum_correct += correct
+                sum_size += total
+                accuracy = 100.0 * sum_correct / sum_size
 
-            pbar.set_postfix({
-                'Loss': f'{loss:.4f}',
-                'Acc': f'{accuracy:.2f}%'
-            })
+                pbar.set_postfix({
+                    'Loss': f'{loss:.4f}',
+                    'Acc': f'{accuracy:.2f}%'
+                })
         self.metrics.loss_per_epoch = sum_loss / sum_size
         self.metrics.acc_per_epoch = 100. * sum_correct / sum_size
         self.metrics.num_batches = sum_size
