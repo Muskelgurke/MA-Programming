@@ -19,6 +19,8 @@ class BaseTrainer(ABC):
 
         self._initialize_components()
 
+
+
     def _initialize_components(self):
 
 

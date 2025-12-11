@@ -11,42 +11,49 @@ class ForwardGradientTrainer(BaseTrainer):
         sum_size = 0
 
         pbar = self._create_progress_bar(desc=f'FGD- Train: {self.epoch_num}/{self.total_epochs}')
+        named_params = dict(self.model.named_parameters())
+        names = tuple(named_params.keys())
+        named_buffers = dict(self.model.named_buffers())
 
         for batch_idx, (inputs, targets) in enumerate(pbar):
             inputs, targets = inputs.to(self.device), targets.to(self.device)
             self.optimizer.zero_grad()
+            self.model.train()
+            # Warmup forward pass to ensure buffers are initialized
+            with torch.no_grad():
+                self.model(inputs)
+            self.model.eval()
 
-            # Forward Pass
-            named_params = dict(self.model.named_parameters())
+            buffers = {k: v.to(self.device) for k, v in named_buffers.items()}
+
             params = tuple(named_params.values())
-            names = tuple(named_params.keys())
 
             # Pertubation Vektor
             v_params = tuple(torch.randn_like(p) for p in params)
-            outputs = self.model(inputs)
-
 
             # Define loss function for functional call
             def loss_fn(params_tuple, inputs, targets):
                 # Reconstruct parameter dict from tuple
                 params_dict = dict(zip(names, params_tuple))
-                output = torch.func.functional_call(self.model, params_dict, inputs)
-                return nn.functional.cross_entropy(output, targets)
+                state_dict = {**params_dict, **buffers} # vorher nur params_dict jetzt mit buffers
+                output = torch.func.functional_call(self.model, state_dict, inputs)
+                loss = nn.functional.cross_entropy(output, targets)
+                return loss, output
 
-            # JVP
-            loss , dir_der = torch.func.jvp(lambda params: loss_fn(params, inputs, targets),
-                                               (params,),
-                                               (v_params,))
-            estimated_gradients = []
+            # Forward Pass mit JVP
+            loss, dir_der, outputs = torch.func.jvp(lambda params: loss_fn(params, inputs, targets),
+                                                     (params,),
+                                                     (v_params,),
+                                                     has_aux=True)
+            sum_loss += loss.item()
+
             # set Gradients = v*jvp (scalar multiplication)
-
             with torch.no_grad():
                 for j, param in enumerate(self.model.parameters()):
                     estimated_gradient = dir_der * v_params[j]
                     param.grad = estimated_gradient
-                    estimated_gradients.append(estimated_gradient)
 
-            sum_loss += loss.item()
+
 
             self.optimizer.step()
 
