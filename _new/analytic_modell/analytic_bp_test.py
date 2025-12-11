@@ -27,8 +27,8 @@ class AnalyticalMemoryBP:
             # HIER WICHTIG: ReLU (inplace=False) speichert oft eine Bitmaske oder den Output.
             # PyTorch ist hier effizient. Wir nehmen konservativ an, es speichert den Output.
             # Wenn du es genauer willst, musst du tiefer graben.
-            # elif isinstance(module, nn.ReLU) and not module.inplace:
-            #     self.bp_memory_bytes += output.numel() * output.element_size()
+            elif isinstance(module, nn.ReLU) and not module.inplace:
+                self.bp_memory_bytes += output.numel() * output.element_size()
 
         for module in self.model.modules():
             # Nur Leaf-Module hooken
