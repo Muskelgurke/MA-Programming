@@ -66,22 +66,6 @@ class BaseTrainer(ABC):
         return tqdm(self.train_loader, desc=desc)
 
 
-    def extract_profiler_metric(self, profiler, key_name, metric_attr="self_cuda_memory_usage"):
-        """
-        Hilfsfunktion die Profiler-Metriken zu extrahieren für die Validation_metrics_DataClass.
-
-        Torch.profiler wird in _train_epoch_impl() verwendet.
-
-        """
-        # key_averages() aggregiert alle Events
-        averages = profiler.key_averages()
-        for event in averages:
-            if event.key == key_name:
-                # self_cuda_memory_usage gibt an, was die Funktion selbst allozierte (ohne Kinder)
-                # cuda_memory_usage inkludiert Kinder.
-                val_bytes = getattr(event, metric_attr)
-                return val_bytes / (1024 * 1024)  # Umrechnung in MB
-        return 0.0
 
 
 

@@ -1,7 +1,7 @@
-from helpers.trainer_class import BaseTrainer
+
 import torch
 from torch.profiler import profile, ProfilerActivity, record_function
-
+from helpers.trainer_class import BaseTrainer
 
 
 class BackpropTrainer(BaseTrainer):
@@ -11,7 +11,7 @@ class BackpropTrainer(BaseTrainer):
         sum_loss = 0
         sum_correct = 0
         sum_size = 0
-
+        to_mb = (1024 ** 2)
         pbar = self._create_progress_bar(desc=f'BP - Train: {self.epoch_num}/{self.total_epochs}')
 
         with profile(
@@ -61,11 +61,24 @@ class BackpropTrainer(BaseTrainer):
                 })
 
 
+        if prof:
+            print("Profiling ergebnisse für Epoche")
+            # Hol alle Events
+            events = prof.key_averages()
+
+            # Suche effizient nach deinen Labels
+            evt_dict = {e.key: e for e in events}
+            print("Profiling events in dict umgewandelt")
+            if "bp_forward" in evt_dict:
+                self.metrics.memory_forward_pass_MB = evt_dict["bp_forward"].self_cuda_memory_usage / to_mb
+                print("Profiling forward pass memory geschrieben")
+            if "bp_backward" in evt_dict:
+                self.metrics.memory_backward_pass_MB = evt_dict["bp_backward"].self_cuda_memory_usage / to_mb
+                print("Profiling backward pass memory geschrieben")
+
         # Speicher-Metriken aktualisieren
         # memory_activiations are saved in the first batch
-        self.metrics.memory_forward_pass_MB = self.extract_profiler_metric(prof, 'bp_forward')
-        self.metrics.memory_backward_pass_MB = self.extract_profiler_metric(prof, 'bp_backward')
-        self.metrics.memory_peak_MB = torch.cuda.max_memory_allocated(self.device) / (1024**2)
+        self.metrics.memory_peak_MB = torch.cuda.max_memory_allocated(self.device) / to_mb
 
         # Epoche-Metriken aktualisieren
         self.metrics.loss_per_epoch = sum_loss / sum_size

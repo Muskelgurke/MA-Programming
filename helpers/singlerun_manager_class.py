@@ -74,14 +74,14 @@ class SingleRunManager:
             for epoch in range(self.config.epoch_total):
 
                 train_metrics, self.trained_model = self.trainer.train_epoch(epoch_num=epoch)
-
+                print("Training beendet. Starte Validierung...")
                 test_metrics = self.tester.validate_epoch(epoch_num=epoch, model = self.trained_model)
-
+                print("Validierung beendet. Write Epoch csv...")
 
                 self.saver.write_epoch_metrics_csv(train_metrics=train_metrics,
                                                    test_metrics=test_metrics,
                                                    epoch_idx=epoch)
-
+                print("update best metrics and check early stopping...")
                 if test_metrics.acc_per_epoch > best_test_acc:
                     best_test_acc = test_metrics.acc_per_epoch
                     best_test_metrics = test_metrics
@@ -104,7 +104,7 @@ class SingleRunManager:
                                                           early_stop_info=self.early_stopping.get_stop_info()
                                                           )
                         break
-
+            print("Training abgeschlossen. Speichere Ergebnisse...")
             self.saver.write_run_yaml_summary(config=self.config,
                                               total_training_time=self.total_time,
                                               train_metrics=best_train_metrics,
