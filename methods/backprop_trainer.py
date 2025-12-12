@@ -15,7 +15,7 @@ class BackpropTrainer(BaseTrainer):
         pbar = self._create_progress_bar(desc=f'BP - Train: {self.epoch_num}/{self.total_epochs}')
 
         with profile(
-            activities= [ProfilerActivity.CPU, ProfilerActivity.GPU],
+            activities= [ProfilerActivity.CPU, ProfilerActivity.CUDA],
             profile_memory=True,
             record_shapes=True,
         )as prof:
