@@ -27,10 +27,16 @@ class TorchModelSaver:
         if not self.epoch_csv_initialized:
             fieldnames = [
                 'epoch',
-                'train_loss','train_accuracy',
-                'test_loss','test_accuracy',
+                'train_loss',
+                'train_accuracy',
+                'test_loss',
+                'test_accuracy',
                 'num_batches',
-                'early_stopped_reason'
+                'early_stop_reason'
+                'memory_foward_pass_MB',
+                'memory_backward_pass_MB',
+                'memory_activations_MB',
+                'memory_peak_MB'
             ]
 
             with open(self.epoch_metrics_file, 'w', newline='') as csvfile:
