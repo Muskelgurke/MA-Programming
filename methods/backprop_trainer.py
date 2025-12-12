@@ -71,7 +71,6 @@ class BackpropTrainer(BaseTrainer):
             # Suche effizient nach deinen Labels
             evt_dict = {e.key: e for e in events}
             print("Profiling events in dict umgewandelt")
-            print(evt_dict)
             if "bp_forward" in evt_dict:
                 evt = evt_dict["bp_forward"]
                 print("Verfügbare Attribute:", dir(evt))
