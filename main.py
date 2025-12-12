@@ -74,9 +74,10 @@ def get_device()->torch.device:
 
     # Fallback auf CPU (z.B. Intel Arc Laptop)
     else:
+
         device = torch.device("cpu")
         print(f"Keine CUDA-GPU verfügbar. Nutze CPU.")
-
+        exit()
         # Optional: Prüfe auf Intel Extension
         try:
             import intel_extension_for_pytorch as ipex

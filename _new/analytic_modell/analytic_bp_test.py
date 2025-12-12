@@ -49,7 +49,6 @@ class AnalyticalMemoryBP:
 
         return self.bp_memory_bytes
 
-
 # --- 2. Die Empirische Messung (Realität) ---
 def measure_real_memory(model, input_tensor):
     if not torch.cuda.is_available():
