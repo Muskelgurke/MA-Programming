@@ -1,6 +1,8 @@
 import torch.utils.data
 import torchaudio
 import torchaudio.transforms as T
+import kagglehub
+import os
 from torchvision import datasets, transforms
 from torchaudio import datasets as datasets_audio
 from helpers.config_class import Config
@@ -36,7 +38,7 @@ def get_dataloaders(config: Config, device: torch.device) -> tuple[torch.utils.d
             train_loader, test_loader = get_cifar100_dataloaders(config,device)
 
         case "cars":
-            train_loader, test_loader = get_standCars_dataloaders(config,device)
+            train_loader, test_loader = get_standCars_dataloaders(config, device)
 
         case "flower":
             train_loader, test_loader = get_flower102_dataloaders(config, device)
@@ -49,7 +51,7 @@ def get_dataloaders(config: Config, device: torch.device) -> tuple[torch.utils.d
 
         case "yesno":
             # TorchAudio
-            train_loader, test_loader = get_yesNo_dataloaders(config, device)
+            raise ValueError(f"Unknown dataset-name: {config.dataset_name}")
 
         case "speechcommands":
             # TorchAudio
@@ -223,13 +225,16 @@ def get_standCars_dataloaders(config: Config, device: torch.device)-> tuple[torc
         Returns:
             Tuple[DataLoader, DataLoader]: Training and test dataloaders.
         """
+    path = config.dataset_path + "/sanford-cars-dataset"
+    if not os.path.exists(path):
+        path = kagglehub.dataset_download("stanford-cars-dataset")
 
     transform_cars = transforms.Compose([transforms.Resize((224,224)),transforms.ToTensor(),
                                          transforms.Normalize(mean=[0.485, 0.456, 0.406],std=[0.229, 0.224, 0.225])])
 
     train_dataset = datasets.StanfordCars(root=config.dataset_path,split='train',download=True,transform=transform_cars)
 
-    test_dataset = datasets.StanfordCars(root=config.dataset_path,split='test',download=True,transform=transform_cars)
+    test_dataset = datasets.StanfordCars(root=config.dataset_path,split='test',transform=transform_cars)
 
     return _create_dataloaders(train_dataset, test_dataset, config, device)
 
