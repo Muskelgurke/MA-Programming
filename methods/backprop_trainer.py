@@ -1,6 +1,6 @@
 
 import torch
-from torch.profiler import profile, ProfilerActivity, record_function
+from torch.profiler import profile, ProfilerActivity, record_function, schedule
 from helpers.trainer_class import BaseTrainer
 
 
@@ -14,8 +14,10 @@ class BackpropTrainer(BaseTrainer):
         to_mb = (1024 ** 2)
         pbar = self._create_progress_bar(desc=f'BP - Train: {self.epoch_num}/{self.total_epochs}')
 
+        prof_schedule = schedule(wait=1, warmup=1, active=3, repeat=1)
         with profile(
             activities= [ProfilerActivity.CPU, ProfilerActivity.CUDA],
+            schedule=prof_schedule,
             profile_memory=True,
             record_shapes=True,
         )as prof:
