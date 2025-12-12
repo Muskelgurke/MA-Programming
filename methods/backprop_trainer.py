@@ -71,6 +71,7 @@ class BackpropTrainer(BaseTrainer):
             # Suche effizient nach deinen Labels
             evt_dict = {e.key: e for e in events}
             print("Profiling events in dict umgewandelt")
+            print(evt_dict)
             if "bp_forward" in evt_dict:
                 self.metrics.memory_forward_pass_MB = evt_dict["bp_forward"].self_cuda_memory_usage / to_mb
                 print("Profiling forward pass memory geschrieben")
