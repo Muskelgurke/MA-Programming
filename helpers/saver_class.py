@@ -33,7 +33,7 @@ class TorchModelSaver:
                 'test_accuracy',
                 'num_batches',
                 'early_stop_reason'
-                'memory_foward_pass_MB',
+                'memory_forward_pass_MB',
                 'memory_backward_pass_MB',
                 'memory_activations_MB',
                 'memory_peak_MB'
@@ -75,8 +75,8 @@ class TorchModelSaver:
             'test_loss',
             'test_accuracy',
             'num_batches',
-            'early_stop_reason'
-            'memory_foward_pass_MB',
+            'early_stop_reason',
+            'memory_forward_pass_MB',
             'memory_backward_pass_MB',
             'memory_activations_MB',
             'memory_peak_MB'
@@ -91,7 +91,7 @@ class TorchModelSaver:
             'test_accuracy': test_metrics.acc_per_epoch if test_metrics.acc_per_epoch  is not None else 'csv_save=None',
             'num_batches': train_metrics.num_batches,
             'early_stop_reason': early_stop_reason.get('reason', '') if early_stop_reason else '',
-            'memory_foward_pass_MB': train_metrics.memory_forward_pass_MB,
+            'memory_forward_pass_MB': train_metrics.memory_forward_pass_MB,
             'memory_backward_pass_MB': train_metrics.memory_backward_pass_MB,
             'memory_activations_MB': train_metrics.memory_activations_MB,
             'memory_peak_MB': train_metrics.memory_peak_MB
