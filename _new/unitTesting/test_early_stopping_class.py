@@ -14,7 +14,6 @@ class SimpleModel(nn.Module):
     def forward(self, x):
         return self.fc(x)
 
-
 class TestEarlyStopping():
 
     @pytest.fixture(autouse=True)

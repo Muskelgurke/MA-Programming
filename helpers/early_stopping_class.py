@@ -1,9 +1,6 @@
 import torch
 from typing import Optional, Dict, Any
 
-import torch
-from typing import Optional, Dict, Any
-
 
 class EarlyStopping:
 
@@ -94,7 +91,9 @@ class EarlyStopping:
             self.best_model_state = {k: v.cpu().clone() for k, v in model.state_dict().items()}
             return
 
-        if score <= self.best_score + self.delta:
+        threshold = self.best_score + self.delta
+
+        if score <= threshold:
             self.counter += 1
             if self.counter >= self.patience:
                 self.early_stop = True

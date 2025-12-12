@@ -67,16 +67,25 @@ class SingleRunManager:
         try:
             train_metrics = None
             test_metrics = None
+            best_test_metrics = None
+            best_train_metrics = None
+            best_test_acc = -float('inf')
+
             for epoch in range(self.config.epoch_total):
-                start_training_time = time.time()
 
                 train_metrics, self.trained_model = self.trainer.train_epoch(epoch_num=epoch)
 
                 test_metrics = self.tester.validate_epoch(epoch_num=epoch, model = self.trained_model)
 
+
                 self.saver.write_epoch_metrics_csv(train_metrics=train_metrics,
                                                    test_metrics=test_metrics,
                                                    epoch_idx=epoch)
+
+                if test_metrics.acc_per_epoch > best_test_acc:
+                    best_test_acc = test_metrics.acc_per_epoch
+                    best_test_metrics = test_metrics
+                    best_train_metrics = train_metrics
 
                 if self.early_stopping:
                     self.early_stopping.check_and_update(
@@ -85,30 +94,38 @@ class SingleRunManager:
                         model=self.trained_model,
                         epoch=epoch
                     )
+                    print(f"Early stopping counter: {self.early_stopping.counter} / {self.early_stopping.patience}")
+                    print(f"")
                     if self.early_stopping.early_stop:
-                        self.total_time = time.time() - start_training_time
                         self.saver.write_run_yaml_summary(config=self.config,
                                                           total_training_time=self.total_time,
-                                                          train_metrics=train_metrics,
-                                                          test_metrics=test_metrics,
+                                                          train_metrics=best_train_metrics,
+                                                          test_metrics=best_test_metrics,
                                                           early_stop_info=self.early_stopping.get_stop_info()
                                                           )
-
                         break
+
+            self.saver.write_run_yaml_summary(config=self.config,
+                                              total_training_time=self.total_time,
+                                              train_metrics=best_train_metrics,
+                                              test_metrics=best_test_metrics,
+                                              early_stop_info=self.early_stopping.get_stop_info()
+                                              )
 
             self.saver.save_model_and_config_after_epochs(config=self.config,
                                                           model=self.trained_model,
                                                           save_full_model=True
                                                           )
+
             self.saver.write_multi_run_results_csv(config=self.config,
                                                    total_training_time=self.total_time,
-                                                   train_metrics=train_metrics,
-                                                   test_metrics=test_metrics,
+                                                   train_metrics=best_train_metrics,
+                                                   test_metrics=best_test_metrics,
                                                    early_stop_info=self.early_stopping.get_stop_info() if self.early_stopping else None,
                                                    run_number=self.run_number)
 
 
-            return train_metrics, test_metrics
+            return best_train_metrics, best_test_metrics
 
         except Exception as e:
             # Fehlerbehandlung
