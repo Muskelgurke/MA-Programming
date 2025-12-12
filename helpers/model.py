@@ -1,6 +1,7 @@
 import torch.nn as nn
 import torch
 import torchvision.models as models
+import torch.nn.functional as F
 
 from torchvision.models.resnet import BasicBlock, Bottleneck
 from helpers.config_class import Config
@@ -41,6 +42,7 @@ def get_model(config: Config, sample_batch: tuple) -> nn.Module:
     }
 
     match config.model_type.lower():
+        case "testmodel": return SimpleTestModel(input_channels, num_classes, input_size)
         case "alexnet": return get_adapted_model(models.alexnet ,specs)
         case "vgg16":   return get_adapted_model(models.vgg16 ,specs)
         case "resnet18":return get_adapted_model(models.resnet18 ,{**specs, "disable_inplace": True})
@@ -167,3 +169,37 @@ def patched_bottleneck_forward(self, x):
 
     return out
 
+
+class SimpleTestModel(nn.Module):
+    """
+    Ein dynamisches, minimalistisches CNN für schnelles Debugging.
+    Passt sich automatisch an Input-Größe und Channels an.
+    """
+
+    def __init__(self, input_channels, num_classes, input_size):
+        super(SimpleTestModel, self).__init__()
+
+        # Conv Layer: Behält HxW bei (durch padding=1 bei kernel=3)
+        self.conv1 = nn.Conv2d(in_channels=input_channels, out_channels=4, kernel_size=3, padding=1)
+
+        # Pooling halbiert die Größe (H/2, W/2)
+        self.pool = nn.MaxPool2d(kernel_size=2, stride=2)
+
+        # Berechnung der Flatten-Größe für den Linear Layer
+        # Nach MaxPool ist das Bild halb so groß
+        final_dim = input_size // 2
+        linear_input_size = 4 * final_dim * final_dim
+
+        self.fc1 = nn.Linear(linear_input_size, num_classes)
+
+    def forward(self, x):
+        # x: [Batch, In_Channels, H, W]
+        x = self.conv1(x)
+        x = F.relu(x)
+        x = self.pool(x)  # -> [Batch, 4, H/2, W/2]
+
+        # Flatten
+        x = x.view(x.size(0), -1)
+
+        x = self.fc1(x)
+        return x
