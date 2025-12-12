@@ -7,7 +7,7 @@ from torchvision import datasets, transforms
 from torchaudio import datasets as datasets_audio
 from helpers.config_class import Config
 
-torchaudio.set_audio_backend("soundfile")
+# torchaudio.set_audio_backend("soundfile")
 
 
 def get_dataloaders(config: Config, device: torch.device) -> tuple[torch.utils.data.DataLoader, torch.utils.data.DataLoader]:
