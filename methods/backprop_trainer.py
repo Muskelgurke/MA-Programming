@@ -9,7 +9,7 @@ class BackpropTrainer(BaseTrainer):
     """Trainer-Klasse für Backpropagation-basiertes Training."""
 
     def _train_epoch_impl(self):
-        self.MAX_NUM_OF_MEM_EVENTS_PER_SNAPSHOT: int = 100000
+        self.MAX_NUM_OF_MEM_EVENTS_PER_SNAPSHOT: int = 10000
         self.TIME_FORMAT_STR: str = "%b_%d_%H_%M_%S"
 
 
