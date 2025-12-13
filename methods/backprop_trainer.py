@@ -110,21 +110,22 @@ class BackpropTrainer(BaseTrainer):
             print("Gefundene Keys:", list(evt_dict.keys())[:5], "...")  # Zeige die ersten 5 Keys zur Hilfe
 
         print("=" * 50 + "\n")
-            if "bp_backward" in evt_dict:
-                evt = evt_dict["bp_forward"]
-                # WICHTIG: Nimm 'cuda_memory_usage' (inkl. Kinder), nicht 'self_'
-                memory_bytes = getattr(evt, "cuda_memory_usage", 0)
-                time_us = getattr(evt, "cuda_time_total", 0)
+        exit()
+        if "bp_backward" in evt_dict:
+            evt = evt_dict["bp_forward"]
+            # WICHTIG: Nimm 'cuda_memory_usage' (inkl. Kinder), nicht 'self_'
+            memory_bytes = getattr(evt, "cuda_memory_usage", 0)
+            time_us = getattr(evt, "cuda_time_total", 0)
 
-                # Umrechnung für bessere Lesbarkeit
-                memory_mb = memory_bytes / (1024 ** 2)
-                time_ms = time_us / 1000.0
+            # Umrechnung für bessere Lesbarkeit
+            memory_mb = memory_bytes / (1024 ** 2)
+            time_ms = time_us / 1000.0
 
-                print(f"--- DEBUG bp_backward ---")
-                print(f"Memory (Total): {memory_mb:.2f} MB")
-                print(f"Time (Total):   {time_ms:.2f} ms")
-                #self.metrics.memory_backward_pass_MB = evt_dict["bp_backward"].self_cuda_memory_usage / to_mb
-                print("Profiling backward pass memory geschrieben")
+            print(f"--- DEBUG bp_backward ---")
+            print(f"Memory (Total): {memory_mb:.2f} MB")
+            print(f"Time (Total):   {time_ms:.2f} ms")
+            #self.metrics.memory_backward_pass_MB = evt_dict["bp_backward"].self_cuda_memory_usage / to_mb
+            print("Profiling backward pass memory geschrieben")
 
         # Speicher-Metriken aktualisieren
         # memory_activiations are saved in the first batch
