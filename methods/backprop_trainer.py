@@ -73,6 +73,7 @@ class BackpropTrainer(BaseTrainer):
             print("Profiling events in dict umgewandelt")
             if "bp_forward" in evt_dict:
                 evt = evt_dict["bp_forward"]
+                print(dir(evt))
                 # WICHTIG: Nimm 'cuda_memory_usage' (inkl. Kinder), nicht 'self_'
                 memory_bytes = getattr(evt, "cuda_memory_usage", 0)
                 time_us = getattr(evt, "cuda_time_total", 0)
