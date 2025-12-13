@@ -76,8 +76,6 @@ class BackpropTrainer(BaseTrainer):
             evt = evt_dict["bp_forward"]
 
             # Umrechnungsfaktoren
-            to_mb = 1024 ** 2
-            to_ms = 1000.0
 
             # --- 1. Die Standard-Zusammenfassung von PyTorch ---
             print("--- PyTorch Roh-Daten (String Repr) ---")
@@ -92,15 +90,13 @@ class BackpropTrainer(BaseTrainer):
             # Self  = Nur der Python-Wrapper Overhead selbst
             print("\n[ZEIT - TIME]")
             print(f"Self CPU Time:       {evt.self_cpu_time_total :.4f} ms")
-            print(f"Self CUDA Time:      {evt.self_cuda_time_total :.4f} ms")
+            print(f"Self CUDA Time:      {evt.self_cuda_time :.4f} ms")
 
             # SPEICHER (Memory)
             print("\n[SPEICHER - MEMORY]")
             # Achtung: Zeigt oft 0.00 MB, wenn PyTorch den Speicher aus dem Cache nimmt!
             print(f"CPU Memory Usage:    {evt.cpu_memory_usage } MB")
             print(f"CUDA Memory Usage:   {evt.cuda_memory_usage } MB  <-- Dein gesuchter Wert")
-            print(f"Self CPU Memory:     {evt.self_cpu_memory_usage } MB")
-            print(f"Self CUDA Memory:    {evt.self_cuda_memory_usage } MB")
 
             # FORM (Shapes) - Falls record_shapes=True aktiviert war
             print("\n[INPUT SHAPES]")
