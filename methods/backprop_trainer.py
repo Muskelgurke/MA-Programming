@@ -62,33 +62,54 @@ class BackpropTrainer(BaseTrainer):
                     'Acc': f'{accuracy:.2f}%'
                 })
 
+        print("\n" + "=" * 50)
+        print("PROFILER DIAGNOSE: bp_forward")
+        print("=" * 50)
 
-        if prof:
-            print("Profiling ergebnisse für Epoche")
-            # Hol alle Events
-            events = prof.key_averages()
+        events = prof.key_averages()
+        evt_dict = {e.key: e for e in events}
 
-            # Suche effizient nach deinen Labels
-            evt_dict = {e.key: e for e in events}
-            print(dir(evt_dict))
-            print("Profiling events in dict umgewandelt")
-            if "bp_forward" in evt_dict:
-                evt = evt_dict["bp_forward"]
-                print(dir(evt))
-                # WICHTIG: Nimm 'cuda_memory_usage' (inkl. Kinder), nicht 'self_'
-                memory_bytes = getattr(evt, "cuda_memory_usage", 0)
-                time_us = getattr(evt, "cuda_time_total", 0)
+        if "bp_forward" in evt_dict:
+            evt = evt_dict["bp_forward"]
 
-                # Umrechnung für bessere Lesbarkeit
-                memory_mb = memory_bytes / (1024 ** 2)
-                time_ms = time_us / 1000.0
+            # Umrechnungsfaktoren
+            to_mb = 1024 ** 2
+            to_ms = 1000.0
 
-                print(f"--- DEBUG bp_forward ---")
-                print(f"Memory (Total): {memory_mb:.2f} MB")
-                print(f"Time (Total):   {time_ms:.2f} ms")
-                #self.metrics.memory_forward_pass_MB = evt_dict["bp_forward"].self_cuda_memory_usage / to_mb
-                print("Profiling forward pass memory geschrieben")
+            # --- 1. Die Standard-Zusammenfassung von PyTorch ---
+            print("--- PyTorch Roh-Daten (String Repr) ---")
+            print(evt)  # Ruft automatisch die __str__ Methode auf, zeigt oft schon viel an.
+            print("-" * 30)
 
+            # --- 2. Manuelle Aufschlüsselung aller Werte ---
+            print(f"Anzahl Aufrufe (Count): {evt.count}")
+
+            # ZEIT (Time)
+            # Total = Die Funktion + alles was sie aufgerufen hat (Conv2d, ReLU, etc.)
+            # Self  = Nur der Python-Wrapper Overhead selbst
+            print("\n[ZEIT - TIME]")
+            print(f"CPU Time Total:      {evt.cpu_time_total / to_ms:.4f} ms")
+            print(f"CUDA Time Total:     {evt.cuda_time_total / to_ms:.4f} ms  <-- Dein gesuchter Wert für den Graph")
+            print(f"Self CPU Time:       {evt.self_cpu_time_total / to_ms:.4f} ms")
+            print(f"Self CUDA Time:      {evt.self_cuda_time_total / to_ms:.4f} ms")
+
+            # SPEICHER (Memory)
+            print("\n[SPEICHER - MEMORY]")
+            # Achtung: Zeigt oft 0.00 MB, wenn PyTorch den Speicher aus dem Cache nimmt!
+            print(f"CPU Memory Usage:    {evt.cpu_memory_usage / to_mb:.4f} MB")
+            print(f"CUDA Memory Usage:   {evt.cuda_memory_usage / to_mb:.4f} MB  <-- Dein gesuchter Wert")
+            print(f"Self CPU Memory:     {evt.self_cpu_memory_usage / to_mb:.4f} MB")
+            print(f"Self CUDA Memory:    {evt.self_cuda_memory_usage / to_mb:.4f} MB")
+
+            # FORM (Shapes) - Falls record_shapes=True aktiviert war
+            print("\n[INPUT SHAPES]")
+            print(f"Input Shapes:        {evt.input_shapes}")
+
+        else:
+            print("WARNUNG: 'bp_forward' wurde im Profiler nicht gefunden!")
+            print("Gefundene Keys:", list(evt_dict.keys())[:5], "...")  # Zeige die ersten 5 Keys zur Hilfe
+
+        print("=" * 50 + "\n")
             if "bp_backward" in evt_dict:
                 evt = evt_dict["bp_forward"]
                 # WICHTIG: Nimm 'cuda_memory_usage' (inkl. Kinder), nicht 'self_'
