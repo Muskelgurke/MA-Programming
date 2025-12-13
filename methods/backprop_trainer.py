@@ -88,18 +88,18 @@ class BackpropTrainer(BaseTrainer):
             # Total = Die Funktion + alles was sie aufgerufen hat (Conv2d, ReLU, etc.)
             # Self  = Nur der Python-Wrapper Overhead selbst
             print("\n[ZEIT - TIME]")
-            print(f"CPU Time Total:      {evt.cpu_time_total / to_ms:.4f} ms")
-            print(f"CUDA Time Total:     {evt.cuda_time_total / to_ms:.4f} ms  <-- Dein gesuchter Wert für den Graph")
-            print(f"Self CPU Time:       {evt.self_cpu_time_total / to_ms:.4f} ms")
-            print(f"Self CUDA Time:      {evt.self_cuda_time_total / to_ms:.4f} ms")
+            print(f"CPU Time Total:      {evt.cpu_time_total :.4f} ms")
+            print(f"CUDA Time Total:     {evt.cuda_time_total :.4f} ms  <-- Dein gesuchter Wert für den Graph")
+            print(f"Self CPU Time:       {evt.self_cpu_time_total :.4f} ms")
+            print(f"Self CUDA Time:      {evt.self_cuda_time_total :.4f} ms")
 
             # SPEICHER (Memory)
             print("\n[SPEICHER - MEMORY]")
             # Achtung: Zeigt oft 0.00 MB, wenn PyTorch den Speicher aus dem Cache nimmt!
-            print(f"CPU Memory Usage:    {evt.cpu_memory_usage / to_mb:.4f} MB")
-            print(f"CUDA Memory Usage:   {evt.cuda_memory_usage / to_mb:.4f} MB  <-- Dein gesuchter Wert")
-            print(f"Self CPU Memory:     {evt.self_cpu_memory_usage / to_mb:.4f} MB")
-            print(f"Self CUDA Memory:    {evt.self_cuda_memory_usage / to_mb:.4f} MB")
+            print(f"CPU Memory Usage:    {evt.cpu_memory_usage } MB")
+            print(f"CUDA Memory Usage:   {evt.cuda_memory_usage } MB  <-- Dein gesuchter Wert")
+            print(f"Self CPU Memory:     {evt.self_cpu_memory_usage } MB")
+            print(f"Self CUDA Memory:    {evt.self_cuda_memory_usage } MB")
 
             # FORM (Shapes) - Falls record_shapes=True aktiviert war
             print("\n[INPUT SHAPES]")
