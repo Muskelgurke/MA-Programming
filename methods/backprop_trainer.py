@@ -34,7 +34,8 @@ class BackpropTrainer(BaseTrainer):
             schedule=prof_schedule,
             profile_memory=True,
             record_shapes=True,
-            on_trace_ready= trace_handler
+            on_trace_ready= trace_handler,
+            with_stack=True
         )as prof:
 
             for batch_idx, (inputs, targets) in enumerate(pbar):
