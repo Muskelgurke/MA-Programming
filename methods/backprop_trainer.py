@@ -38,6 +38,7 @@ class BackpropTrainer(BaseTrainer):
         )as prof:
 
             for batch_idx, (inputs, targets) in enumerate(pbar):
+                prof.step()
                 inputs, targets = inputs.to(device=self.device,non_blocking=True), targets.to(self.device,non_blocking=True)
                 self.optimizer.zero_grad()
                 if batch_idx == 5:
@@ -60,7 +61,7 @@ class BackpropTrainer(BaseTrainer):
                 mem_after_backward = torch.cuda.memory_allocated(self.device)
 
                 self.optimizer.step()
-                prof.step() # Profiling Schritt abschließen
+                # Profiling Schritt abschließen
 
                 # Metriken aktualisieren
                 _, predicted = torch.max(outputs.data, 1)
