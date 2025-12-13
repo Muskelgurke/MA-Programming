@@ -28,7 +28,7 @@ class BackpropTrainer(BaseTrainer):
 
 
 
-        def start_record_memory_history()->None
+        def start_record_memory_history()->None:
             print("Starte Speicher-Verlaufsaufzeichnung...")
             torch.cuda.memory._record_memory_history(max_entries=self.MAX_NUM_OF_MEM_EVENTS_PER_SNAPSHOT)
 
