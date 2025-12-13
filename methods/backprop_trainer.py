@@ -9,7 +9,7 @@ class BackpropTrainer(BaseTrainer):
     """Trainer-Klasse für Backpropagation-basiertes Training."""
     TIME_FORMAT_STR: str = "%b_%d_%H_%M_%S"
     def _train_epoch_impl(self):
-        def trace_handler(self, prof: torch.profiler.profile):
+        def trace_handler(prof: torch.profiler.profile):
             # Prefix for file names.
             TIME_FORMAT_STR: str = "%b_%d_%H_%M_%S"
 
