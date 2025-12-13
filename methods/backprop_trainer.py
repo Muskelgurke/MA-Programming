@@ -7,14 +7,17 @@ from helpers.trainer_class import BaseTrainer
 
 class BackpropTrainer(BaseTrainer):
     """Trainer-Klasse für Backpropagation-basiertes Training."""
-    TIME_FORMAT_STR: str = "%b_%d_%H_%M_%S"
+
     def _train_epoch_impl(self):
+        self.MAX_NUM_OF_MEM_EVENTS_PER_SNAPSHOT: int = 100000
+        self.TIME_FORMAT_STR: str = "%b_%d_%H_%M_%S"
+
+
         def trace_handler(prof: torch.profiler.profile):
             # Prefix for file names.
-            TIME_FORMAT_STR: str = "%b_%d_%H_%M_%S"
 
             host_name = socket.gethostname()
-            timestamp = datetime.now().strftime(TIME_FORMAT_STR)
+            timestamp = datetime.now().strftime(self.TIME_FORMAT_STR)
             file_prefix = f"{host_name}_{timestamp}"
 
             # Construct the trace file.
@@ -22,12 +25,37 @@ class BackpropTrainer(BaseTrainer):
 
             # Construct the memory timeline file.
             prof.export_memory_timeline(f"{file_prefix}.html", device=self.device)
+
+
+
+        def start_record_memory_history()->None
+            print("Starte Speicher-Verlaufsaufzeichnung...")
+            torch.cuda.memory._record_memory_history(max_entries=self.MAX_NUM_OF_MEM_EVENTS_PER_SNAPSHOT)
+
+        def stop_record_memory_history() -> None:
+            print("Stoppe Speicher-Verlaufsaufzeichnung...")
+            torch.cuda.memory._record_memory_history(enabled=None)
+
+        def export_memory_snapshot() -> None:
+            # Prefix for file names.
+            host_name = socket.gethostname()
+            timestamp = datetime.now().strftime(self.TIME_FORMAT_STR)
+            file_prefix = f"{host_name}_{timestamp}"
+
+            try:
+                print(f"Saving snapshot to local file: {file_prefix}.pickl")
+                torch.cuda.memory._dump_snapshot(f"{file_prefix}.pickle")
+            except Exception as e:
+                print(f"Failed to capture memory snapshot {e}")
+                return
+
         sum_loss = 0
         sum_correct = 0
         sum_size = 0
         to_mb = (1024 ** 2)
         pbar = self._create_progress_bar(desc=f'BP - Train: {self.epoch_num}/{self.total_epochs}')
 
+        """
         prof_schedule = schedule(wait=1, warmup=1, active=3, repeat=1)
         with profile(
             activities= [ProfilerActivity.CPU, ProfilerActivity.CUDA],
@@ -37,51 +65,58 @@ class BackpropTrainer(BaseTrainer):
             on_trace_ready= trace_handler,
             with_stack=True
         )as prof:
+        """
 
-            for batch_idx, (inputs, targets) in enumerate(pbar):
-                prof.step()
-                inputs, targets = inputs.to(device=self.device), targets.to(self.device)
-                self.optimizer.zero_grad()
-                if batch_idx == 5:
-                    torch.cuda.empty_cache()
+        for batch_idx, (inputs, targets) in enumerate(pbar):
+            #prof.step()
+            start_record_memory_history()
+            inputs, targets = inputs.to(device=self.device), targets.to(self.device)
+            self.optimizer.zero_grad()
+            if batch_idx == 5:
+                torch.cuda.empty_cache()
 
-                mem_start = torch.cuda.memory_allocated(self.device)
+            #mem_start = torch.cuda.memory_allocated(self.device)
 
-                with record_function("bp_forward"):
-                    outputs = self.model(inputs)
-                    loss = self.loss_function(outputs, targets)
-                # Speicher  (Gewichte + Outputs + Graph)
-                mem_after_forward = torch.cuda.memory_allocated(self.device)
+            #with record_function("bp_forward"):
+            start_record_memory_history()
+            outputs = self.model(inputs)
+            loss = self.loss_function(outputs, targets)
+            export_memory_snapshot()
+            stop_record_memory_history()
 
-                sum_loss += loss.item()
+            # Speicher  (Gewichte + Outputs + Graph)
+            #mem_after_forward = torch.cuda.memory_allocated(self.device)
 
-                # Backward Pass
-                with record_function("bp_backward"):
-                    loss.backward()
-                # Speicher  (Gewichte + Gradients + Outputs - Graph)
-                mem_after_backward = torch.cuda.memory_allocated(self.device)
+            sum_loss += loss.item()
 
-                self.optimizer.step()
-                # Profiling Schritt abschließen
+            # Backward Pass
+            #with record_function("bp_backward"):
+            loss.backward()
+            # Speicher  (Gewichte + Gradients + Outputs - Graph)
+            mem_after_backward = torch.cuda.memory_allocated(self.device)
 
-                # Metriken aktualisieren
-                _, predicted = torch.max(outputs.data, 1)
-                total = targets.size(0)
-                correct = (predicted == targets).sum().item()
+            self.optimizer.step()
+            # Profiling Schritt abschließen
 
-                if batch_idx == 3:
-                    mem_activations = (mem_after_forward - mem_start) / (1024 ** 2)
-                    print(f"Activation Memory (Batch 0): {mem_activations:.7f} kB")
-                    self.metrics.memory_activations_MB = mem_activations
+            # Metriken aktualisieren
+            _, predicted = torch.max(outputs.data, 1)
+            total = targets.size(0)
+            correct = (predicted == targets).sum().item()
 
-                sum_correct += correct
-                sum_size += total
-                accuracy = 100.0 * sum_correct / sum_size
+            if batch_idx == 3:
+                mem_activations = 0
+                #mem_activations = (mem_after_forward - mem_start) / (1024 ** 2)
+                print(f"Activation Memory (Batch 0): {mem_activations:.7f} kB")
+                self.metrics.memory_activations_MB = mem_activations
 
-                pbar.set_postfix({
-                    'Loss': f'{loss:.4f}',
-                    'Acc': f'{accuracy:.2f}%'
-                })
+            sum_correct += correct
+            sum_size += total
+            accuracy = 100.0 * sum_correct / sum_size
+
+            pbar.set_postfix({
+                'Loss': f'{loss:.4f}',
+                'Acc': f'{accuracy:.2f}%'
+            })
 
         exit()
         print("\n" + "=" * 50)
