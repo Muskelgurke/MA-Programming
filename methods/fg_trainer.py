@@ -1,11 +1,38 @@
 import torch
+import socket
+from datetime import datetime
+
 from torch import nn
+
 from helpers.trainer_class import BaseTrainer
 
 class ForwardGradientTrainer(BaseTrainer):
     """Trainer-Klasse für Backpropagation-basiertes Training."""
 
+
     def _train_epoch_impl(self):
+        self.MAX_NUM_OF_MEM_EVENTS_PER_SNAPSHOT: int = 10000
+        self.TIME_FORMAT_STR: str = "%b_%d_%H_%M_%S"
+        def start_record_memory_history()->None:
+            print("Starte Speicher-Verlaufsaufzeichnung...")
+            torch.cuda.memory._record_memory_history(max_entries=self.MAX_NUM_OF_MEM_EVENTS_PER_SNAPSHOT)
+
+        def stop_record_memory_history() -> None:
+            print("Stoppe Speicher-Verlaufsaufzeichnung...")
+            torch.cuda.memory._record_memory_history(enabled=None)
+
+        def export_memory_snapshot() -> None:
+            # Prefix for file names.
+            host_name = socket.gethostname()
+            timestamp = datetime.now().strftime(self.TIME_FORMAT_STR)
+            file_prefix = f"{host_name}_{timestamp}"
+
+            try:
+                print(f"Saving snapshot to local file: {file_prefix}.pickl")
+                torch.cuda.memory._dump_snapshot(f"{file_prefix}.pickle")
+            except Exception as e:
+                print(f"Failed to capture memory snapshot {e}")
+                return
         sum_loss = 0
         sum_correct = 0
         sum_size = 0
@@ -24,6 +51,7 @@ class ForwardGradientTrainer(BaseTrainer):
                 self.model(inputs)
                 #self.model.eval()
 
+                start_record_memory_history()
 
                 buffers = {k: v.to(self.device) for k, v in named_buffers.items()}
                 params = tuple(named_params.values())
@@ -43,6 +71,9 @@ class ForwardGradientTrainer(BaseTrainer):
                                                          (params,),
                                                          (v_params,),
                                                          has_aux=True)
+                export_memory_snapshot()
+                stop_record_memory_history()
+
                 sum_loss += loss.item()
 
                 # set Gradients = v*jvp (scalar multiplication)

@@ -26,8 +26,6 @@ class BackpropTrainer(BaseTrainer):
             # Construct the memory timeline file.
             prof.export_memory_timeline(f"{file_prefix}.html", device=self.device)
 
-
-
         def start_record_memory_history()->None:
             print("Starte Speicher-Verlaufsaufzeichnung...")
             torch.cuda.memory._record_memory_history(max_entries=self.MAX_NUM_OF_MEM_EVENTS_PER_SNAPSHOT)
