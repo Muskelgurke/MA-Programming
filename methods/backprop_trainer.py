@@ -21,7 +21,7 @@ class BackpropTrainer(BaseTrainer):
             prof.export_chrome_trace(f"{file_prefix}.json.gz")
 
             # Construct the memory timeline file.
-            prof.export_memory_timeline(f"{file_prefix}.html", device="cuda:0")
+            prof.export_memory_timeline(f"{file_prefix}.html", device=self.device)
         sum_loss = 0
         sum_correct = 0
         sum_size = 0
