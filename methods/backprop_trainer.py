@@ -69,7 +69,7 @@ class BackpropTrainer(BaseTrainer):
                 total = targets.size(0)
                 correct = (predicted == targets).sum().item()
 
-                if batch_idx == 0:
+                if batch_idx == 3:
                     mem_activations = (mem_after_forward - mem_start) / (1024 ** 2)
                     print(f"Activation Memory (Batch 0): {mem_activations:.7f} kB")
                     self.metrics.memory_activations_MB = mem_activations
