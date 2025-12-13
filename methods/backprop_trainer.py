@@ -81,7 +81,8 @@ class BackpropTrainer(BaseTrainer):
                     'Loss': f'{loss:.4f}',
                     'Acc': f'{accuracy:.2f}%'
                 })
-        prof.export_memory_timeline(f"{}.html", device="cuda:0")
+
+        exit()
         print("\n" + "=" * 50)
         print("PROFILER DIAGNOSE: bp_forward")
         print("=" * 50)
@@ -124,7 +125,7 @@ class BackpropTrainer(BaseTrainer):
             print("Gefundene Keys:", list(evt_dict.keys())[:5], "...")  # Zeige die ersten 5 Keys zur Hilfe
 
         print("=" * 50 + "\n")
-        exit()
+
         if "bp_backward" in evt_dict:
             evt = evt_dict["bp_forward"]
             # WICHTIG: Nimm 'cuda_memory_usage' (inkl. Kinder), nicht 'self_'
