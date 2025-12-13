@@ -25,8 +25,11 @@ class BackpropTrainer(BaseTrainer):
             for batch_idx, (inputs, targets) in enumerate(pbar):
                 inputs, targets = inputs.to(self.device), targets.to(self.device)
                 self.optimizer.zero_grad()
+                if batch_idx == 5:
+                    torch.cuda.empty_cache()
 
                 mem_start = torch.cuda.memory_allocated(self.device)
+
                 with record_function("bp_forward"):
                     outputs = self.model(inputs)
                     loss = self.loss_function(outputs, targets)
