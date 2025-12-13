@@ -69,7 +69,7 @@ class BackpropTrainer(BaseTrainer):
 
         for batch_idx, (inputs, targets) in enumerate(pbar):
             #prof.step()
-            start_record_memory_history()
+
             inputs, targets = inputs.to(device=self.device), targets.to(self.device)
             self.optimizer.zero_grad()
             if batch_idx == 5:

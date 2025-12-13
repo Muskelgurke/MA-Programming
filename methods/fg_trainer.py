@@ -24,13 +24,11 @@ class ForwardGradientTrainer(BaseTrainer):
                 self.model(inputs)
                 #self.model.eval()
 
+
                 buffers = {k: v.to(self.device) for k, v in named_buffers.items()}
-
                 params = tuple(named_params.values())
-
                 # Pertubation Vektor
                 v_params = tuple(torch.randn_like(p) for p in params)
-
                 # Define loss function for functional call
                 def loss_fn(params_tuple, inputs, targets):
                     # Reconstruct parameter dict from tuple
