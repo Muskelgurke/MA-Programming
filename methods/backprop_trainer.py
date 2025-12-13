@@ -8,22 +8,20 @@ from helpers.trainer_class import BaseTrainer
 class BackpropTrainer(BaseTrainer):
     """Trainer-Klasse für Backpropagation-basiertes Training."""
     TIME_FORMAT_STR: str = "%b_%d_%H_%M_%S"
-
-    def trace_handler(self, prof: torch.profiler.profile):
-        # Prefix for file names.
-        TIME_FORMAT_STR: str = "%b_%d_%H_%M_%S"
-
-        host_name = socket.gethostname()
-        timestamp = datetime.now().strftime(TIME_FORMAT_STR)
-        file_prefix = f"{host_name}_{timestamp}"
-
-        # Construct the trace file.
-        prof.export_chrome_trace(f"{file_prefix}.json.gz")
-
-        # Construct the memory timeline file.
-        prof.export_memory_timeline(f"{file_prefix}.html", device="cuda:0")
-
     def _train_epoch_impl(self):
+        def trace_handler(self, prof: torch.profiler.profile):
+            # Prefix for file names.
+            TIME_FORMAT_STR: str = "%b_%d_%H_%M_%S"
+
+            host_name = socket.gethostname()
+            timestamp = datetime.now().strftime(TIME_FORMAT_STR)
+            file_prefix = f"{host_name}_{timestamp}"
+
+            # Construct the trace file.
+            prof.export_chrome_trace(f"{file_prefix}.json.gz")
+
+            # Construct the memory timeline file.
+            prof.export_memory_timeline(f"{file_prefix}.html", device="cuda:0")
         sum_loss = 0
         sum_correct = 0
         sum_size = 0
@@ -36,7 +34,7 @@ class BackpropTrainer(BaseTrainer):
             schedule=prof_schedule,
             profile_memory=True,
             record_shapes=True,
-            on_trace_ready= self.trace_handler
+            on_trace_ready= trace_handler
         )as prof:
 
             for batch_idx, (inputs, targets) in enumerate(pbar):
