@@ -39,7 +39,7 @@ class BackpropTrainer(BaseTrainer):
 
             for batch_idx, (inputs, targets) in enumerate(pbar):
                 prof.step()
-                inputs, targets = inputs.to(device=self.device,non_blocking=True), targets.to(self.device,non_blocking=True)
+                inputs, targets = inputs.to(device=self.device), targets.to(self.device)
                 self.optimizer.zero_grad()
                 if batch_idx == 5:
                     torch.cuda.empty_cache()
