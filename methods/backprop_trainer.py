@@ -23,7 +23,7 @@ class BackpropTrainer(BaseTrainer):
         )as prof:
 
             for batch_idx, (inputs, targets) in enumerate(pbar):
-                inputs, targets = inputs.to(self.device), targets.to(self.device)
+                inputs, targets = inputs.to(device=self.device,non_blocking=True), targets.to(self.device,non_blocking=True)
                 self.optimizer.zero_grad()
                 if batch_idx == 5:
                     torch.cuda.empty_cache()
@@ -68,7 +68,7 @@ class BackpropTrainer(BaseTrainer):
         print("\n" + "=" * 50)
         print("PROFILER DIAGNOSE: bp_forward")
         print("=" * 50)
-
+        #events_test = prof.
         events = prof.key_averages()
         evt_dict = {e.key: e for e in events}
 
