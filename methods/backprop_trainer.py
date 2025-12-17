@@ -43,7 +43,7 @@ class BackpropTrainer(BaseTrainer):
 
             if self.should_track_memory_this_epoch:
                 if batch_idx < self.NUM_MEMORY_SNAPSHOTS_IN_EPOCH:
-                    self.export_memory_snapshot()
+                    self.export_memory_snapshot(batch_idx=batch_idx)
                     self.stop_record_memory_history()
 
             self.optimizer.step()

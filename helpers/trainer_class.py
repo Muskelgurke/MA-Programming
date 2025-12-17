@@ -75,10 +75,13 @@ class BaseTrainer(ABC):
     def stop_record_memory_history(self) -> None:
         torch.cuda.memory._record_memory_history(enabled=None)
 
-    def export_memory_snapshot(self) -> None:
+    def export_memory_snapshot(self, batch_idx: int=None )  -> None:
         # Prefix for file names.
         time_stamp = datetime.datetime.now().strftime("%m%d_%H%M%S")
-        file_name = f"mem_snap_ep_{self.epoch_num}_{time_stamp}"
+        if batch_idx is not None:
+            file_name = f"mem_snap_ep{self.epoch_num}_batch{batch_idx}_{time_stamp}"
+        else:
+            file_name = f"mem_snap_ep{self.epoch_num}_{time_stamp}"
         file_path = f"{self.runsPath}/{file_name}"
 
         try:
