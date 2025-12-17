@@ -8,6 +8,7 @@ import helpers.loss_function as loss_function_helper
 import helpers.optimizer as optimizer_helper
 from abc import ABC, abstractmethod
 from tqdm import tqdm
+from pathlib import Path
 
 class BaseTrainer(ABC):
 
@@ -16,7 +17,8 @@ class BaseTrainer(ABC):
         self.config = config_file
         self.device = device
         self.saver = saver_class
-        self.runsPath = self.saver.base_dir + self.saver.run_dir
+        self.runsPath = str(Path(self.saver.base_dir) / self.saver.run_dir)
+
         self._initialize_components()
 
 
