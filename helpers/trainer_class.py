@@ -76,7 +76,8 @@ class BaseTrainer(ABC):
 
     def export_memory_snapshot(self) -> None:
         # Prefix for file names.
-        file_name = f"mem_snapshot_epoch_{self.epoch_num}"
+        time_stamp = time.time()
+        file_name = f"mem_snap_ep_{self.epoch_num}_{time_stamp}"
         file_path = f"{self.runsPath}/{file_name}"
 
         try:
