@@ -16,7 +16,7 @@ class BaseTrainer(ABC):
         self.config = config_file
         self.device = device
         self.saver = saver_class
-
+        self.runsPath = saver_class.base_dir + saver_class.run_dir
         self._initialize_components()
 
 
