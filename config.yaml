@@ -2,7 +2,7 @@
 base_config:
   random_seed: 43
   learning_rate: 0.001
-  epoch_total: 1
+  epoch_total: 100
   training_method: fgd #bp fgd
   dataset_name: mnist
   batch_size: 64
@@ -15,33 +15,13 @@ base_config:
   early_stopping_patience: 8
   early_stopping_delta: 0.01
   dataset_path: _Dataset
+  memory_snapshot_epochs: [0, 5, 10]
 
 # Multi-Parameter Configuration: Parameter für Grid-Search
 # Wenn ein Parameter hier definiert ist, wird er für Multi-Training verwendet
 # Wenn nicht, wird der Wert aus base_config genommen
 
-multi_params:
-  learning_rate:
-    - 0.001
-    - 0.0001 # bester FGD LR
-    - 0.00001
-    - 0.0005
-  optimizer:
-    - adam
-    - sgd
-  model_type:
-    - alexnet
-    - vgg16
-    - resnet18
-    - resnet34
-    - mobilenet
-    - densenet
-    - efficientnet
-  dataset_name:
-    - mnist
-    - fashionmnist
-    - cifar10
-    - cifar100
+
 
 #  dataset_name:
 #    - flower

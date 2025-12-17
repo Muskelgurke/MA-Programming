@@ -11,31 +11,7 @@ class ForwardGradientTrainer(BaseTrainer):
 
 
     def _train_epoch_impl(self):
-        self.MAX_NUM_OF_MEM_EVENTS_PER_SNAPSHOT: int = 10000 # nur die letzten xxx Events speichern
-        self.TIME_FORMAT_STR: str = "%b_%d_%H_%M_%S"
-        self.NUM_MEMORY_SNAPSHOTS: int = 3
 
-        def start_record_memory_history()->None:
-            print("Starte Speicher-Verlaufsaufzeichnung...")
-            torch.cuda.memory._record_memory_history(max_entries=self.MAX_NUM_OF_MEM_EVENTS_PER_SNAPSHOT)
-
-        def stop_record_memory_history() -> None:
-            print("Stoppe Speicher-Verlaufsaufzeichnung...")
-            torch.cuda.memory._record_memory_history(enabled=None)
-
-        def export_memory_snapshot() -> None:
-            # Prefix for file names.
-            host_name = socket.gethostname()
-            timestamp = datetime.now().strftime(self.TIME_FORMAT_STR)
-            file_name = f"{host_name}_{timestamp}"
-            file_path = f"{self.runsPath}/{file_name}"
-
-            try:
-                print(f"Saving snapshot to local file: {file_path}.pickl")
-                torch.cuda.memory._dump_snapshot(f"{file_path}.pickle")
-            except Exception as e:
-                print(f"Failed to capture memory snapshot {e}")
-                return
 
         sum_loss = 0
         sum_correct = 0
@@ -54,8 +30,9 @@ class ForwardGradientTrainer(BaseTrainer):
                 # Warmup forward pass to ensure buffers are initialized
                 self.model(inputs)
 
-                if batch_idx < self.NUM_MEMORY_SNAPSHOTS:
-                    start_record_memory_history()
+                if self.should_track_memory_this_epoch:
+                    if batch_idx < self.NUM_MEMORY_SNAPSHOTS:
+                        self.start_record_memory_history()
 
                 buffers = {k: v.to(self.device) for k, v in named_buffers.items()}
                 params = tuple(named_params.values())
@@ -86,8 +63,8 @@ class ForwardGradientTrainer(BaseTrainer):
                     param.grad = estimated_gradient
 
                 if batch_idx < self.NUM_MEMORY_SNAPSHOTS:
-                    export_memory_snapshot()
-                    stop_record_memory_history()
+                    self.export_memory_snapshot()
+                    self.stop_record_memory_history()
 
                 self.optimizer.step()
 

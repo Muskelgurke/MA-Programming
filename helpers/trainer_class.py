@@ -21,6 +21,10 @@ class BaseTrainer(ABC):
         self.runsPath = str(self.saver.run_dir)
         self._initialize_components()
 
+        self.should_track_memory_this_epoch = False
+        self.NUM_MEMORY_SNAPSHOTS_IN_EPOCH: int = 3
+        self.MAX_NUM_OF_MEM_EVENTS_PER_SNAPSHOT = 100000
+
     def _initialize_components(self):
 
 
@@ -50,17 +54,37 @@ class BaseTrainer(ABC):
         self.epoch_num = epoch_num + 1
         self.model.train()
 
-        epoch_start_time = time.time()
+        self.should_track_memory_this_epoch = epoch_num in self.config.memory_snapshot_epochs
 
+        epoch_start_time = time.time()
         self._train_epoch_impl()
         epoch_duration = time.time() - epoch_start_time
         self.metrics.epoch_duration = epoch_duration
+
 
         return self.metrics, self.model
 
     @abstractmethod
     def _train_epoch_impl(self):
         pass
+
+    def start_record_memory_history(self) -> None:
+        torch.cuda.memory._record_memory_history(max_entries=self.MAX_NUM_OF_MEM_EVENTS_PER_SNAPSHOT)
+
+    def stop_record_memory_history(self) -> None:
+        torch.cuda.memory._record_memory_history(enabled=None)
+
+    def export_memory_snapshot(self) -> None:
+        # Prefix for file names.
+        file_name = f"mem_snapshot_epoch_{self.epoch_num}"
+        file_path = f"{self.runsPath}/{file_name}"
+
+        try:
+            print(f"Saving snapshot to local file: {file_path}.pickl")
+            torch.cuda.memory._dump_snapshot(f"{file_path}.pickle")
+        except Exception as e:
+            print(f"Failed to capture memory snapshot {e}")
+            return
 
 
     def _create_progress_bar(self, desc: str = None) -> tqdm:

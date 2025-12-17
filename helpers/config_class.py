@@ -17,9 +17,11 @@ class Config:
     loss_function: str # e.g., "CrossEntropy"
     momentum: float
     early_stopping_delta: float
+    memory_snapshot_epochs: list[int]
     early_stopping: bool = False
     early_stopping_patience: Optional[int] = None
     augment_data: bool = False
+
 
     @classmethod
     def from_yaml(cls, yaml_path: str = "") -> "Config":
@@ -44,6 +46,7 @@ class MultiParamLoader:
         self.base_config = {}
         self.multi_params = {}
         self.configs =  []
+
 
     def initialize(self) -> None:
         """Initialisiere den MultiParamLoader

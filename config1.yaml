@@ -2,12 +2,12 @@
 base_config:
   random_seed: 43
   learning_rate: 0.001
-  epoch_total: 5
-  training_method: fgd #bp fg
+  epoch_total: 100
+  training_method: fgd #bp fgd
   dataset_name: mnist
   batch_size: 64
   augment_data: false
-  model_type: alexnet
+  model_type: testmodel #testmodel
   optimizer: adam
   momentum: 0.9
   loss_function: cross_entropy
@@ -15,10 +15,12 @@ base_config:
   early_stopping_patience: 8
   early_stopping_delta: 0.01
   dataset_path: _Dataset
+  memory_snapshot_epochs: [0, 5, 10]
 
 # Multi-Parameter Configuration: Parameter für Grid-Search
 # Wenn ein Parameter hier definiert ist, wird er für Multi-Training verwendet
 # Wenn nicht, wird der Wert aus base_config genommen
+
 multi_params:
   learning_rate:
     - 0.001
@@ -40,6 +42,7 @@ multi_params:
     - fashionmnist
     - cifar10
     - cifar100
+
 #  dataset_name:
 #    - flower
 #    - food
