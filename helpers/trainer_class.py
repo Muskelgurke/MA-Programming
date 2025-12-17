@@ -17,7 +17,7 @@ class BaseTrainer(ABC):
         self.config = config_file
         self.device = device
         self.saver = saver_class
-        self.runsPath = str(Path(self.saver.base_dir) / self.saver.run_dir)
+        self.runsPath = str(self.saver.run_dir)
 
         self._initialize_components()
 
