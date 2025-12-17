@@ -11,22 +11,9 @@ class BackpropTrainer(BaseTrainer):
     def _train_epoch_impl(self):
         self.MAX_NUM_OF_MEM_EVENTS_PER_SNAPSHOT: int = 10000
         self.TIME_FORMAT_STR: str = "%b_%d_%H_%M_%S"
+        self.NUM_MEMORY_SNAPSHOTS: int = 3
 
-
-        def trace_handler(prof: torch.profiler.profile):
-            # Prefix for file names.
-
-            host_name = socket.gethostname()
-            timestamp = datetime.now().strftime(self.TIME_FORMAT_STR)
-            file_prefix = f"{host_name}_{timestamp}"
-
-            # Construct the trace file.
-            prof.export_chrome_trace(f"{file_prefix}.json.gz")
-
-            # Construct the memory timeline file.
-            prof.export_memory_timeline(f"{file_prefix}.html", device=self.device)
-
-        def start_record_memory_history()->None:
+        def start_record_memory_history() -> None:
             print("Starte Speicher-Verlaufsaufzeichnung...")
             torch.cuda.memory._record_memory_history(max_entries=self.MAX_NUM_OF_MEM_EVENTS_PER_SNAPSHOT)
 
@@ -38,11 +25,12 @@ class BackpropTrainer(BaseTrainer):
             # Prefix for file names.
             host_name = socket.gethostname()
             timestamp = datetime.now().strftime(self.TIME_FORMAT_STR)
-            file_prefix = f"{host_name}_{timestamp}"
+            file_name = f"{host_name}_{timestamp}"
+            file_path = f"{self.runsPath}/{file_name}"
 
             try:
-                print(f"Saving snapshot to local file: {file_prefix}.pickl")
-                torch.cuda.memory._dump_snapshot(f"{file_prefix}.pickle")
+                print(f"Saving snapshot to local file: {file_path}.pickl")
+                torch.cuda.memory._dump_snapshot(f"{file_path}.pickle")
             except Exception as e:
                 print(f"Failed to capture memory snapshot {e}")
                 return
@@ -50,7 +38,6 @@ class BackpropTrainer(BaseTrainer):
         sum_loss = 0
         sum_correct = 0
         sum_size = 0
-        to_mb = (1024 ** 2)
         pbar = self._create_progress_bar(desc=f'BP - Train: {self.epoch_num}/{self.total_epochs}')
 
         """
@@ -66,121 +53,42 @@ class BackpropTrainer(BaseTrainer):
         """
 
         for batch_idx, (inputs, targets) in enumerate(pbar):
-            #prof.step()
 
             inputs, targets = inputs.to(device=self.device), targets.to(self.device)
             self.optimizer.zero_grad()
-            if batch_idx == 5:
-                torch.cuda.empty_cache()
 
-            #mem_start = torch.cuda.memory_allocated(self.device)
+            if batch_idx < self.NUM_MEMORY_SNAPSHOTS:
+                start_record_memory_history()
 
-            #with record_function("bp_forward"):
-            start_record_memory_history()
             outputs = self.model(inputs)
             loss = self.loss_function(outputs, targets)
-            export_memory_snapshot()
-            stop_record_memory_history()
-
-            # Speicher  (Gewichte + Outputs + Graph)
-            #mem_after_forward = torch.cuda.memory_allocated(self.device)
-
             sum_loss += loss.item()
 
-            # Backward Pass
-            #with record_function("bp_backward"):
             loss.backward()
-            # Speicher  (Gewichte + Gradients + Outputs - Graph)
-            mem_after_backward = torch.cuda.memory_allocated(self.device)
+
+            if batch_idx < self.NUM_MEMORY_SNAPSHOTS:
+                export_memory_snapshot()
+                stop_record_memory_history()
 
             self.optimizer.step()
-            # Profiling Schritt abschließen
 
             # Metriken aktualisieren
             _, predicted = torch.max(outputs.data, 1)
             total = targets.size(0)
             correct = (predicted == targets).sum().item()
-
-            if batch_idx == 3:
-                mem_activations = 0
-                #mem_activations = (mem_after_forward - mem_start) / (1024 ** 2)
-                print(f"Activation Memory (Batch 0): {mem_activations:.7f} kB")
-                self.metrics.memory_activations_MB = mem_activations
-
             sum_correct += correct
             sum_size += total
             accuracy = 100.0 * sum_correct / sum_size
-
             pbar.set_postfix({
                 'Loss': f'{loss:.4f}',
                 'Acc': f'{accuracy:.2f}%'
             })
 
-        exit()
-        print("\n" + "=" * 50)
-        print("PROFILER DIAGNOSE: bp_forward")
-        print("=" * 50)
-        #events_test = prof.
-        events = prof.key_averages()
-        evt_dict = {e.key: e for e in events}
+            # Speicher-Metriken aktualisieren
+            # memory_activiations are saved in the first batch
 
-        if "bp_forward" in evt_dict:
-            evt = evt_dict["bp_forward"]
 
-            # Umrechnungsfaktoren
-
-            # --- 1. Die Standard-Zusammenfassung von PyTorch ---
-            print("--- PyTorch Roh-Daten (String Repr) ---")
-            print(evt)  # Ruft automatisch die __str__ Methode auf, zeigt oft schon viel an.
-            print("-" * 30)
-
-            # --- 2. Manuelle Aufschlüsselung aller Werte ---
-            print(f"Anzahl Aufrufe (Count): {evt.count}")
-
-            # ZEIT (Time)
-            # Total = Die Funktion + alles was sie aufgerufen hat (Conv2d, ReLU, etc.)
-            # Self  = Nur der Python-Wrapper Overhead selbst
-            print("\n[ZEIT - TIME]")
-            print(f"Self CPU Time:       {evt.self_cpu_time_total :.4f} ms")
-            print(f"Self CUDA Time:      {evt.self_cuda_time :.4f} ms")
-
-            # SPEICHER (Memory)
-            print("\n[SPEICHER - MEMORY]")
-            # Achtung: Zeigt oft 0.00 MB, wenn PyTorch den Speicher aus dem Cache nimmt!
-            print(f"CPU Memory Usage:    {evt.cpu_memory_usage } MB")
-            print(f"CUDA Memory Usage:   {evt.cuda_memory_usage } MB  <-- Dein gesuchter Wert")
-
-            # FORM (Shapes) - Falls record_shapes=True aktiviert war
-            print("\n[INPUT SHAPES]")
-            print(f"Input Shapes:        {evt.input_shapes}")
-
-        else:
-            print("WARNUNG: 'bp_forward' wurde im Profiler nicht gefunden!")
-            print("Gefundene Keys:", list(evt_dict.keys())[:5], "...")  # Zeige die ersten 5 Keys zur Hilfe
-
-        print("=" * 50 + "\n")
-
-        if "bp_backward" in evt_dict:
-            evt = evt_dict["bp_forward"]
-            # WICHTIG: Nimm 'cuda_memory_usage' (inkl. Kinder), nicht 'self_'
-            memory_bytes = getattr(evt, "cuda_memory_usage", 0)
-            time_us = getattr(evt, "cuda_time_total", 0)
-
-            # Umrechnung für bessere Lesbarkeit
-            memory_mb = memory_bytes / (1024 ** 2)
-            time_ms = time_us / 1000.0
-
-            print(f"--- DEBUG bp_backward ---")
-            print(f"Memory (Total): {memory_mb:.2f} MB")
-            print(f"Time (Total):   {time_ms:.2f} ms")
-            #self.metrics.memory_backward_pass_MB = evt_dict["bp_backward"].self_cuda_memory_usage / to_mb
-            print("Profiling backward pass memory geschrieben")
-
-        # Speicher-Metriken aktualisieren
-        # memory_activiations are saved in the first batch
-        self.metrics.memory_peak_MB = torch.cuda.max_memory_allocated(self.device) / to_mb
-
-        # Epoche-Metriken aktualisieren
-        self.metrics.loss_per_epoch = sum_loss / sum_size
-        self.metrics.acc_per_epoch = 100. * sum_correct / sum_size
-        self.metrics.num_batches = sum_size
+            # Epoche-Metriken aktualisieren
+            self.metrics.loss_per_epoch = sum_loss / sum_size
+            self.metrics.acc_per_epoch = 100. * sum_correct / sum_size
+            self.metrics.num_batches = sum_size

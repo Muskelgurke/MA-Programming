@@ -32,11 +32,9 @@ class TorchModelSaver:
                 'test_loss',
                 'test_accuracy',
                 'num_batches',
-                'early_stop_reason'
-                'memory_forward_pass_MB',
-                'memory_backward_pass_MB',
-                'memory_activations_MB',
-                'memory_peak_MB'
+                 'early_stop_reason',
+                'epoch_duration',
+                'time_to_converge'
             ]
 
             with open(self.epoch_metrics_file, 'w', newline='') as csvfile:
@@ -76,10 +74,8 @@ class TorchModelSaver:
             'test_accuracy',
             'num_batches',
             'early_stop_reason',
-            'memory_forward_pass_MB',
-            'memory_backward_pass_MB',
-            'memory_activations_MB',
-            'memory_peak_MB'
+            'epoch_duration',
+            'time_to_converge'
         ]
 
         # Write one row per epoch with all relevant metrics
@@ -91,10 +87,8 @@ class TorchModelSaver:
             'test_accuracy': test_metrics.acc_per_epoch if test_metrics.acc_per_epoch  is not None else 'csv_save=None',
             'num_batches': train_metrics.num_batches,
             'early_stop_reason': early_stop_reason.get('reason', '') if early_stop_reason else '',
-            'memory_forward_pass_MB': train_metrics.memory_forward_pass_MB,
-            'memory_backward_pass_MB': train_metrics.memory_backward_pass_MB,
-            'memory_activations_MB': train_metrics.memory_activations_MB,
-            'memory_peak_MB': train_metrics.memory_peak_MB
+            'epoch_duration': train_metrics.epoch_duration,
+            'time_to_converge': train_metrics.time_to_converge
         }
 
         with open(self.epoch_metrics_file, 'a', newline='') as csvfile:
@@ -134,11 +128,15 @@ class TorchModelSaver:
                                total_training_time: float,
                                train_metrics: TrainMetrics,
                                test_metrics: TestMetrics,
-                               early_stop_info: dict) -> None:
+                               early_stop_info: dict,
+                               avg_train_epoch_time: float,
+                               time_to_convergence: float) -> None:
 
         """Save run information including configuration and total training time"""
         run_summary = {
             "total_training_time_seconds": total_training_time,
+            "time_to_convergence_seconds": time_to_convergence,
+            "avg_train_epoch_time_seconds": avg_train_epoch_time,
             "train_accuracy": train_metrics.acc_per_epoch,
             "train_loss": train_metrics.loss_per_epoch,
             "test_accuracy": test_metrics.acc_per_epoch,
@@ -158,7 +156,9 @@ class TorchModelSaver:
                                     train_metrics: TrainMetrics,
                                     test_metrics: TestMetrics,
                                     early_stop_info: dict,
-                                    run_number= int) -> None:
+                                    run_number: int,
+                                    avg_train_epoch_time: float,
+                                    time_to_convergence: float) -> None:
         """Save run information including configuration and total training time to CSV"""
 
         run_summary = {
@@ -180,7 +180,9 @@ class TorchModelSaver:
             "learning_rate": config.learning_rate,
             "optimizer_type": config.optimizer,
             "optimizer_momentum": config.momentum,
-            "batch_size": config.batch_size
+            "batch_size": config.batch_size,
+            "time_to_convergence_seconds": time_to_convergence,
+            "avg_train_epoch_time_seconds": avg_train_epoch_time,
         }
 
         file_exists = self.summary_file.exists()

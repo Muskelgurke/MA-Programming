@@ -8,13 +8,9 @@ class TrainMetrics:
     loss_per_epoch: float = 0.0
     acc_per_epoch: float = 0.0
     num_batches: int = 0
+    epoch_duration: float = 0.0
+    time_to_converge: float = 0.0
 
-    # Memory-Profiling ( in MB )
-
-    memory_forward_pass_MB: float = 0.0
-    memory_backward_pass_MB: float = 0.0
-    memory_activations_MB: float = 0.0
-    memory_peak_MB: float = 0.0
 
     def to_dict(self) -> dict:
         return asdict(self)

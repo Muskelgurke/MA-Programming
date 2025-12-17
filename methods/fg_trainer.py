@@ -59,8 +59,10 @@ class ForwardGradientTrainer(BaseTrainer):
 
                 buffers = {k: v.to(self.device) for k, v in named_buffers.items()}
                 params = tuple(named_params.values())
+
                 # Pertubation Vektor
                 v_params = tuple(torch.randn_like(p) for p in params)
+
                 # Define loss function for functional call
                 def loss_fn(params_tuple, inputs, targets):
                     # Reconstruct parameter dict from tuple
@@ -75,9 +77,6 @@ class ForwardGradientTrainer(BaseTrainer):
                                                          (params,),
                                                          (v_params,),
                                                          has_aux=True)
-                if batch_idx < self.NUM_MEMORY_SNAPSHOTS:
-                    export_memory_snapshot()
-                    stop_record_memory_history()
 
                 sum_loss += loss.item()
 
@@ -86,7 +85,9 @@ class ForwardGradientTrainer(BaseTrainer):
                     estimated_gradient = dir_der * v_params[j]
                     param.grad = estimated_gradient
 
-
+                if batch_idx < self.NUM_MEMORY_SNAPSHOTS:
+                    export_memory_snapshot()
+                    stop_record_memory_history()
 
                 self.optimizer.step()
 
@@ -94,11 +95,9 @@ class ForwardGradientTrainer(BaseTrainer):
                 _, predicted = torch.max(outputs.data, 1)
                 total = targets.size(0)
                 correct = (predicted == targets).sum().item()
-
                 sum_correct += correct
                 sum_size += total
                 accuracy = 100.0 * sum_correct / sum_size
-
                 pbar.set_postfix({
                     'Loss': f'{loss:.4f}',
                     'Acc': f'{accuracy:.2f}%'

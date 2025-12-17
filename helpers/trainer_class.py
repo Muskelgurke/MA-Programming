@@ -1,11 +1,12 @@
 import torch
-from helpers.config_class import Config
-from helpers.saver_class import TorchModelSaver
-from helpers.training_metrics_class import TrainMetrics
+import time
 import helpers.datasets as datasets_helper
 import helpers.model as model_helper
 import helpers.loss_function as loss_function_helper
 import helpers.optimizer as optimizer_helper
+from helpers.config_class import Config
+from helpers.saver_class import TorchModelSaver
+from helpers.training_metrics_class import TrainMetrics
 from abc import ABC, abstractmethod
 from tqdm import tqdm
 from pathlib import Path
@@ -18,10 +19,7 @@ class BaseTrainer(ABC):
         self.device = device
         self.saver = saver_class
         self.runsPath = str(self.saver.run_dir)
-
         self._initialize_components()
-
-
 
     def _initialize_components(self):
 
@@ -52,7 +50,11 @@ class BaseTrainer(ABC):
         self.epoch_num = epoch_num + 1
         self.model.train()
 
+        epoch_start_time = time.time()
+
         self._train_epoch_impl()
+        epoch_duration = time.time() - epoch_start_time
+        self.metrics.epoch_duration = epoch_duration
 
         return self.metrics, self.model
 

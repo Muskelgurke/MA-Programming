@@ -65,11 +65,14 @@ class SingleRunManager:
     def run(self) -> dict:
         """Führt die Haupt-Epochen-Schleife durch und gibt die Ergebnisse zurück."""
         try:
+            total_start_time = time.time()
             train_metrics = None
             test_metrics = None
             best_test_metrics = None
             best_train_metrics = None
             best_test_acc = -float('inf')
+            convergence_epoch = -1
+            epoch_durations = []
 
             for epoch in range(self.config.epoch_total):
 
@@ -77,6 +80,8 @@ class SingleRunManager:
                 print("Training beendet. Starte Validierung...")
                 test_metrics = self.tester.validate_epoch(epoch_num=epoch, model = self.trained_model)
                 print("Validierung beendet. Write Epoch csv...")
+                if hasattr(train_metrics, 'epoch_duration'):
+                    epoch_durations.append(train_metrics.epoch_duration)
 
                 self.saver.write_epoch_metrics_csv(train_metrics=train_metrics,
                                                    test_metrics=test_metrics,
@@ -86,6 +91,7 @@ class SingleRunManager:
                     best_test_acc = test_metrics.acc_per_epoch
                     best_test_metrics = test_metrics
                     best_train_metrics = train_metrics
+                    convergence_epoch = epoch
 
                 if self.early_stopping:
                     self.early_stopping.check_and_update(
@@ -97,19 +103,21 @@ class SingleRunManager:
                     print(f"Early stopping counter: {self.early_stopping.counter} / {self.early_stopping.patience}")
                     print(f"")
                     if self.early_stopping.early_stop:
-                        self.saver.write_run_yaml_summary(config=self.config,
-                                                          total_training_time=self.total_time,
-                                                          train_metrics=best_train_metrics,
-                                                          test_metrics=best_test_metrics,
-                                                          early_stop_info=self.early_stopping.get_stop_info()
-                                                          )
+                        convergence_epoch = epoch
                         break
+
+            self.total_time = time.time() - total_start_time
+            time_to_convergence = sum(m.epoch_duration for m in [train_metrics] if hasattr(m,'epoch_duration')
+                                      ) if convergence_epoch >=0 else self.total_time
+            avg_epoch_time = sum(epoch_durations) / len(epoch_durations) if epoch_durations else 0
             print("Training abgeschlossen. Speichere Ergebnisse...")
             self.saver.write_run_yaml_summary(config=self.config,
                                               total_training_time=self.total_time,
                                               train_metrics=best_train_metrics,
                                               test_metrics=best_test_metrics,
-                                              early_stop_info=self.early_stopping.get_stop_info()
+                                              early_stop_info=self.early_stopping.get_stop_info(),
+                                              avg_train_epoch_time= avg_epoch_time,
+                                              time_to_convergence=time_to_convergence
                                               )
 
             self.saver.save_model_and_config_after_epochs(config=self.config,
@@ -122,10 +130,11 @@ class SingleRunManager:
                                                    train_metrics=best_train_metrics,
                                                    test_metrics=best_test_metrics,
                                                    early_stop_info=self.early_stopping.get_stop_info() if self.early_stopping else None,
-                                                   run_number=self.run_number)
+                                                   run_number=self.run_number,
+                                                   avg_train_epoch_time= avg_epoch_time,
+                                                   time_to_convergence=time_to_convergence
+                                                   )
 
-
-            return best_train_metrics, best_test_metrics
 
         except Exception as e:
             # Fehlerbehandlung
