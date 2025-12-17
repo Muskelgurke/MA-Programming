@@ -38,10 +38,9 @@ multi_params:
     - densenet
     - efficientnet
   dataset_name:
-    - mnist
-    - fashionmnist
-    - cifar10
-    - cifar100
+    - flower
+    - food
+    - pet
 
 #  dataset_name:
 #    - flower
