@@ -1,4 +1,5 @@
 import torch
+import datetime
 import time
 import helpers.datasets as datasets_helper
 import helpers.model as model_helper
@@ -76,7 +77,7 @@ class BaseTrainer(ABC):
 
     def export_memory_snapshot(self) -> None:
         # Prefix for file names.
-        time_stamp = time.time()
+        time_stamp = datetime.datetime.now().strftime("%m%d_%H%M%S")
         file_name = f"mem_snap_ep_{self.epoch_num}_{time_stamp}"
         file_path = f"{self.runsPath}/{file_name}"
 
