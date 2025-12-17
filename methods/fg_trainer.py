@@ -31,7 +31,7 @@ class ForwardGradientTrainer(BaseTrainer):
                 self.model(inputs)
 
                 if self.should_track_memory_this_epoch:
-                    if batch_idx < self.NUM_MEMORY_SNAPSHOTS:
+                    if batch_idx < self.NUM_MEMORY_SNAPSHOTS_IN_EPOCH:
                         self.start_record_memory_history()
 
                 buffers = {k: v.to(self.device) for k, v in named_buffers.items()}
@@ -62,7 +62,7 @@ class ForwardGradientTrainer(BaseTrainer):
                     estimated_gradient = dir_der * v_params[j]
                     param.grad = estimated_gradient
 
-                if batch_idx < self.NUM_MEMORY_SNAPSHOTS:
+                if batch_idx < self.NUM_MEMORY_SNAPSHOTS_IN_EPOCH:
                     self.export_memory_snapshot()
                     self.stop_record_memory_history()
 
