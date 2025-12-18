@@ -66,7 +66,7 @@ class ForwardGradientTrainer_test(BaseTrainer):
 
                 with self.disable_running_stats(self.model):
                     # JVP berechnet die Richtungsableitung
-                    (loss, outputs), dir_der = torch.func.jvp(
+                    loss, outputs, dir_der = torch.func.jvp(
                         loss_fn,
                         (params,),
                         (v_params,),
