@@ -21,6 +21,19 @@ base_config:
 # Wenn ein Parameter hier definiert ist, wird er für Multi-Training verwendet
 # Wenn nicht, wird der Wert aus base_config genommen
 
+multi_params:
+  learning_rate:
+    - 0.001
+    - 0.0001 # bester FGD LR
+    - 0.00001
+  optimizer:
+    - sgd
+  model_type:
+    - resnet18
+  dataset_name:
+    - mnist
+    - cifar10
+
 #  dataset_name:
 #    - flower
 #    - food
