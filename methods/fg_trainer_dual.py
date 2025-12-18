@@ -41,11 +41,23 @@ class ForwardGradientTrainer_dual(BaseTrainer):
         delattr(obj, parts[-1])
 
     def _set_nested_attr(self, obj, name, value):
-        """Hilfsfunktion um Attribute wie 'layer1.weight' zu setzen"""
+        """
+        Setzt ein Attribut und löscht es vorher, um Konflikte zwischen
+        nn.Parameter und regulären Tensors/DualTensors zu vermeiden.
+        """
         parts = name.split('.')
+        # Zum richtigen Submodul navigieren (z.B. layer1.conv1)
         for part in parts[:-1]:
             obj = getattr(obj, part)
-        setattr(obj, parts[-1], value)
+
+        attr_name = parts[-1]
+
+        # WICHTIG: Erst löschen! Das entfernt 'weight' aus self._parameters
+        if hasattr(obj, attr_name):
+            delattr(obj, attr_name)
+
+        # Jetzt neu setzen (als Tensor, DualTensor oder Parameter)
+        setattr(obj, attr_name, value)
 
     @contextmanager
     def disable_running_stats(self, model):
