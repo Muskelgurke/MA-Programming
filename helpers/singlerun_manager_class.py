@@ -55,6 +55,10 @@ class SingleRunManager:
                 return ForwardGradientTrainer(config_file=self.config,
                                               device=self.device,
                                               saver_class=self.saver)
+            case "fgd_test":
+                return ForwardGradientTrainer(config_file=self.config,
+                                              device=self.device,
+                                              saver_class=self.saver)
             case "bp":
                 return BackpropTrainer(config_file=self.config,
                                        device=self.device,
