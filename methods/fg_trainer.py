@@ -23,7 +23,7 @@ class ForwardGradientTrainer(BaseTrainer):
             for batch_idx, (inputs, targets) in enumerate(pbar):
                 inputs, targets = inputs.to(self.device), targets.to(self.device)
                 self.optimizer.zero_grad()
-                self.model.eval()
+                self.model.train()
                 # Warmup forward pass to ensure buffers are initialized
                 self.model(inputs)
 

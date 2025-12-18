@@ -6,7 +6,7 @@ from torch import nn
 
 from helpers.trainer_class import BaseTrainer
 
-class ForwardGradientTrainer(BaseTrainer):
+class ForwardGradientTrainer_test(BaseTrainer):
     """Trainer-Klasse für Backpropagation-basiertes Training."""
 
     def _train_epoch_impl(self):
