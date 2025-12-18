@@ -72,11 +72,11 @@ class ForwardGradientTrainer_test(BaseTrainer):
                         (v_params,),
                         has_aux=True
                     )
-
+                print(f"Loss: {loss.item()}, Directional Derivative: {dir_der.item()}")
                 sum_loss += loss.item()
 
                 # Gradient Schätzung: grad ≈ directional_derivative * v (ohne Normierung)
-                for j, param in enumerate(self.model.parameters()):
+                for j, param in zip(self.model.parameters(), v_params):
                     estimated_gradient = dir_der * v_params[j]
                     param.grad = estimated_gradient
 
