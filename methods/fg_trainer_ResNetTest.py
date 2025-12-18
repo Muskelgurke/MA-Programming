@@ -1,13 +1,31 @@
 import torch
 import socket
 from datetime import datetime
-
+from contextlib import contextmanager
 from torch import nn
 
 from helpers.trainer_class import BaseTrainer
 
 class ForwardGradientTrainer_test(BaseTrainer):
     """Trainer-Klasse für Backpropagation-basiertes Training."""
+
+
+    @contextmanager
+    def disable_running_stats(model):
+        # Finde alle BatchNorm Layer
+        bns = [m for m in model.modules() if isinstance(m, (nn.BatchNorm1d, nn.BatchNorm2d, nn.BatchNorm3d))]
+        # Speichere den alten Zustand
+        saved_states = [m.track_running_stats for m in bns]
+
+        try:
+            # Schalte Tracking aus -> BN nutzt Batch-Statistiken, schreibt aber nicht in Buffer
+            for m in bns:
+                m.track_running_stats = False
+            yield
+        finally:
+            # Stelle alten Zustand wieder her
+            for m, state in zip(bns, saved_states):
+                m.track_running_stats = state
 
     def _train_epoch_impl(self):
         sum_loss = 0
@@ -23,7 +41,7 @@ class ForwardGradientTrainer_test(BaseTrainer):
             for batch_idx, (inputs, targets) in enumerate(pbar):
                 inputs, targets = inputs.to(self.device), targets.to(self.device)
                 self.optimizer.zero_grad()
-                self.model.eval()
+                self.model.train()
 
                 # Warmup forward pass
                 self.model(inputs)
@@ -46,13 +64,14 @@ class ForwardGradientTrainer_test(BaseTrainer):
                     loss = nn.functional.cross_entropy(output, targets)
                     return loss, output
 
-                # JVP berechnet die Richtungsableitung
-                (loss, outputs), dir_der = torch.func.jvp(
-                    loss_fn,
-                    (params,),
-                    (v_params,),
-                    has_aux=True
-                )
+                with self.disable_running_stats(self.model):
+                    # JVP berechnet die Richtungsableitung
+                    (loss, outputs), dir_der = torch.func.jvp(
+                        loss_fn,
+                        (params,),
+                        (v_params,),
+                        has_aux=True
+                    )
 
                 sum_loss += loss.item()
 
