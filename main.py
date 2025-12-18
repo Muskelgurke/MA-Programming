@@ -64,9 +64,10 @@ def get_device()->torch.device:
 
         # GPU Cluster mit 3 NVIDIA GPUs
         if gpu_count >= 3:
-            device = torch.device("cuda:2")
+            device = torch.device("cuda:1")
             print(f"GPU Cluster erkannt: Nutze {torch.cuda.get_device_name(2)}")
-            print(f"Verfügbare GPUs: {gpu_count}")
+            print(f"Verfügbare GPUs: {gpu_count} - CudaDevice ID: {device}")
+
         # Einzelne NVIDIA GPU
         else:
             device = torch.device("cuda:0")

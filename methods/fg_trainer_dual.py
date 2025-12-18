@@ -4,7 +4,7 @@ from torch import nn
 from helpers.trainer_class import BaseTrainer
 from contextlib import contextmanager
 
-class ForwardGradientTrainer_FROG(BaseTrainer):
+class ForwardGradientTrainer_dual(BaseTrainer):
     """
     Implementiert Forward Gradient Descent basierend auf der Logik des FROG-Repos.
     Trick: Ersetzt nn.Parameter durch Dual-Tensors direkt im Modell.

@@ -9,6 +9,7 @@ from helpers.trainer_class import BaseTrainer
 from methods.backprop_trainer import BackpropTrainer
 from methods.fg_trainer import ForwardGradientTrainer
 from methods.fg_trainer_ResNetTest import ForwardGradientTrainer_test
+from methods.fg_trainer_dual import ForwardGradientTrainer_dual
 from helpers.early_stopping_class import EarlyStopping
 
 class SingleRunManager:
@@ -61,7 +62,7 @@ class SingleRunManager:
                                               device=self.device,
                                               saver_class=self.saver)
             case "fgd_dual":
-                return ForwardGradientTrainer_test(config_file=self.config,
+                return ForwardGradientTrainer_dual(config_file=self.config,
                                                    device=self.device,
                                                    saver_class=self.saver)
             case "bp":

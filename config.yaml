@@ -1,7 +1,7 @@
 # Base Configuration: Grundeinstellungen für alle Trainings
 base_config:
   random_seed: 43
-  learning_rate: 0.0001
+  learning_rate: 0.00007
   epoch_total: 100
   training_method: fgd_dual #bp fgd
   dataset_name: mnist
