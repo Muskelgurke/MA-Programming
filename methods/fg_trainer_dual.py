@@ -1,0 +1,154 @@
+import torch
+import torch.autograd.forward_ad as fwAD
+from torch import nn
+from helpers.trainer_class import BaseTrainer
+from contextlib import contextmanager
+
+class ForwardGradientTrainer_FROG(BaseTrainer):
+    """
+    Implementiert Forward Gradient Descent basierend auf der Logik des FROG-Repos.
+    Trick: Ersetzt nn.Parameter durch Dual-Tensors direkt im Modell.
+    """
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        # 1. HACK: Parameter "befreien"
+        # Wir speichern die echten Parameter separat und löschen sie aus der Modell-Registrierung,
+        # damit wir sie später durch Dual Tensors ersetzen können.
+        self.params_store = {}
+        self.param_names = []
+
+        # Wir müssen über named_parameters iterieren und sie "detachen"
+        for name, param in self.model.named_parameters():
+            self.params_store[name] = param  # Referenz behalten für Optimizer
+            self.param_names.append(name)
+
+        # Jetzt entfernen wir die Parameter aus dem Modell-Objekt
+        # Das macht Platz für unsere Dual Tensors
+        for name in self.param_names:
+            self._del_nested_attr(self.model, name)
+
+        # WICHTIG: Der Optimizer muss VORHER initialisiert worden sein mit den originalen Parametern!
+        # Da BaseTrainer den Optimizer meist im __init__ erstellt, passt das.
+        # Aber Vorsicht: model.parameters() ist jetzt leer!
+
+    def _del_nested_attr(self, obj, name):
+        """Hilfsfunktion um Attribute wie 'layer1.weight' zu löschen"""
+        parts = name.split('.')
+        for part in parts[:-1]:
+            obj = getattr(obj, part)
+        delattr(obj, parts[-1])
+
+    def _set_nested_attr(self, obj, name, value):
+        """Hilfsfunktion um Attribute wie 'layer1.weight' zu setzen"""
+        parts = name.split('.')
+        for part in parts[:-1]:
+            obj = getattr(obj, part)
+        setattr(obj, parts[-1], value)
+
+    @contextmanager
+    def disable_running_stats(self, model):
+        # BN Fix wie gehabt
+        bns = [m for m in model.modules() if isinstance(m, (nn.BatchNorm1d, nn.BatchNorm2d, nn.BatchNorm3d))]
+        saved_states = [m.track_running_stats for m in bns]
+        try:
+            for m in bns: m.track_running_stats = False
+            yield
+        finally:
+            for m, state in zip(bns, saved_states): m.track_running_stats = state
+
+    def _train_epoch_impl(self):
+        sum_loss = 0
+        sum_correct = 0
+        sum_size = 0
+        loss_func = nn.CrossEntropyLoss()
+
+        pbar = self._create_progress_bar(desc=f'FROG Train: {self.epoch_num}')
+
+        # Sicherstellen, dass wir im Train-Modus sind
+        self.model.train()
+
+        for batch_idx, (inputs, targets) in enumerate(pbar):
+            inputs, targets = inputs.to(self.device), targets.to(self.device)
+            self.optimizer.zero_grad()
+
+            # --- SCHRITT A: Warmup / Sync ---
+            # Wir setzen temporär die echten Tensors (keine Duals) ein,
+            # damit BatchNorm Statistiken sammeln kann.
+            for name, param in self.params_store.items():
+                self._set_nested_attr(self.model, name, param)
+
+            # Warmup Forward Pass (ohne Gradienten, rein für BatchNorm Statistiken)
+            with torch.no_grad():
+                self.model(inputs)
+
+            # --- SCHRITT B: Forward AD Pass ---
+            with fwAD.dual_level():
+
+                # 1. Perturbation generieren & Dual Tensors setzen
+                v_dict = {}
+                for name, param in self.params_store.items():
+                    # Perturbation v
+                    v = torch.randn_like(param)
+                    v_dict[name] = v
+
+                    # Erstelle Dual Tensor: (Primal=Weight, Tangent=v)
+                    dual_val = fwAD.make_dual(param, v)
+
+                    # Hier ist der "Repo-Trick": Wir überschreiben das Attribut im Modell!
+                    self._set_nested_attr(self.model, name, dual_val)
+
+                # 2. Forward Pass mit Dual Tensors
+                # Wir deaktivieren BN-Tracking, da wir nicht in die Buffer schreiben wollen (Dual Tensor Crash Gefahr)
+                with self.disable_running_stats(self.model):
+                    outputs = self.model(inputs)
+                    loss = loss_func(outputs, targets)
+
+                # 3. Unpack Results
+                dual_loss = fwAD.unpack_dual(loss)
+                loss_val = dual_loss.primal
+                jvp = dual_loss.tangent  # Gradient Richtung
+
+                # NaN Schutz
+                if jvp is None or torch.isnan(jvp):
+                    # Restore original weights before continue
+                    for name, param in self.params_store.items():
+                        self._set_nested_attr(self.model, name, param)
+                    continue
+
+            # --- SCHRITT C: Gradient Update ---
+            # Wir schreiben die Gradienten direkt in die .grad Attribute der gespeicherten Parameter
+            with torch.no_grad():
+                for name, param in self.params_store.items():
+                    v = v_dict[name]
+                    # Update Regel: grad = (dL/dv) * v
+                    if param.grad is None:
+                        param.grad = jvp * v
+                    else:
+                        param.grad += jvp * v  # Falls man Batch Accumulation macht
+
+            # --- SCHRITT D: Cleanup & Step ---
+            # WICHTIG: Vor dem Optimizer Step müssen wir die Dual Tensors wieder 
+            # durch die echten Parameter ersetzen!
+            for name, param in self.params_store.items():
+                self._set_nested_attr(self.model, name, param)
+
+            self.optimizer.step()
+
+            # --- Metrics ---
+            sum_loss += loss_val.item() * inputs.size(0)
+
+            # Primal Output für Accuracy nutzen
+            primal_output = fwAD.unpack_dual(outputs).primal
+            _, predicted = torch.max(primal_output, 1)
+            sum_correct += (predicted == targets).sum().item()
+            sum_size += targets.size(0)
+
+            pbar.set_postfix({
+                'Loss': f'{loss_val.item():.4f}',
+                'JVP': f'{jvp.item():.4f}'
+            })
+
+        self.metrics.loss_per_epoch = sum_loss / sum_size
+        self.metrics.acc_per_epoch = 100. * sum_correct / sum_size
