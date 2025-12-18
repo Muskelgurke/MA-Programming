@@ -157,9 +157,11 @@ class ForwardGradientTrainer_dual(BaseTrainer):
             sum_correct += (predicted == targets).sum().item()
             sum_size += targets.size(0)
 
+            acc = 100.0 * sum_correct / sum_size
+
             pbar.set_postfix({
                 'Loss': f'{loss_val.item():.4f}',
-                'JVP': f'{jvp.item():.4f}'
+                'ACC': f'{acc:.4f}'
             })
 
         self.metrics.loss_per_epoch = sum_loss / sum_size
