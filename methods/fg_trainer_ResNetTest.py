@@ -11,7 +11,7 @@ class ForwardGradientTrainer_test(BaseTrainer):
 
 
     @contextmanager
-    def disable_running_stats(model):
+    def disable_running_stats(self, model):
         # Finde alle BatchNorm Layer
         bns = [m for m in model.modules() if isinstance(m, (nn.BatchNorm1d, nn.BatchNorm2d, nn.BatchNorm3d))]
         # Speichere den alten Zustand
