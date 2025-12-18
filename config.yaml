@@ -7,7 +7,7 @@ base_config:
   dataset_name: mnist
   batch_size: 64
   augment_data: false
-  model_type: testmodel #testmodel
+  model_type: resnet18 #testmodel
   optimizer: adam
   momentum: 0.9
   loss_function: cross_entropy
