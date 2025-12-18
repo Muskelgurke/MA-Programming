@@ -12,7 +12,7 @@ base_config:
   momentum: 0.9
   loss_function: cross_entropy
   early_stopping: true
-  early_stopping_patience: 8
+  early_stopping_patience: 100
   early_stopping_delta: 0.01
   dataset_path: _Dataset
   memory_snapshot_epochs: [0, 5, 10]
