@@ -66,18 +66,18 @@ class ForwardGradientTrainer_test(BaseTrainer):
 
                 with self.disable_running_stats(self.model):
                     # JVP berechnet die Richtungsableitung
-                    loss, outputs, dir_der = torch.func.jvp(
+                    loss, dir_der, outputs = torch.func.jvp(
                         loss_fn,
                         (params,),
                         (v_params,),
                         has_aux=True
                     )
-                print(f"Loss: {loss.item()}, Directional Derivative: {dir_der.item()}")
+                    print(f"Loss: {loss.item()}, Directional Derivative: {dir_der.item()}")
                 sum_loss += loss.item()
 
                 # Gradient Schätzung: grad ≈ directional_derivative * v (ohne Normierung)
-                for j, param in zip(self.model.parameters(), v_params):
-                    estimated_gradient = dir_der * v_params[j]
+                for param, v in zip(self.model.parameters(), v_params):
+                    estimated_gradient = dir_der * v
                     param.grad = estimated_gradient
 
                 if batch_idx < self.NUM_MEMORY_SNAPSHOTS_IN_EPOCH:
