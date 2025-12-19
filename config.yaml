@@ -20,6 +20,10 @@ base_config:
 # Multi-Parameter Configuration: Parameter für Grid-Search
 # Wenn ein Parameter hier definiert ist, wird er für Multi-Training verwendet
 # Wenn nicht, wird der Wert aus base_config genommen
+multi_params:
+  dataset_name:
+    - cifar10
+    - cifar100
 
   #momentum:
   #  - 0.8
