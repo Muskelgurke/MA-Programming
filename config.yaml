@@ -4,7 +4,7 @@ base_config:
   learning_rate: 0.0001
   epoch_total: 100
   training_method: fgd_dual #bp fgd
-  dataset_name: mnist
+  dataset_name: cifar10
   batch_size: 64
   augment_data: false
   model_type: resnet18 #testmodel
@@ -20,20 +20,6 @@ base_config:
 # Multi-Parameter Configuration: Parameter für Grid-Search
 # Wenn ein Parameter hier definiert ist, wird er für Multi-Training verwendet
 # Wenn nicht, wird der Wert aus base_config genommen
-
-multi_params:
-
-  model_type:
-    - alexnet
-    - vgg16
-    - resnet34
-    - mobilenet
-    - densenet
-    - efficientnet
-  dataset_name:
-    - flower
-    - food
-    - pet
 
   #momentum:
   #  - 0.8
