@@ -3,7 +3,7 @@ base_config:
   random_seed: 43
   learning_rate: 0.0001
   epoch_total: 100
-  training_method: F #bp fgd
+  training_method: fgd #bp fgd
   dataset_name: mnist
   batch_size: 64
   augment_data: false
