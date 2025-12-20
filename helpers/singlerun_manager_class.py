@@ -53,7 +53,7 @@ class SingleRunManager:
     def _create_trainer(self) -> BaseTrainer:
 
         match self.config.training_method:
-            case "fgd":
+            case "D":
                 return ForwardGradientTrainer(config_file=self.config,
                                               device=self.device,
                                               saver_class=self.saver)
