@@ -32,9 +32,14 @@ class TorchModelSaver:
                 'test_loss',
                 'test_accuracy',
                 'num_batches',
-                 'early_stop_reason',
+                'early_stop_reason',
                 'epoch_duration',
-                'time_to_converge'
+                'time_to_converge',
+                'mem_base_bytes',
+                'mem_parameter_bytes',
+                'avg_mem_forward_pass_bytes',
+                'max_mem_forward_pass_bytes',
+                'max_mem_bytes'
             ]
 
             with open(self.epoch_metrics_file, 'w', newline='') as csvfile:
@@ -75,7 +80,12 @@ class TorchModelSaver:
             'num_batches',
             'early_stop_reason',
             'epoch_duration',
-            'time_to_converge'
+            'time_to_converge',
+            'mem_base_bytes',
+            'mem_parameter_bytes',
+            'avg_mem_forward_pass_bytes',
+            'max_mem_forward_pass_bytes',
+            'max_mem_bytes'
         ]
 
         # Write one row per epoch with all relevant metrics
@@ -88,7 +98,12 @@ class TorchModelSaver:
             'num_batches': train_metrics.num_batches,
             'early_stop_reason': early_stop_reason.get('reason', '') if early_stop_reason else '',
             'epoch_duration': train_metrics.epoch_duration,
-            'time_to_converge': train_metrics.time_to_converge
+            'time_to_converge': train_metrics.time_to_converge,
+            'mem_base_bytes': train_metrics.mem_base_bytes,
+            'mem_parameter_bytes': train_metrics.mem_parameter_bytes,
+            'avg_mem_forward_pass_bytes': train_metrics.avg_mem_forward_pass_bytes,
+            'max_mem_forward_pass_bytes': train_metrics.max_mem_forward_pass_bytes,
+            'max_mem_bytes': train_metrics.max_mem_bytes,
         }
 
         with open(self.epoch_metrics_file, 'a', newline='') as csvfile:
@@ -183,6 +198,11 @@ class TorchModelSaver:
             "batch_size": config.batch_size,
             "time_to_convergence_seconds": time_to_convergence,
             "avg_train_epoch_time_seconds": avg_train_epoch_time,
+            'best_train_mem_base_bytes': train_metrics.mem_base_bytes,
+            'best_train_mem_parameter_bytes': train_metrics.mem_parameter_bytes,
+            'best_train_avg_mem_forward_pass_bytes': train_metrics.avg_mem_forward_pass_bytes,
+            'best_train_max_mem_forward_pass_bytes': train_metrics.max_mem_forward_pass_bytes,
+            'best_train_max_mem_bytes': train_metrics.max_mem_bytes,
         }
 
         file_exists = self.summary_file.exists()

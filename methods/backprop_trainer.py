@@ -1,7 +1,5 @@
-import socket
-from datetime import datetime, timedelta
 import torch
-from torch.profiler import profile, ProfilerActivity, record_function, schedule
+import numpy as np
 from helpers.trainer_class import BaseTrainer
 
 
@@ -14,6 +12,10 @@ class BackpropTrainer(BaseTrainer):
         sum_size = 0
         pbar = self._create_progress_bar(desc=f'BP - Train: {self.epoch_num}/{self.total_epochs}')
 
+        mem_pre_forward = 0
+        mem_post_forward = 0
+        mem_forward = []
+        mem_backward = []
         """
         prof_schedule = schedule(wait=1, warmup=1, active=3, repeat=1)
         with profile(
@@ -29,19 +31,26 @@ class BackpropTrainer(BaseTrainer):
         for batch_idx, (inputs, targets) in enumerate(pbar):
 
             inputs, targets = inputs.to(device=self.device), targets.to(self.device)
-            self.optimizer.zero_grad()
+            self.optimizer.zero_grad(set_to_none=True)
 
             if self.should_track_memory_this_epoch:
+                mem_pre_forward = torch.cuda.memory_allocated()
                 if batch_idx < self.NUM_MEMORY_SNAPSHOTS_IN_EPOCH:
                     self.start_record_memory_history()
 
             outputs = self.model(inputs)
+
+            if self.should_track_memory_this_epoch:
+                mem_post_forward = torch.cuda.memory_allocated()
+                mem_forward.append(mem_post_forward - mem_pre_forward)
+
             loss = self.loss_function(outputs, targets)
             sum_loss += loss.item()
 
             loss.backward()
 
             if self.should_track_memory_this_epoch:
+
                 if batch_idx < self.NUM_MEMORY_SNAPSHOTS_IN_EPOCH:
                     self.export_memory_snapshot(batch_idx=batch_idx)
                     self.stop_record_memory_history()
@@ -63,8 +72,9 @@ class BackpropTrainer(BaseTrainer):
             # Speicher-Metriken aktualisieren
             # memory_activiations are saved in the first batch
 
-
-            # Epoche-Metriken aktualisieren
-            self.metrics.loss_per_epoch = sum_loss / sum_size
-            self.metrics.acc_per_epoch = 100. * sum_correct / sum_size
-            self.metrics.num_batches = sum_size
+        self.metrics.avg_mem_forward_pass_bytes = int(np.mean(mem_forward)) if mem_forward else 0
+        self.metrics.max_mem_forward_pass_bytes = int(np.max(mem_forward)) if mem_forward else 0
+        # Epoche-Metriken aktualisieren
+        self.metrics.loss_per_epoch = sum_loss / sum_size
+        self.metrics.acc_per_epoch = 100. * sum_correct / sum_size
+        self.metrics.num_batches = sum_size

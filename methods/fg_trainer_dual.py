@@ -1,5 +1,6 @@
 import torch
 import torch.autograd.forward_ad as fwAD
+import numpy as np
 from torch import nn
 from helpers.trainer_class import BaseTrainer
 from contextlib import contextmanager
@@ -75,18 +76,26 @@ class ForwardGradientTrainer_dual(BaseTrainer):
         sum_correct = 0
         sum_size = 0
         loss_func = nn.CrossEntropyLoss()
+        mem_pre_forward = 0
+        mem_forward = []
 
         pbar = self._create_progress_bar(desc=f'FROG Train: {self.epoch_num}')
 
-        # Sicherstellen, dass wir im Train-Modus sind
         self.model.train()
 
         for batch_idx, (inputs, targets) in enumerate(pbar):
+            if self.should_track_memory_this_epoch:
+                if batch_idx < self.NUM_MEMORY_SNAPSHOTS_IN_EPOCH:
+                    self.start_record_memory_history()
+
             inputs, targets = inputs.to(self.device), targets.to(self.device)
             self.optimizer.zero_grad()
 
-            # --- SCHRITT A: Warmup / Sync ---
-            # Wir setzen temporär die echten Tensors (keine Duals) ein,
+
+            if self.should_track_memory_this_epoch:
+                mem_pre_forward = torch.cuda.memory_allocated()
+
+            # temporär die echten Tensors (keine Duals) ein,
             # damit BatchNorm Statistiken sammeln kann.
             for name, param in self.params_store.items():
                 self._set_nested_attr(self.model, name, param)
@@ -95,42 +104,39 @@ class ForwardGradientTrainer_dual(BaseTrainer):
             with torch.no_grad():
                 self.model(inputs)
 
-            # --- SCHRITT B: Forward AD Pass ---
+
             with fwAD.dual_level():
 
                 # 1. Perturbation generieren & Dual Tensors setzen
                 v_dict = {}
                 for name, param in self.params_store.items():
-                    # Perturbation v
+
                     v = torch.randn_like(param)
                     v_dict[name] = v
 
-                    # Erstelle Dual Tensor: (Primal=Weight, Tangent=v)
                     dual_val = fwAD.make_dual(param, v)
 
-                    # Hier ist der "Repo-Trick": Wir überschreiben das Attribut im Modell!
                     self._set_nested_attr(self.model, name, dual_val)
 
-                # 2. Forward Pass mit Dual Tensors
+                # Forward Pass
                 # Wir deaktivieren BN-Tracking, da wir nicht in die Buffer schreiben wollen (Dual Tensor Crash Gefahr)
                 with self.disable_running_stats(self.model):
                     outputs = self.model(inputs)
                     loss = loss_func(outputs, targets)
 
-                # 3. Unpack Results
+                # Unpack dual Tensors
                 dual_loss = fwAD.unpack_dual(loss)
                 loss_val = dual_loss.primal
                 jvp = dual_loss.tangent  # Gradient Richtung
 
-                # NaN Schutz
+
                 if jvp is None or torch.isnan(jvp):
-                    # Restore original weights before continue
+                    # wiederherstellung der originalen Parameter
                     for name, param in self.params_store.items():
                         self._set_nested_attr(self.model, name, param)
                     continue
 
-            # --- SCHRITT C: Gradient Update ---
-            # Wir schreiben die Gradienten direkt in die .grad Attribute der gespeicherten Parameter
+            #Gradient setzen
             with torch.no_grad():
                 for name, param in self.params_store.items():
                     v = v_dict[name]
@@ -140,15 +146,18 @@ class ForwardGradientTrainer_dual(BaseTrainer):
                     else:
                         param.grad += jvp * v  # Falls man Batch Accumulation macht
 
-            # --- SCHRITT D: Cleanup & Step ---
-            # WICHTIG: Vor dem Optimizer Step müssen wir die Dual Tensors wieder 
+            if self.should_track_memory_this_epoch:
+                mem_post_forward = torch.cuda.memory_allocated()
+                mem_forward.append(mem_post_forward - mem_pre_forward)
+
+            # WICHTIG: Vor dem Optimizer Step müssen wir die Dual Tensors wieder
             # durch die echten Parameter ersetzen!
             for name, param in self.params_store.items():
                 self._set_nested_attr(self.model, name, param)
 
             self.optimizer.step()
 
-            # --- Metrics ---
+
             sum_loss += loss_val.item() * inputs.size(0)
 
             # Primal Output für Accuracy nutzen
@@ -164,5 +173,10 @@ class ForwardGradientTrainer_dual(BaseTrainer):
                 'ACC': f'{acc:.4f}'
             })
 
+
+        self.metrics.avg_mem_forward_pass_bytes = int(np.mean(mem_forward)) if mem_forward else 0
+        self.metrics.max_mem_forward_pass_bytes = int(np.max(mem_forward)) if mem_forward else 0
+
         self.metrics.loss_per_epoch = sum_loss / sum_size
         self.metrics.acc_per_epoch = 100. * sum_correct / sum_size
+        self.metrics.num_batches = sum_size

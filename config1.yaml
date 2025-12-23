@@ -1,31 +1,32 @@
 # Base Configuration: Grundeinstellungen für alle Trainings
 base_config:
   random_seed: 43
-  learning_rate: 0.001
+  learning_rate: 0.0001
   epoch_total: 100
-  training_method: fgd #bp fgd
+  training_method: fgd_dual
   dataset_name: mnist
   batch_size: 64
   augment_data: false
-  model_type: testmodel #testmodel
+  model_type: alexnet
   optimizer: adam
   momentum: 0.9
   loss_function: cross_entropy
   early_stopping: true
-  early_stopping_patience: 100
-  early_stopping_delta: 0.01
+  early_stopping_patience: 15
+  early_stopping_delta: 0.001
   dataset_path: _Dataset
-  memory_snapshot_epochs: [0, 5, 10]
+  memory_snapshot_epochs: [5,10,15,20]
 
 # Multi-Parameter Configuration: Parameter für Grid-Search
 # Wenn ein Parameter hier definiert ist, wird er für Multi-Training verwendet
 # Wenn nicht, wird der Wert aus base_config genommen
 
 multi_params:
-  learning_rate:
-    - 0.001
-    - 0.0001 # bester FGD LR
-    - 0.00001
+
+  seed:
+    - 1024
+    - 69
+    - 103
   optimizer:
     - adam
     - sgd
@@ -37,11 +38,15 @@ multi_params:
     - mobilenet
     - densenet
     - efficientnet
+    - lenet
   dataset_name:
     - mnist
     - fashionmnist
     - cifar10
     - cifar100
+    - flower
+    - food
+    - pet
 
 #  dataset_name:
 #    - flower

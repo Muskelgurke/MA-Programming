@@ -1,7 +1,6 @@
 from dataclasses import dataclass, asdict
 from typing import List
 
-
 @dataclass
 class TrainMetrics:
     """Dataclass to store training metrics for each epoch"""
@@ -11,6 +10,11 @@ class TrainMetrics:
     epoch_duration: float = 0.0
     time_to_converge: float = 0.0
 
+    mem_base_bytes: int = 0
+    mem_parameter_bytes: int = 0
+    avg_mem_forward_pass_bytes: int = 0
+    max_mem_forward_pass_bytes: int = 0
+    max_mem_bytes: int = 0
 
     def to_dict(self) -> dict:
         return asdict(self)
