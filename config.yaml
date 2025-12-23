@@ -15,7 +15,7 @@ base_config:
   early_stopping_patience: 15
   early_stopping_delta: 0.001
   dataset_path: _Dataset
-  memory_snapshot_epochs: [5,10,15,20]
+  memory_snapshot_epochs: [1,5,10,15,20]
 
 # Multi-Parameter Configuration: Parameter für Grid-Search
 # Wenn ein Parameter hier definiert ist, wird er für Multi-Training verwendet
