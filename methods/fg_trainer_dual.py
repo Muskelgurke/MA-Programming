@@ -93,7 +93,7 @@ class ForwardGradientTrainer_dual(BaseTrainer):
 
 
             if self.should_track_memory_this_epoch:
-                mem_pre_forward = torch.cuda.memory_allocated()
+                mem_pre_forward = torch.cuda.memory_allocated(device=self.device)
                 print(f"Mem before forward: {mem_pre_forward} bytes")
 
             # temporär die echten Tensors (keine Duals) ein,
@@ -148,7 +148,7 @@ class ForwardGradientTrainer_dual(BaseTrainer):
                         param.grad += jvp * v  # Falls man Batch Accumulation macht
 
             if self.should_track_memory_this_epoch:
-                mem_post_forward = torch.cuda.memory_allocated()
+                mem_post_forward = torch.cuda.memory_allocated(device=self.device)
                 mem_forward.append(mem_post_forward - mem_pre_forward)
                 print(f"Mem after forward: {mem_post_forward} bytes, used: {mem_post_forward - mem_pre_forward} bytes")
 

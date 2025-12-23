@@ -118,9 +118,9 @@ class BaseTrainer(ABC):
         # Zwinge Garbage Collection, um Artefakte zu vermeiden
         gc.collect()
         torch.cuda.empty_cache()
-        torch.cuda.reset_max_memory_allocated()
+        torch.cuda.reset_max_memory_allocated(device=self.device)
         # allocate ist belegter Speicher in Bytes
-        mem = torch.cuda.memory_allocated()
+        mem = torch.cuda.memory_allocated(device=self.device)
         return mem
 
 
