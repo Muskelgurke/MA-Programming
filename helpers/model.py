@@ -27,7 +27,7 @@ def get_model(config: Config, sample_batch: tuple) -> nn.Module:
     # Bestimme Anzahl der Klassen aus dem gesamten Dataset, nicht nur aus dem Batch
     match config.dataset_name.lower():
 
-        case "mnist": num_classes = 10,
+        case "mnist": num_classes = 10
         case "fashionmnist": num_classes = 10
         case "cifar10": num_classes = 10
         case "cifar100":num_classes = 100
