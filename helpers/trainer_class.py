@@ -66,8 +66,8 @@ class BaseTrainer(ABC):
         print(f"Epoch={self.epoch_num}: Memory Tracking = {self.should_track_memory_this_epoch}")
         epoch_start_time = time.time()
 
-        if self.should_track_memory_this_epoch:
-            torch.cuda.reset_peak_memory_stats()
+        #if self.should_track_memory_this_epoch:
+         #   torch.cuda.reset_peak_memory_stats()
 
         self._train_epoch_impl()
 
