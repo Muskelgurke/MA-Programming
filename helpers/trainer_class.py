@@ -63,7 +63,7 @@ class BaseTrainer(ABC):
         self.model.train()
 
         self.should_track_memory_this_epoch = self.epoch_num in self.config.memory_snapshot_epochs
-
+        print(f"Epoch={self.epoch_num}: Memory Tracking = {self.should_track_memory_this_epoch}")
         epoch_start_time = time.time()
 
         if self.should_track_memory_this_epoch:
