@@ -94,6 +94,7 @@ class ForwardGradientTrainer_dual(BaseTrainer):
 
             if self.should_track_memory_this_epoch:
                 mem_pre_forward = torch.cuda.memory_allocated()
+                print(f"Mem before forward: {mem_pre_forward} bytes")
 
             # temporär die echten Tensors (keine Duals) ein,
             # damit BatchNorm Statistiken sammeln kann.
@@ -149,6 +150,7 @@ class ForwardGradientTrainer_dual(BaseTrainer):
             if self.should_track_memory_this_epoch:
                 mem_post_forward = torch.cuda.memory_allocated()
                 mem_forward.append(mem_post_forward - mem_pre_forward)
+                print(f"Mem after forward: {mem_post_forward} bytes, used: {mem_post_forward - mem_pre_forward} bytes")
 
             # WICHTIG: Vor dem Optimizer Step müssen wir die Dual Tensors wieder
             # durch die echten Parameter ersetzen!
