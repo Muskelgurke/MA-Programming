@@ -40,9 +40,9 @@ multi_params:
     #- fashionmnist
     #- cifar10
     #- cifar100
-    - flower
+    #- flower
     - food
-    #- pet
+    - pet
 
 #  dataset_name:
 #    - flower

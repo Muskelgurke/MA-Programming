@@ -41,8 +41,8 @@ multi_params:
     #- cifar10
     #- cifar100
     - flower
-    - food
-    - pet
+    #- food
+    #- pet
 
 #  dataset_name:
 #    - flower
