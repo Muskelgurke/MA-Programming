@@ -26,7 +26,7 @@ class SingleRunManager:
 
     def _setup_run(self):
         timestamp = datetime.datetime.now().strftime("%m%d_%H%M%S")
-        run_name = f'run{self.run_number}_time{timestamp}_{self.config.dataset_name}_{self.config.model_type}_{self.config.training_method}'
+        run_name = f'run{self.run_number}_d{self.config.cuda_device}_t{timestamp}_{self.config.dataset_name}_{self.config.model_type}_{self.config.training_method}'
         run_path = Path(self.base_path) / run_name
 
         self.saver = TorchModelSaver(base_path=self.base_path,
