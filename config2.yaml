@@ -1,6 +1,6 @@
 # Base Configuration: Grundeinstellungen für alle Trainings
 base_config:
-  cuda_device: 0
+  cuda_device: 2
   random_seed: 43
   learning_rate: 0.0001
   epoch_total: 1
@@ -36,12 +36,12 @@ multi_params:
     - efficientnet
     - lenet
   dataset_name:
-    - mnist
-    - fashionmnist
-    - cifar10
-    - cifar100
-    #- flower
-    #- food
+    #- mnist
+    #- fashionmnist
+    #- cifar10
+    #- cifar100
+    - flower
+    - food
     #- pet
 
 #  dataset_name:

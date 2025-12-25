@@ -91,7 +91,6 @@ class ForwardGradientTrainer_dual(BaseTrainer):
             inputs, targets = inputs.to(self.device), targets.to(self.device)
             self.optimizer.zero_grad()
 
-
             if self.should_track_memory_this_epoch:
                 mem_pre_forward = torch.cuda.memory_allocated(device=self.device)
                 #print(f"Mem before forward: {mem_pre_forward} bytes")
