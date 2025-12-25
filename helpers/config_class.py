@@ -5,6 +5,7 @@ import itertools
 
 @dataclass
 class Config:
+    cuda_device: int
     random_seed: int
     dataset_name: str
     learning_rate: float
