@@ -47,18 +47,23 @@ def start_training(config_path: str, device: torch.device):
         #try:
 
         start_nn_run(config_file=config,device=device,run_number=run_number,base_path=base_path)
-
+        clear_gpu_memory()
         print(f"✅ Lauf {run_number} abgeschlossen.")
 
-        #except Exception as e:
-        #    print(f"❌ Fehler bei Lauf {run_number}: {e}")
+
 
     print(f"\n=== MULTI-RUN ABGESCHLOSSEN ===")
 
+def clear_gpu_memory():
+    """Räumt den GPU-Speicher auf, falls CUDA verfügbar ist."""
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
+        torch.cuda.ipc_collect()
+        print("GPU-Speicher wurde aufgeräumt.")
 def get_device()->torch.device:
     """Gibt das Gerät zurück, auf dem das Training durchgeführt werden soll."""
 
-    # Prüfe ob CUDA verfügbar ist (NVIDIA GPUs)
+    # Prüfe ob CUDA verfügbar istw (NVIDIA GPUs)
     if torch.cuda.is_available():
         gpu_count = torch.cuda.device_count()
 

@@ -1,6 +1,7 @@
 import csv
 import torch
 import yaml
+import os
 from pathlib import Path
 from helpers.config_class import Config
 from helpers.training_metrics_class import TrainMetrics
@@ -215,6 +216,8 @@ class TorchModelSaver:
                 writer.writeheader()
 
             writer.writerow(run_summary)
+            csvfile.flush()
+            os.fsync(csvfile.fileno())
 
     def save_model_and_config_after_epochs(self, config: Config,
                                            model: torch.nn.Module,

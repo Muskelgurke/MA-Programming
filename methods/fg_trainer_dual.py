@@ -79,7 +79,7 @@ class ForwardGradientTrainer_dual(BaseTrainer):
         mem_pre_forward = 0
         mem_forward = []
 
-        pbar = self._create_progress_bar(desc=f'FROG Train: {self.epoch_num}')
+        pbar = self._create_progress_bar(desc=f'FG Train: {self.epoch_num}')
 
         self.model.train()
 
@@ -94,7 +94,7 @@ class ForwardGradientTrainer_dual(BaseTrainer):
 
             if self.should_track_memory_this_epoch:
                 mem_pre_forward = torch.cuda.memory_allocated(device=self.device)
-                print(f"Mem before forward: {mem_pre_forward} bytes")
+                #print(f"Mem before forward: {mem_pre_forward} bytes")
 
             # temporär die echten Tensors (keine Duals) ein,
             # damit BatchNorm Statistiken sammeln kann.
@@ -150,7 +150,7 @@ class ForwardGradientTrainer_dual(BaseTrainer):
             if self.should_track_memory_this_epoch:
                 mem_post_forward = torch.cuda.memory_allocated(device=self.device)
                 mem_forward.append(mem_post_forward - mem_pre_forward)
-                print(f"Mem after forward: {mem_post_forward} bytes, used: {mem_post_forward - mem_pre_forward} bytes")
+                #print(f"Mem after forward: {mem_post_forward} bytes, used: {mem_post_forward - mem_pre_forward} bytes")
 
             # WICHTIG: Vor dem Optimizer Step müssen wir die Dual Tensors wieder
             # durch die echten Parameter ersetzen!
