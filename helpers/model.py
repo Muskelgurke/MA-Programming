@@ -174,7 +174,7 @@ def patched_bottleneck_forward(self, x):
 
 
 class LeNet5(nn.Module):
-    def __init__(self, num_input_channel=1, num_classes=10):
+    def __init__(self, num_input_channel, num_classes, input_size):
         super(LeNet5, self).__init__()
         activation = nn.modules.activation.ReLU
         # assume the input tensor of shape (None,num_input_channel,32,32);
@@ -190,7 +190,10 @@ class LeNet5(nn.Module):
         # after conv1 layer (5x5 convolution kernels, 16 output channels), the feature map is of shape (None,16,10,10)
         self.pool2 = nn.MaxPool2d(2)
         # after max pooling (kernel_size=2, so is stride), the feature map is of shape (None,16,5,5)
-        self.fc1 = nn.Linear(400, 120)
+
+        feature_map_size = ((input_size-4)//2 -4)//2  # Berechnung der finalen Feature-Map-Größe nach den Convs und Pools
+        flattend_size = 16 * feature_map_size * feature_map_size
+        self.fc1 = nn.Linear(flattend_size, 120)
         self.activation3 = activation()
         # note that 16*5*5 = 400
         # the feature map of shape (None,16,5,5) is flattend and of shape (None,400),
@@ -216,12 +219,8 @@ class LeNet5(nn.Module):
         y = torch.flatten(y, 1)  # flatten all dimensions except for the very first (batch dimension)
         y = self.fc1(y)
         y = self.activation3(y)
-        if self.dropout1 is not None:
-            y = self.dropout1(y)
         y = self.fc2(y)
         y = self.activation4(y)
-        if self.dropout2 is not None:
-            y = self.dropout2(y)
         y = self.fc3(y)
         return y
 

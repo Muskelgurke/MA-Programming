@@ -23,6 +23,45 @@ class TorchModelSaver:
         self.base_dir.mkdir(parents=True, exist_ok=True)
         self.run_dir.mkdir(parents=True, exist_ok=True)
 
+        self._ensure_multi_run_csv_ready()
+
+    def _ensure_multi_run_csv_ready(self):
+        """Initialisiert die Multi-Run CSV-Datei mit Header falls nötig"""
+        if not self.summary_file.exists():
+            # Define all fieldnames that will be used
+            fieldnames = [
+                "run_number",
+                "total_training_time_seconds",
+                "train_accuracy",
+                "train_loss",
+                "test_accuracy",
+                "test_loss",
+                "early_stopped_at_epoch",
+                "early_stopping_reason",
+                "early:stopping_delta",
+                "early:stopping_patience",
+                "epoch_total",
+                "random_seed",
+                "dataset_name",
+                "model_type",
+                "training_method",
+                "learning_rate",
+                "optimizer_type",
+                "optimizer_momentum",
+                "batch_size",
+                "time_to_convergence_seconds",
+                "avg_train_epoch_time_seconds",
+                "best_train_mem_base_bytes",
+                "best_train_mem_parameter_bytes",
+                "best_train_avg_mem_forward_pass_bytes",
+                "best_train_max_mem_forward_pass_bytes",
+                "best_train_max_mem_bytes",
+            ]
+
+            with open(self.summary_file, 'w', newline='') as csvfile:
+                writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+                writer.writeheader()
+
     def _ensure_epoch_csv_ready(self):
         """Initialisiert die Epoch CSV-Datei falls nötig"""
         if not self.epoch_csv_initialized:
@@ -206,14 +245,9 @@ class TorchModelSaver:
             'best_train_max_mem_bytes': train_metrics.max_mem_bytes,
         }
 
-        file_exists = self.summary_file.exists()
 
         with open(self.summary_file, 'a', newline='') as csvfile:
             writer = csv.DictWriter(csvfile, fieldnames=run_summary.keys())
-
-            # Write header only if file doesn't exist
-            if not file_exists:
-                writer.writeheader()
 
             writer.writerow(run_summary)
             csvfile.flush()

@@ -96,7 +96,9 @@ class SingleRunManager:
                 self.saver.write_epoch_metrics_csv(train_metrics=train_metrics,
                                                    test_metrics=test_metrics,
                                                    epoch_idx=epoch)
+
                 print("update best metrics and check early stopping...")
+
                 if test_metrics.acc_per_epoch > best_test_acc:
                     best_test_acc = test_metrics.acc_per_epoch
                     best_test_metrics = test_metrics
