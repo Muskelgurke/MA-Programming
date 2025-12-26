@@ -1,15 +1,14 @@
 # Base Configuration: Grundeinstellungen für alle Trainings
 base_config:
   cuda_device: 2
-
   random_seed: 43
   learning_rate: 0.0001
   epoch_total: 30
   training_method: fgd_dual
-  dataset_name: mnist
+  dataset_name: flower
   batch_size: 64
   augment_data: false
-  model_type: lenet
+  model_type: densenet
   optimizer: adam
   momentum: 0.9
   loss_function: cross_entropy
