@@ -52,7 +52,7 @@ def get_model(config: Config, sample_batch: tuple) -> nn.Module:
         case "mobilenet":return get_adapted_model(models.mobilenet_v2 ,specs)
         case "densenet":return get_adapted_model(models.densenet121 ,specs)
         case "efficientnet":return get_adapted_model(models.efficientnet_v2_s ,specs)
-        case "lenet": return LeNet5(input_channels, num_classes)
+        case "lenet": return LeNet5(input_channels, num_classes, input_size)
         case _:
             raise ValueError(f"Unknown model type: {config.model_type}")
 
