@@ -121,8 +121,9 @@ class ForwardGradientTrainer_dual(BaseTrainer):
                 # Forward Pass
                 # Wir deaktivieren BN-Tracking, da wir nicht in die Buffer schreiben wollen (Dual Tensor Crash Gefahr)
                 with self.disable_running_stats(self.model):
-                    outputs = self.model(inputs)
-                    loss = loss_func(outputs, targets)
+                    with torch.no_grad():
+                        outputs = self.model(inputs)
+                        loss = loss_func(outputs, targets)
 
                 # Unpack dual Tensors
                 dual_loss = fwAD.unpack_dual(loss)
