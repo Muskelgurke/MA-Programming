@@ -1,9 +1,9 @@
 # Base Configuration: Grundeinstellungen für alle Trainings
 base_config:
-  cuda_device: 0
+  cuda_device: 1
   random_seed: 43
   learning_rate: 0.0001
-  epoch_total: 1
+  epoch_total: 30
   training_method: fgd_dual
   dataset_name: mnist
   batch_size: 64
