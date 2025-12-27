@@ -1,6 +1,7 @@
 import torch
 import sys
 import datetime
+import gc
 
 from helpers.config_class import MultiParamLoader, Config
 from helpers.singlerun_manager_class import SingleRunManager
@@ -18,7 +19,15 @@ def get_config()->str:
 
 def start_nn_run(config_file: Config, device: torch.device, run_number: int, base_path= str) -> None:
     manager = SingleRunManager(config = config_file, device=device, run_number=run_number, base_path=base_path)
-    manager.run()
+    try:
+        manager.run()
+    except Exception as e:
+        print(f"Fehler im Lauf {run_number}: {e}")
+        raise e
+    finally:
+
+        del manager
+        clear_gpu_memory() # Räume GPU auf
 
 def start_training(config_path: str):
     """
@@ -54,6 +63,7 @@ def start_training(config_path: str):
 def clear_gpu_memory():
     """Räumt den GPU-Speicher auf, falls CUDA verfügbar ist."""
     if torch.cuda.is_available():
+        gc.collect()
         torch.cuda.empty_cache()
         torch.cuda.ipc_collect()
         print("GPU-Speicher wurde aufgeräumt.")
