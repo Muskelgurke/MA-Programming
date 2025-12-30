@@ -70,8 +70,8 @@ def clear_gpu_memory():
 
 def get_device()->torch.device:
     """Gibt das Gerät zurück, auf dem das Training durchgeführt werden soll."""
-
-    # Prüfe ob CUDA verfügbar istw (NVIDIA GPUs)
+    """
+    # Prüfe ob CUDA verfügbar ist (NVIDIA GPUs)
     if torch.cuda.is_available():
         gpu_count = torch.cuda.device_count()
         device = torch.device(f"cuda:{config.cuda_device}")
@@ -81,7 +81,8 @@ def get_device()->torch.device:
             print(f"GPU Cluster erkannt: Nutze {torch.cuda.get_device_name(2)}")
             print(f"Verfügbare GPUs: {gpu_count} - CudaDevice ID: {device}")
 
-    return device
+    return device"""
+    pass
 
 if __name__ == "__main__":
 
