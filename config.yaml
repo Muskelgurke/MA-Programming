@@ -47,7 +47,7 @@ multi_params:
 
   training_method:
     - bp
-    - fgd_dual
+    #- fgd_dual
 
   random_seed:
     - 26

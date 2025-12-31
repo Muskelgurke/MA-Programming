@@ -42,7 +42,8 @@ def start_training(config_path: str):
     print(f"Starte insgesamt {len(configs)} Läufe...")
 
     timestamp = datetime.datetime.now().strftime("%m%d_%H%M%S")
-    base_path = f'runs/{timestamp}'
+
+    base_path = f'runs/bp_{timestamp}'
     print(f"base_path: {base_path}")
 
     for i, config in enumerate(configs):
