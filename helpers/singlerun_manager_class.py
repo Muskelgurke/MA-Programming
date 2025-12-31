@@ -2,6 +2,7 @@ import torch
 import time
 import datetime
 from pathlib import Path
+from dataclasses import replace
 from helpers.saver_class import TorchModelSaver
 from helpers.config_class import Config
 from helpers.validation_class import Tester
@@ -101,8 +102,8 @@ class SingleRunManager:
 
                 if test_metrics.acc_per_epoch > best_test_acc:
                     best_test_acc = test_metrics.acc_per_epoch
-                    best_test_metrics = test_metrics
-                    best_train_metrics = train_metrics
+                    best_test_metrics = replace(test_metrics)
+                    best_train_metrics = replace(train_metrics)
                     convergence_epoch = epoch
 
                 if self.early_stopping:

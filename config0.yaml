@@ -37,9 +37,9 @@ multi_params:
     - lenet
   dataset_name:
     - mnist
-    - fashionmnist
-    - cifar10
-    - cifar100
+    #- fashionmnist
+    #- cifar10
+    #- cifar100
     #- flower
     #- food
     #- pet

@@ -1,6 +1,6 @@
 # Base Configuration: Grundeinstellungen für alle Trainings
 base_config:
-  cuda_device: 2
+  cuda_device: 0
   random_seed: 43
   learning_rate: 0.0001
   epoch_total: 1
@@ -23,26 +23,19 @@ base_config:
 # Wenn nicht, wird der Wert aus base_config genommen
 
 multi_params:
-  optimizer:
-    - adam
-    - sgd
   model_type:
-    - alexnet
     - vgg16
     - resnet18
-    - resnet34
     - mobilenet
-    - densenet
-    - efficientnet
     - lenet
   dataset_name:
-    #- mnist
+    - mnist
     #- fashionmnist
     #- cifar10
     #- cifar100
     #- flower
     - food
-    - pet
+    #- pet
 
 #  dataset_name:
 #    - flower

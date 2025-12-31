@@ -33,8 +33,9 @@ class BackpropTrainer(BaseTrainer):
             inputs, targets = inputs.to(device=self.device), targets.to(self.device)
             self.optimizer.zero_grad(set_to_none=True)
 
+            mem_pre_forward = torch.cuda.memory_allocated(device=self.device)
+
             if self.should_track_memory_this_epoch:
-                mem_pre_forward = torch.cuda.memory_allocated(device=self.device)
                 if batch_idx < self.NUM_MEMORY_SNAPSHOTS_IN_EPOCH:
                     self.start_record_memory_history()
 
@@ -43,6 +44,9 @@ class BackpropTrainer(BaseTrainer):
             if self.should_track_memory_this_epoch:
                 mem_post_forward = torch.cuda.memory_allocated(device=self.device)
                 mem_forward.append(mem_post_forward - mem_pre_forward)
+
+            mem_post_forward = torch.cuda.memory_allocated(device=self.device)
+            mem_forward.append(mem_post_forward - mem_pre_forward)
 
             loss = self.loss_function(outputs, targets)
             sum_loss += loss.item()

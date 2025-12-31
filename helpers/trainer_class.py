@@ -42,11 +42,15 @@ class BaseTrainer(ABC):
             )
 
         sample_batch = next(iter(self.train_loader))
+        inputs, targets = sample_batch
 
+        if isinstance(inputs, torch.Tensor):
+            inputs = inputs.to(self.device)
         self.base_memory_bytes = self.get_mem_info()
-
+        print(f"DEBUG MEM: Base Memory: {self.base_memory_bytes} bytes")
         self.model = model_helper.get_model(config=self.config,sample_batch= sample_batch).to(self.device)
         self.mem_parameters_bytes = self.get_mem_info() - self.base_memory_bytes
+        print(f"DEBUG MEM: Post-Model Memory: {self.mem_parameters_bytes} bytes")
 
         self.loss_function = loss_function_helper.get_loss_function(config=self.config)
         self.optimizer = optimizer_helper.get_optimizer(config=self.config,
@@ -61,24 +65,22 @@ class BaseTrainer(ABC):
         """"Trainiert das Modell für eine Epoche und gibt die Trainingsmetriken zurück."""
         self.epoch_num = epoch_num + 1
         self.model.train()
+        self.metrics.mem_base_bytes = self.base_memory_bytes
+        self.metrics.mem_parameter_bytes = self.mem_parameters_bytes
 
         self.should_track_memory_this_epoch = self.epoch_num in self.config.memory_snapshot_epochs
         #print(f"Epoch={self.epoch_num}: Memory Tracking = {self.should_track_memory_this_epoch}")
         epoch_start_time = time.time()
 
-        if self.should_track_memory_this_epoch:
-            torch.cuda.reset_peak_memory_stats()
+        torch.cuda.reset_peak_memory_stats()
 
         self._train_epoch_impl()
 
-        if self.should_track_memory_this_epoch:
-            self.max_memory_bytes = torch.cuda.memory.max_memory_allocated()
+        self.max_memory_bytes = torch.cuda.memory.max_memory_allocated()
 
         epoch_duration = time.time() - epoch_start_time
         self.metrics.epoch_duration = epoch_duration
         self.metrics.max_mem_bytes = self.max_memory_bytes
-        self.metrics.mem_parameter_bytes = self.mem_parameters_bytes
-        self.metrics.mem_base_bytes = self.base_memory_bytes
 
         return self.metrics, self.model
 
