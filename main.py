@@ -43,7 +43,7 @@ def start_training(config_path: str):
 
     timestamp = datetime.datetime.now().strftime("%m%d_%H%M%S")
 
-    base_path = f'runs/bp_{timestamp}'
+    base_path = f'runs/fgd_{timestamp}'
     print(f"base_path: {base_path}")
 
     for i, config in enumerate(configs):
