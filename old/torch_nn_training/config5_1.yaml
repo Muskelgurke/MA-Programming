@@ -14,7 +14,7 @@ base_config:
   loss_function: cross_entropy
   early_stopping: true
   early_stopping_patience: 10
-  early_stopping_delta: 0.001
+  early_stopping_delta: 0.01
   dataset_path: _Dataset
   memory_snapshot_epochs: [1,5,10,15,20]
 
