@@ -57,6 +57,9 @@ class BaseTrainer(ABC):
                                                         model=self.model)
 
         self.metrics = TrainMetrics()
+        self.metrics.mem_base_bytes = self.base_memory_bytes
+        self.metrics.mem_parameter_bytes = self.mem_parameters_bytes
+
         self.total_epochs = self.config.epoch_total
         self.epoch_num = 0
         self.seed = self.config.random_seed
@@ -65,8 +68,6 @@ class BaseTrainer(ABC):
         """"Trainiert das Modell für eine Epoche und gibt die Trainingsmetriken zurück."""
         self.epoch_num = epoch_num + 1
         self.model.train()
-        self.metrics.mem_base_bytes = self.base_memory_bytes
-        self.metrics.mem_parameter_bytes = self.mem_parameters_bytes
 
         self.should_track_memory_this_epoch = self.epoch_num in self.config.memory_snapshot_epochs
         #print(f"Epoch={self.epoch_num}: Memory Tracking = {self.should_track_memory_this_epoch}")
