@@ -48,8 +48,8 @@ def start_training(config_path: str):
     # Check the following Paths for completed runs
     search_paths = [
         '/homes/sojagraf/25_1/MA-Programming/runs',
-        '/homes/sojagraf/25_2/MA-Programming/runs',
-        '/homes/sojagraf/25_3/MA-Programming/runs',
+        #'/homes/sojagraf/25_2/MA-Programming/runs',
+        #'/homes/sojagraf/25_3/MA-Programming/runs',
         # Auch den aktuellen Ordner scannen, falls wir im gleichen Ordner weitermachen
         'runs'
     ]
