@@ -1,53 +1,52 @@
 # Base Configuration: Grundeinstellungen für alle Trainings
 base_config:
-  cuda_device: 2
   random_seed: 43
-  learning_rate: 0.0001
-  epoch_total: 1
-  training_method: fgd_dual
-  dataset_name: mnist
+  learning_rate: 0.00125
+  epoch_num: 10
+  training_method: fgd
+  dataset_name: cifar10
   batch_size: 64
   augment_data: false
-  model_type: alexnet
+  model_type: cnn
   optimizer: adam
   momentum: 0.9
   loss_function: cross_entropy
   early_stopping: true
-  early_stopping_patience: 15
-  early_stopping_delta: 0.001
+  early_stopping_patience: 5
+  early_stopping_delta: 0.01
   dataset_path: _Dataset
-  memory_snapshot_epochs: [1,5,10,15,20]
-
 # Multi-Parameter Configuration: Parameter für Grid-Search
 # Wenn ein Parameter hier definiert ist, wird er für Multi-Training verwendet
 # Wenn nicht, wird der Wert aus base_config genommen
-
 multi_params:
-  optimizer:
-    - adam
-    - sgd
-  model_type:
-    - alexnet
-    - vgg16
-    - resnet18
-    - resnet34
-    - mobilenet
-    - densenet
-    - efficientnet
-    - lenet
-  dataset_name:
-    #- mnist
-    #- fashionmnist
-    #- cifar10
-    #- cifar100
-    #- flower
-    - food
-    - pet
+  learning_rate:
+    - 0.000175
+    - 0.00015
+    - 0.0002
+    - 0.000225
+    - 0.00025
+    - 0.000275
+    - 0.0003
+    - 0.0004
+    - 0.0005
+    - 0.0006
+    - 0.0007
+    - 0.0008
+    - 0.0009
+    - 0.001
+    - 0.00125
+    - 0.0015
+  training_method:
+    - fgd
 
-#  dataset_name:
-#    - flower
-#    - food
-#    - pet
+  random_seed:
+    - 42
+    - 69
+    - 103
+    - 256
+  optimizer:
+    - sgd
+    - adam
 
   #momentum:
   #  - 0.8

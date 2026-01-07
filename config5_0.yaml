@@ -6,7 +6,7 @@ base_config:
   epoch_total: 100
   training_method: fgd_dual
   dataset_name: mnist
-  batch_size: 64
+  batch_size: 128
   augment_data: false
   model_type: alexnet
   optimizer: adam

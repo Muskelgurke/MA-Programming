@@ -1,5 +1,6 @@
 import torch.nn as nn
 import torch
+import numpy as np
 import torchvision.models as models
 import torch.nn.functional as F
 
@@ -23,6 +24,22 @@ def get_model(config: Config, sample_batch: tuple) -> nn.Module:
     # for Torchaudio datasets (yes_no)
     if isinstance(targets, list):
         targets = torch.tensor(targets)
+    # inputs, targets = sample_batch ... (dein Code)
+
+    # 1. Anzahl der Elemente pro Batch (für die Formel)
+    # Wir multiplizieren alle Dimensionen ab Index 1 (lassen Batch-Dim 0 weg)
+    single_sample_elements = np.prod(inputs.shape[1:])
+
+    # 2. Speicherbedarf für den gesamten Batch (M_Input) in Bytes
+    # numel() gibt die Gesamtanzahl aller Elemente im Tensor zurück (inkl. Batch)
+    # element_size() gibt die Bytes pro Zahl zurück (z.B. 4 für float32)
+    total_input_memory_bytes = inputs.numel() * inputs.element_size()
+
+    print(f"Shape des Inputs: {inputs.shape}")
+    print(f"Elemente pro Sample (Input-Dim): {single_sample_elements}")
+    print(f"Speicherbedarf M_Input (Batch): {total_input_memory_bytes / 1024 ** 2:.2f} MB")
+
+    exit()
 
     # Bestimme Anzahl der Klassen aus dem gesamten Dataset, nicht nur aus dem Batch
     match config.dataset_name.lower():

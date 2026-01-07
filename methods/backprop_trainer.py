@@ -29,8 +29,8 @@ class BackpropTrainer(BaseTrainer):
         """
 
         for batch_idx, (inputs, targets) in enumerate(pbar):
+            #inputs, targets = inputs.to(device=self.device), targets.to(self.device)
 
-            inputs, targets = inputs.to(device=self.device), targets.to(self.device)
             self.optimizer.zero_grad(set_to_none=True)
 
             mem_pre_forward = torch.cuda.memory_allocated(device=self.device)
