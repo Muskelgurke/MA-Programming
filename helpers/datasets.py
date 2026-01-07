@@ -77,6 +77,94 @@ def _create_dataloaders(train_dataset: torch.utils.data.Dataset,
                         test_dataset: torch.utils.data.Dataset,
                         config: Config,
                         device: torch.device,
+                        cache_to_gpu: bool = True) -> tuple[
+    torch.utils.data.DataLoader, torch.utils.data.DataLoader]:
+    """
+    Erstellt Dataloaders mit automatischem Fallback-Mechanismus.
+    Versucht GPU-Caching, fällt bei OOM aber auf RAM-Streaming zurück.
+    """
+
+    # Imports hier, falls noch nicht oben vorhanden
+    import torch.multiprocessing
+    try:
+        torch.multiprocessing.set_sharing_strategy('file_system')
+    except RuntimeError:
+        pass
+
+    # 1. Wir laden ALLES in den RAM (mit großen Batches für Speed)
+    # Das hast du schon getestet, das ist schnell.
+    print(f"DATASET-> Pre-loading data into RAM (Workers: 8)...")
+
+    def load_to_ram(dataset):
+        loader = DataLoader(dataset, batch_size=256, num_workers=8, shuffle=False)
+        x_list, y_list = [], []
+        for x, y in loader:
+            x_list.append(x)
+            y_list.append(y)
+        return torch.cat(x_list), torch.cat(y_list)
+
+    try:
+        print(f"DATASET-> Loading Training Data...")
+        train_x, train_y = load_to_ram(train_dataset)
+
+        print(f"DATASET-> Loading Test Data...")
+        test_x, test_y = load_to_ram(test_dataset)
+
+        # 2. Versuch: Ab auf die GPU damit!
+        if cache_to_gpu:
+            print("DATASET-> Trying to move data to GPU...", end="")
+            train_x = train_x.to(device)
+            train_y = train_y.to(device)
+            test_x = test_x.to(device)
+            test_y = test_y.to(device)
+            print(" Success! 🚀")
+
+            # Wenn wir hier sind, ist alles auf der GPU.
+            # Finaler Loader braucht keine Worker mehr.
+            train_loader = DataLoader(TensorDataset(train_x, train_y),
+                                      batch_size=config.batch_size,
+                                      shuffle=True,
+                                      num_workers=0)
+            test_loader = DataLoader(TensorDataset(test_x, test_y),
+                                     batch_size=config.batch_size,
+                                     shuffle=False,
+                                     num_workers=0)
+            return train_loader, test_loader
+
+    except RuntimeError as e:
+        # 3. FALLBACK: Wenn der GPU Speicher voll ist (OOM)
+        if "out of memory" in str(e).lower() or "allocate" in str(e).lower():
+            print("\nWARNUNG: GPU voll! Fallback auf RAM-Streaming. (Keine Sorge, Training läuft weiter).")
+
+            train_loader = DataLoader(TensorDataset(train_x, train_y),
+                                      batch_size=config.batch_size,
+                                      shuffle=True,
+                                      num_workers=0,  # Bei TensorDataset im RAM sind 0 Worker oft schneller
+                                      pin_memory=False)
+
+            test_loader = DataLoader(TensorDataset(test_x, test_y),
+                                     batch_size=config.batch_size,
+                                     shuffle=False,
+                                     num_workers=0,
+                                     pin_memory=False)
+
+            return train_loader, test_loader
+        else:
+            raise e  # Anderer Fehler? Absturz.
+
+    # Fallback für den Fall cache_to_gpu=False explizit gesetzt
+    train_loader = DataLoader(TensorDataset(train_x, train_y), batch_size=config.batch_size, shuffle=True,
+                              num_workers=0, pin_memory=False)
+    test_loader = DataLoader(TensorDataset(test_x, test_y), batch_size=config.batch_size, shuffle=False,
+                             num_workers=0, pin_memory=False)
+
+    return train_loader, test_loader
+
+
+def _create_dataloaders_v0(train_dataset: torch.utils.data.Dataset,
+                        test_dataset: torch.utils.data.Dataset,
+                        config: Config,
+                        device: torch.device,
                         cache_to_gpu: bool = True) -> tuple[torch.utils.data.DataLoader, torch.utils.data.DataLoader]:
     """ Private helper function to create dataloaders from datasets.
 
@@ -95,6 +183,7 @@ def _create_dataloaders(train_dataset: torch.utils.data.Dataset,
 
         dataset = TensorDataset(x, y)
         return dataset
+
     """
     def get_dataset(dataloader: DataLoader) -> TensorDataset:
         print(f"DATASET-> Starting Loading entire dataset into memory (Batch size: {dataloader.batch_size})...")

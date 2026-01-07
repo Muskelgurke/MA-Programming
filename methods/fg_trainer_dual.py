@@ -14,9 +14,8 @@ class ForwardGradientTrainer_dual(BaseTrainer):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        # 1. HACK: Parameter "befreien"
-        # Wir speichern die echten Parameter separat und löschen sie aus der Modell-Registrierung,
-        # damit wir sie später durch Dual Tensors ersetzen können.
+
+
         self.params_store = {}
         self.param_names = []
 
@@ -88,7 +87,9 @@ class ForwardGradientTrainer_dual(BaseTrainer):
                 if batch_idx < self.NUM_MEMORY_SNAPSHOTS_IN_EPOCH:
                     self.start_record_memory_history()
 
-            #inputs, targets = inputs.to(self.device), targets.to(self.device)
+            inputs = inputs.to(self.device, non_blocking=True)
+            targets = targets.to(self.device, non_blocking=True)
+
             self.optimizer.zero_grad()
 
             #print(f"Mem before forward: {mem_pre_forward} bytes")
