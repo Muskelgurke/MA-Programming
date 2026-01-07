@@ -344,7 +344,7 @@ def get_food101_dataloaders(config: Config, device: torch.device)-> tuple[torch.
 
     test_dataset = datasets.Food101(root=config.dataset_path,split='test',download=True,transform=transform_food)
 
-    return _create_dataloaders(train_dataset, test_dataset, config, device)
+    return _create_dataloaders(train_dataset, test_dataset, config, device, cache_to_gpu=False)
 
 def get_flower102_dataloaders(config: Config, device: torch.device)-> tuple[torch.utils.data.DataLoader, torch.utils.data.DataLoader]:
     """
