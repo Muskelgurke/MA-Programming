@@ -35,9 +35,9 @@ def get_model(config: Config, sample_batch: tuple) -> nn.Module:
     # element_size() gibt die Bytes pro Zahl zurück (z.B. 4 für float32)
     total_input_memory_bytes = inputs.numel() * inputs.element_size()
 
-    print(f"Shape des Inputs: {inputs.shape}")
-    print(f"Elemente pro Sample (Input-Dim): {single_sample_elements}")
-    print(f"Speicherbedarf M_Input (Batch): {total_input_memory_bytes / 1024 ** 2:.2f} MB")
+    print(f"MODEL-> Shape des Inputs: {inputs.shape}")
+    print(f"MODEL-> Elemente pro Sample (Input-Dim): {single_sample_elements}")
+    print(f"MODEL-> Speicherbedarf M_Input (Batch): {total_input_memory_bytes / 1024 ** 2:.2f} MB")
 
 
 

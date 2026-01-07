@@ -10,18 +10,18 @@ from tqdm import tqdm
 
 class Tester():
 
-    def __init__(self,config_file: Config, device: torch.device, saver_class: TorchModelSaver):
+    def __init__(self,config_file: Config, device: torch.device, saver_class: TorchModelSaver, test_loader: torch.utils.data.DataLoader):
 
         self.config = config_file
         self.device = device
         self.saver = saver_class
+        self.test_loader = test_loader
 
         self._initialize_components()
 
     def _initialize_components(self):
         self.model = None
-        xx , self.test_loader = datasets_helper.get_dataloaders(config=self.config,
-                                                                device=self.device)
+
         self.loss_function = loss_function_helper.get_loss_function(config=self.config)
 
         self.seed = self.config.random_seed

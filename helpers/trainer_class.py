@@ -16,12 +16,13 @@ from pathlib import Path
 
 class BaseTrainer(ABC):
 
-    def __init__(self, config_file=Config, device= torch.device, saver_class = TorchModelSaver):
+    def __init__(self, config_file=Config, device= torch.device, saver_class = TorchModelSaver, train_loader= torch.utils.data.DataLoader ):
 
         self.config = config_file
         self.device = device
         self.saver = saver_class
         self.runsPath = str(self.saver.run_dir)
+        self.train_loader = train_loader
         self._initialize_components()
 
         self.should_track_memory_this_epoch = False
@@ -33,6 +34,7 @@ class BaseTrainer(ABC):
         self.max_memory_bytes = 0
 
     def _initialize_components(self):
+
         self.train_loader, xx = datasets_helper.get_dataloaders(config=self.config,
                                                                device=self.device)
         if len(self.train_loader) == 0:
@@ -50,10 +52,10 @@ class BaseTrainer(ABC):
         if isinstance(inputs, torch.Tensor):
             inputs = inputs.to(self.device)
         self.base_memory_bytes = self.get_mem_info()
-        print(f"DEBUG MEM: Base Memory: {self.base_memory_bytes} bytes")
+        print(f"TRAINERCLASS-> DEBUG MEM: Base Memory: {self.base_memory_bytes} bytes")
         self.model = model_helper.get_model(config=self.config,sample_batch= sample_batch).to(self.device)
         self.mem_parameters_bytes = self.get_mem_info() - self.base_memory_bytes
-        print(f"DEBUG MEM: Post-Model Memory: {self.mem_parameters_bytes} bytes")
+        print(f"TRAINERCLASS-> DEBUG MEM: Post-Model Memory: {self.mem_parameters_bytes} bytes")
 
         self.loss_function = loss_function_helper.get_loss_function(config=self.config)
         self.optimizer = optimizer_helper.get_optimizer(config=self.config,
@@ -108,10 +110,10 @@ class BaseTrainer(ABC):
         file_path = f"{self.runsPath}/{file_name}"
 
         try:
-            print(f"Saving snapshot to local file: {file_path}.pickl")
+            print(f"TRAINERCLASS-> Saving snapshot to local file: {file_path}.pickl")
             torch.cuda.memory._dump_snapshot(f"{file_path}.pickle")
         except Exception as e:
-            print(f"Failed to capture memory snapshot {e}")
+            print(f"TRAINERCLASS-> Failed to capture memory snapshot {e}")
             return
 
     def _create_progress_bar(self, desc: str = None) -> tqdm:

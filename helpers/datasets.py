@@ -76,27 +76,34 @@ def get_dataloaders(config: Config, device: torch.device) -> tuple[torch.utils.d
 def _create_dataloaders(train_dataset: torch.utils.data.Dataset,
                         test_dataset: torch.utils.data.Dataset,
                         config: Config,
-                        device: torch.device) -> tuple[torch.utils.data.DataLoader, torch.utils.data.DataLoader]:
+                        device: torch.device,
+                        cache_to_gpu: bool = True) -> tuple[torch.utils.data.DataLoader, torch.utils.data.DataLoader]:
     """ Private helper function to create dataloaders from datasets. """
 
     def get_dataset(dataloader: DataLoader) -> TensorDataset:
-        print("Starting Loading entire dataset into memory...")
+        print("DATASET-> Starting Loading entire dataset into memory...")
         stack_x = list()
         stack_y = list()
         for idx, (x, y) in enumerate(dataloader):
             stack_x.append(x)
             stack_y.append(y)
+            if idx% 10 == 0:
+                print(f"DATASET-> Loaded {idx}/{len(dataloader)} samples into memory...")
+        print("\nDATASET->  Concatenating all samples...")
         x = torch.squeeze(torch.stack(stack_x), 1).to(device)
         y = torch.squeeze(torch.stack(stack_y), 1).to(device)
         dataset = TensorDataset(x, y)
         return dataset
 
-    train_dataset = get_dataset(DataLoader(train_dataset, batch_size=1))
-    test_dataset = get_dataset(DataLoader(test_dataset, batch_size=1))
-    print("Finished loading entire dataset into memory.")
-    train_drop_last = len(train_dataset) > config.batch_size
+    print("DATASET-> Pre-loading Training Data...")
+    train_dataset_on_gpu = get_dataset(DataLoader(train_dataset, batch_size=256,num_workers=8))
+    print("DATASET-> Pre-loading Test Data...")
+    test_dataset_on_gpu = get_dataset(DataLoader(test_dataset, batch_size=256,num_workers=8))
+    print("DATASET-> Finished loading entire dataset into memory.")
 
-    train_loader = torch.utils.data.DataLoader(dataset=train_dataset,
+    train_drop_last = len(train_dataset_on_gpu) > config.batch_size
+
+    train_loader = torch.utils.data.DataLoader(dataset=train_dataset_on_gpu,
                                                batch_size=config.batch_size,
                                                shuffle=True,
                                                num_workers=0,
@@ -104,7 +111,8 @@ def _create_dataloaders(train_dataset: torch.utils.data.Dataset,
                                                pin_memory = False,
                                                drop_last=train_drop_last
                                                )
-    test_loader = torch.utils.data.DataLoader(dataset=test_dataset,
+
+    test_loader = torch.utils.data.DataLoader(dataset=test_dataset_on_gpu,
                                               batch_size=config.batch_size,
                                               shuffle=False,
                                               num_workers=0,
@@ -116,6 +124,7 @@ def _create_dataloaders(train_dataset: torch.utils.data.Dataset,
 
 
     return train_loader, test_loader
+
 def get_audio_transform(sample_rate: int=16000, n_mels: int=64, target_length: int= 100):
     """Create Tranform pipeline for audio to mel-spectrogram conversion"""
 
@@ -445,7 +454,6 @@ def get_linear_regression_dataloaders(config: Config) -> tuple[torch.utils.data.
     test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=config.batch_size, shuffle=False)
     return train_loader, test_loader
 
-
 class YesNoDataset(torch.utils.data.Dataset):
     """YesNo Dataset returns: transformed_waveform, label_index"""
 
@@ -487,7 +495,6 @@ class YesNoDataset(torch.utils.data.Dataset):
 
         # Das zurückgegebene Label muss ein Tensor sein
         return transformed, torch.tensor(label_idx, dtype=torch.long)
-
 
 class SpeechCommandsDataset(torch.utils.data.Dataset):
     """SpeechCommand dataset returns: transformed_waveform, label_index"""

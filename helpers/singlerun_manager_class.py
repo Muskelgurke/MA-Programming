@@ -12,6 +12,7 @@ from methods.fg_trainer import ForwardGradientTrainer
 from methods.fg_trainer_ResNetTest import ForwardGradientTrainer_test
 from methods.fg_trainer_dual import ForwardGradientTrainer_dual
 from helpers.early_stopping_class import EarlyStopping
+from datasets import get_dataloaders
 
 class SingleRunManager:
     """Verwaltet einen einzelnen Trainingslauf von A bis Z."""
@@ -33,6 +34,9 @@ class SingleRunManager:
         self.saver = TorchModelSaver(base_path=self.base_path,
                                      run_path=run_path)
 
+        print("SingleRunMng-> Initialize Dataloaders in Manager...")
+        self.train_loader, self.test_loaders = get_dataloaders(self.config, self.device)
+
         self.trainer = self._create_trainer()
 
         self.tester = self._create_tester()
@@ -49,7 +53,8 @@ class SingleRunManager:
     def _create_tester(self):
         return Tester(config_file=self.config,
                       device=self.device,
-                      saver_class=self.saver)
+                      saver_class=self.saver,
+                      test_loader=self.test_loaders)
 
     def _create_trainer(self) -> BaseTrainer:
 
@@ -57,19 +62,23 @@ class SingleRunManager:
             case "fgd":
                 return ForwardGradientTrainer(config_file=self.config,
                                               device=self.device,
-                                              saver_class=self.saver)
+                                              saver_class=self.saver,
+                                              train_loader = self.train_loader)
             case "fgd_test":
                 return ForwardGradientTrainer_test(config_file=self.config,
                                               device=self.device,
-                                              saver_class=self.saver)
+                                              saver_class=self.saver,
+                                                train_loader = self.train_loader)
             case "fgd_dual":
                 return ForwardGradientTrainer_dual(config_file=self.config,
                                                    device=self.device,
-                                                   saver_class=self.saver)
+                                                   saver_class=self.saver,
+                                                   train_loader = self.train_loader)
             case "bp":
                 return BackpropTrainer(config_file=self.config,
                                        device=self.device,
-                                       saver_class=self.saver)
+                                       saver_class=self.saver,
+                                       train_loader = self.train_loader)
             case _:
                 raise ValueError(f"Unknown Training - Method: {self.config.training_method}")
 
