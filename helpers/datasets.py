@@ -80,6 +80,7 @@ def _create_dataloaders(train_dataset: torch.utils.data.Dataset,
     """ Private helper function to create dataloaders from datasets. """
 
     def get_dataset(dataloader: DataLoader) -> TensorDataset:
+        print("Starting Loading entire dataset into memory...")
         stack_x = list()
         stack_y = list()
         for idx, (x, y) in enumerate(dataloader):
@@ -92,7 +93,7 @@ def _create_dataloaders(train_dataset: torch.utils.data.Dataset,
 
     train_dataset = get_dataset(DataLoader(train_dataset, batch_size=1))
     test_dataset = get_dataset(DataLoader(test_dataset, batch_size=1))
-
+    print("Finished loading entire dataset into memory.")
     train_drop_last = len(train_dataset) > config.batch_size
 
     train_loader = torch.utils.data.DataLoader(dataset=train_dataset,
