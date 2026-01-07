@@ -22,17 +22,17 @@ base_config:
 multi_params:
   # Load Balancing: Mischung aus Mittel und Leicht
   model_type:
+    - vgg16
+    - resnet18
     - efficientnet
+    - alexnet
+    - densenet
+    - mobilenet
     - resnet34
+    - lenet
 
   dataset_name:
-    - mnist
-    - fashionmnist
-    - cifar10
-    - cifar100
-    - flower
     - food
-    - pet
 
   optimizer:
     - sgd

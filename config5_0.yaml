@@ -24,6 +24,7 @@ multi_params:
   model_type:
     - densenet
     - mobilenet
+    - resnet34
     - lenet
 
   dataset_name:
@@ -32,7 +33,6 @@ multi_params:
     - cifar10
     - cifar100
     - flower
-    - food
     - pet
 
   optimizer:
