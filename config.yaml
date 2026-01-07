@@ -1,6 +1,6 @@
 # Base Configuration
 base_config:
-  cuda_device: 1
+  cuda_device: 2
   random_seed: 43
   learning_rate: 0.0001
   epoch_total: 100
@@ -26,14 +26,13 @@ multi_params:
     - resnet18
     - efficientnet
     - alexnet
+    - densenet
+    - mobilenet
+    - resnet34
+    - lenet
 
   dataset_name:
-    - mnist
-    - fashionmnist
-    - cifar10
-    - cifar100
-    - flower
-    - pet
+    - food
 
   optimizer:
     - sgd
