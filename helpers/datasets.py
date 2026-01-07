@@ -125,9 +125,9 @@ def _create_dataloaders(train_dataset: torch.utils.data.Dataset,
         return dataset
 
     print("DATASET-> Pre-loading Training Data...")
-    train_dataset_on_gpu = get_dataset(DataLoader(train_dataset, batch_size=1,num_workers=8))
+    train_dataset_on_gpu = get_dataset(DataLoader(train_dataset, batch_size=256,num_workers=8))
     print("DATASET-> Pre-loading Test Data...")
-    test_dataset_on_gpu = get_dataset(DataLoader(test_dataset, batch_size=1,num_workers=8))
+    test_dataset_on_gpu = get_dataset(DataLoader(test_dataset, batch_size=256,num_workers=8))
     print("DATASET-> Finished loading entire dataset into memory.")
 
     train_drop_last = len(train_dataset_on_gpu) > config.batch_size
