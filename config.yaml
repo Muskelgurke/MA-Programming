@@ -1,6 +1,6 @@
 # Base Configuration
 base_config:
-  cuda_device: 2
+  cuda_device: 1
   random_seed: 43
   learning_rate: 0.0001
   epoch_total: 100
@@ -22,8 +22,9 @@ base_config:
 multi_params:
   # Load Balancing: Mischung aus Mittel und Leicht
   model_type:
-    - efficientnet
-    - resnet34
+    - vgg16
+    - resnet18
+    - alexnet
 
   dataset_name:
     - mnist
