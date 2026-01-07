@@ -12,7 +12,7 @@ from methods.fg_trainer import ForwardGradientTrainer
 from methods.fg_trainer_ResNetTest import ForwardGradientTrainer_test
 from methods.fg_trainer_dual import ForwardGradientTrainer_dual
 from helpers.early_stopping_class import EarlyStopping
-from datasets import get_dataloaders
+from helpers.datasets import get_dataloaders
 
 class SingleRunManager:
     """Verwaltet einen einzelnen Trainingslauf von A bis Z."""
