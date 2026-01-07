@@ -35,8 +35,6 @@ class BaseTrainer(ABC):
 
     def _initialize_components(self):
 
-        self.train_loader, xx = datasets_helper.get_dataloaders(config=self.config,
-                                                               device=self.device)
         if len(self.train_loader) == 0:
             raise ValueError(
                 f"Train DataLoader ist leer! "
@@ -45,9 +43,6 @@ class BaseTrainer(ABC):
 
         sample_batch = next(iter(self.train_loader))
         inputs, targets = sample_batch
-        ##löschen!!!
-        self.model = model_helper.get_model(config=self.config, sample_batch=sample_batch).to(self.device)
-        ##duplikate löschen
 
         if isinstance(inputs, torch.Tensor):
             inputs = inputs.to(self.device)
