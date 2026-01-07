@@ -39,7 +39,7 @@ def get_model(config: Config, sample_batch: tuple) -> nn.Module:
     print(f"Elemente pro Sample (Input-Dim): {single_sample_elements}")
     print(f"Speicherbedarf M_Input (Batch): {total_input_memory_bytes / 1024 ** 2:.2f} MB")
 
-    exit()
+
 
     # Bestimme Anzahl der Klassen aus dem gesamten Dataset, nicht nur aus dem Batch
     match config.dataset_name.lower():
