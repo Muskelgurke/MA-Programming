@@ -87,18 +87,19 @@ def _create_dataloaders(train_dataset: torch.utils.data.Dataset,
         for idx, (x, y) in enumerate(dataloader):
             stack_x.append(x)
             stack_y.append(y)
-            if idx% 10 == 0:
+            if idx% 20 == 0:
                 print(f"DATASET-> Loaded {idx}/{len(dataloader)} samples into memory...")
         print("\nDATASET->  Concatenating all samples...")
         x = torch.squeeze(torch.stack(stack_x), 1).to(device)
         y = torch.squeeze(torch.stack(stack_y), 1).to(device)
+
         dataset = TensorDataset(x, y)
         return dataset
 
     print("DATASET-> Pre-loading Training Data...")
-    train_dataset_on_gpu = get_dataset(DataLoader(train_dataset, batch_size=256,num_workers=8))
+    train_dataset_on_gpu = get_dataset(DataLoader(train_dataset, batch_size=1,num_workers=8))
     print("DATASET-> Pre-loading Test Data...")
-    test_dataset_on_gpu = get_dataset(DataLoader(test_dataset, batch_size=256,num_workers=8))
+    test_dataset_on_gpu = get_dataset(DataLoader(test_dataset, batch_size=1,num_workers=8))
     print("DATASET-> Finished loading entire dataset into memory.")
 
     train_drop_last = len(train_dataset_on_gpu) > config.batch_size
