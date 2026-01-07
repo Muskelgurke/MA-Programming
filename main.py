@@ -160,9 +160,6 @@ def create_config_list_of_completed_runs(directory: str) -> Any:
 
         return None
 
-
-
-
 def clear_gpu_memory():
     """Räumt den GPU-Speicher auf, falls CUDA verfügbar ist."""
     if torch.cuda.is_available():
@@ -188,9 +185,4 @@ def get_device()->torch.device:
     pass
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--config", type=str, default="config.yaml", help="Pfad zur Config Datei")
-    args = parser.parse_args()
-
-    start_training(config_path=args.config)
     start_training(config_path = get_config())

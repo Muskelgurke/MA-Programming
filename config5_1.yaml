@@ -23,8 +23,8 @@ multi_params:
   # Load Balancing: Mischung aus Mittel und Leicht
   model_type:
     - vgg16
-    - mobilenet
-    - lenet
+    - resnet18
+    - alexnet
 
   dataset_name:
     - mnist
