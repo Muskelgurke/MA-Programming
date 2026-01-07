@@ -78,7 +78,7 @@ def _create_dataloaders(train_dataset: torch.utils.data.Dataset,
                         config: Config,
                         device: torch.device,
                         cache_to_gpu: bool = True) -> tuple[torch.utils.data.DataLoader, torch.utils.data.DataLoader]:
-    """ Private helper function to create dataloaders from datasets. """
+    """ Private helper function to create dataloaders from datasets.
 
     def get_dataset(dataloader: DataLoader) -> TensorDataset:
         print("DATASET-> Starting Loading entire dataset into memory...")
@@ -94,6 +94,34 @@ def _create_dataloaders(train_dataset: torch.utils.data.Dataset,
         y = torch.squeeze(torch.stack(stack_y), 1).to(device)
 
         dataset = TensorDataset(x, y)
+        return dataset
+    """
+    def get_dataset(dataloader: DataLoader) -> TensorDataset:
+        print(f"DATASET-> Starting Loading entire dataset into memory (Batch size: {dataloader.batch_size})...")
+        stack_x = list()
+        stack_y = list()
+
+        # 1. Daten einsammeln (CPU)
+        for idx, (x, y) in enumerate(dataloader):
+            stack_x.append(x)
+            stack_y.append(y)
+            if idx % 20 == 0:
+                print(f"DATASET-> Loaded chunk {idx}/{len(dataloader)}...", end='\r')
+
+        print("\nDATASET-> Concatenating and moving to GPU...")
+
+        # 2. Zusammenfügen (cat statt stack!)
+        # cat verbindet entlang der Dimension 0 (Batch-Dimension)
+        # Wir machen das erst auf der CPU, dann .to(device) -> Sicherer gegen Abstürze
+        try:
+            full_x = torch.cat(stack_x, dim=0).to(device)
+            full_y = torch.cat(stack_y, dim=0).to(device)
+        except RuntimeError as e:
+            print(f"\nFATAL ERROR: Not enough GPU memory to hold the entire dataset! Error: {e}")
+            # Fallback oder Abbruch hier behandeln
+            raise e
+
+        dataset = TensorDataset(full_x, full_y)
         return dataset
 
     print("DATASET-> Pre-loading Training Data...")
