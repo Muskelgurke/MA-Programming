@@ -1,6 +1,7 @@
 import torch
 import time
 import datetime
+import random
 from pathlib import Path
 from dataclasses import replace
 from helpers.saver_class import TorchModelSaver
@@ -23,8 +24,16 @@ class SingleRunManager:
         self.device = device
         self.total_time = 0
         self.base_path = base_path
-
+        self._seed_setup()
         self._setup_run()
+
+    def _seed_setup(self):
+        seed = self.config.random_seed
+        torch.manual_seed(seed)
+        torch.cuda.manual_seed(seed)
+        random.seed(seed)
+        torch.backends.cudnn.deterministic = True
+        torch.backends.cudnn.benchmark = False
 
     def _setup_run(self):
         timestamp = datetime.datetime.now().strftime("%m%d_%H%M%S")
