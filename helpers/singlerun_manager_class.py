@@ -125,7 +125,10 @@ class SingleRunManager:
                     print(f"Early stopping counter: {self.early_stopping.counter} / {self.early_stopping.patience}")
                     print(f"")
                     if self.early_stopping.early_stop:
+                        print("Early stopping ausgelöst. Beende Training...")
+
                         convergence_epoch = epoch
+
                         break
 
             self.total_time = time.time() - total_start_time

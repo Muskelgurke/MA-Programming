@@ -1,6 +1,6 @@
 # Base Configuration
 base_config:
-  cuda_device: 2
+  cuda_device: 0
   random_seed: 43
   learning_rate: 0.0001
   epoch_total: 100
@@ -22,17 +22,18 @@ base_config:
 multi_params:
   # Load Balancing: Mischung aus Mittel und Leicht
   model_type:
-    - vgg16
-    - resnet18
-    - efficientnet
-    - alexnet
     - densenet
     - mobilenet
     - resnet34
     - lenet
 
   dataset_name:
-    - food
+    - mnist
+    - fashionmnist
+    - cifar10
+    - cifar100
+    - flower
+    - pet
 
   optimizer:
     - sgd
@@ -42,7 +43,7 @@ multi_params:
     - 0.01 # Standard SGD
     - 0.001 # Standard ADAM
     - 0.0005
-    - 0.0001
+    - 0.0001 # die beste von FGD bei ADAM
     - 0.00005
 
   training_method:
@@ -50,6 +51,11 @@ multi_params:
     - fgd_dual
 
   random_seed:
-    - 26
-    - 8
-    - 101
+    #- 26
+    #- 8
+    #- 101
+    - 7
+    - 1337
+    - 2025
+    - 42
+    - 69

@@ -42,7 +42,7 @@ multi_params:
     - 0.01 # Standard SGD
     - 0.001 # Standard ADAM
     - 0.0005
-    - 0.0001
+    - 0.0001 # die beste von FGD bei ADAM
     - 0.00005
 
   training_method:
@@ -53,3 +53,8 @@ multi_params:
     - 26
     - 8
     - 101
+    - 7
+    - 1337
+    - 2025
+    - 42
+    - 69
