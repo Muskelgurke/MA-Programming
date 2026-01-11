@@ -32,10 +32,10 @@ def print_parameters(model: nn.Module):
 
 # Call the function
 if __name__ == "__main__":
-    #model = models.alexnet(pretrained=False)
+    model = models.alexnet(pretrained=False)
     #model = models.vgg16(pretrained=False)
     #model = models.densenet121(pretrained=False)
-    model = models.efficientnet_v2_s(pretrained=False)
+    #model = models.efficientnet_v2_s(pretrained=False)
     #model = models.mobilenet_v2(pretrained=False)
     #model = models.resnet18(pretrained=False)
     #model = models.resnet34(pretrained=False)

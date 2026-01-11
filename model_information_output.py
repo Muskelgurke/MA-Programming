@@ -2,8 +2,10 @@ import torch
 import torchvision.models as models
 
 # ResNet18 Modell erstellen
+
 #model = models.resnet18(pretrained=False)
-model = models.vgg16(pretrained=False)
+#model = models.vgg16(pretrained=False)
+model = models.alexnet(pretrained=False)
 
 # Modell-Struktur ausgeben
 #print("ResNet18 Modell-Struktur:")
