@@ -2,8 +2,11 @@ import torch
 import torch.nn as nn
 import torchvision.models as models
 import pandas as pd
+import helpers.model as model_helper
+from helpers.datasets import get_sample_batch
+from helpers.config_class import Config
 
-# Deine LeNet5 Klasse (aus deiner Frage kopiert, damit das Skript vollständig ist)
+
 class LeNet5(nn.Module):
     def __init__(self, num_input_channel, num_classes, input_size):
         super(LeNet5, self).__init__()
@@ -123,10 +126,12 @@ class ModelMemoryAnalyzer:
             "K_h": k_h, "K_w": k_w,  # Kernel Size
             "S_h": s_h, "S_w": s_w,  # Stride
             "P_h": p_h, "P_w": p_w,  # Padding
-            "d": d_h,  # Dilation (Vereinfacht d_h)
-            "G": groups,  # Groups
-            "NUMEL_Params_bytes": sum(p.numel() for p in module.parameters()),  # Gewichte + Bias
-            "NUMEL_Activations_bytes": output.numel()  # Output Aktivierungen
+            "d": d_h,
+            "G": groups,
+            "numel_params": sum(p.numel() for p in module.parameters()),  # Gewichte + Bias
+            "numel_params_bytes": int,
+            "numel_activations": output.numel(), # Output Aktivierungen
+            "numel_activations_bytes": int
         })
 
 
@@ -157,14 +162,11 @@ class ModelMemoryAnalyzer:
 def calc_parameter_memory(row):
     # Fall 1: Linear Layer
     if row["Layer"] == "Linear":
-        # N_in * N_out * 4 Bytes + N_out * 4 Bytes (Bias)
         params = int(row["N_in"]) * int(row["N_out"]) + int(row["N_out"])
         return params
 
     # Fall 2: Conv Layer
     elif row["Layer"] == "Conv2d":
-
-
         params = (int(row["K_h"]) * int(row["K_w"]) *
          (int(row["N_in"]) // row["G"]) * int(row["N_out"]) +
          int(row["N_out"]))
@@ -172,11 +174,10 @@ def calc_parameter_memory(row):
     return 0
 
 
-def calc_activation_memory(row):
+def calc_activation(row):
     # Fall 1: Linear Layer (Wir nutzen N_in wie in deiner Formel)
     BATCH_SIZE = row["BatchSize"]
     if row["Layer"] == "Linear":
-        # B * N_in * 4 Bytes
         return BATCH_SIZE * int(row["N_out"])
 
     # Fall 2: Conv/Pool Layer (Wir nutzen H_out * W_out * C_out wie in deiner Formel)
@@ -194,16 +195,31 @@ def calc_activation_memory(row):
         w_out = (row["W_in"] + 2 * row["P_w"] - row["d"] * (int(row["K_w"]) - 1) - 1) // row["S_w"] + 1
         return BATCH_SIZE * int(row["N_out"]) * int(h_out) * int(w_out)
 
+    elif row["Layer"] == "BatchNorm2d":
+        # BatchNorm behält die Input-Dimensionen bei
+        feature_maps = BATCH_SIZE * int(row["N_out"]) * int(row["H_out"]) * int(row["W_out"])
+        additional_params = 2 * int(row["N_out"])  # gamma und beta
+        return feature_maps
+
     elif row["Layer"] in ["ReLU", "Sigmoid", "Tanh"]:
         # Aktivierungen: B * N_out * H_out * W_out
         # Da ich immer die Output dimensionen nehme zum Berechnen und RelU InputDimension = OutputDimension ist
         # kann ich hier einfach die Input Dimensionen nehmen
-        if row["H_out"] >0 or row["W_out"] > 0:
+        if row["H_out"] == 0 or row["W_out"] == 0:
             params = int(row["N_out"])
         else:
             params = int(row["N_out"]) * int(row["H_out"]) * int(row["W_out"])
         return BATCH_SIZE * params
     return 0
+
+
+
+
+
+
+
+
+
 
 # Test für LeeNet5
 pd.set_option('display.max_columns', None)  # Alle Spalten anzeigen
@@ -220,18 +236,79 @@ df_alex = analyzer_alex.analyze()
 print(df_alex[cols_interest].head(10))  # Zeige die ersten Schichten (Features)
 """
 
+print("\n------------- Analyse -------------")
+dtype = 4 #float34
+config = Config(
+    cuda_device=0,
+    random_seed=42,
+    dataset_name="mnist",
+    learning_rate=0.001,
+    epoch_total=10,
+    batch_size=64,
+    dataset_path="_Dataset",
+    model_type="vgg16",
+    training_method="bp",
+    optimizer="Adam",
+    loss_function="CrossEntropy",
+    momentum=0.9,
+    early_stopping_delta=0.001,
+    memory_snapshot_epochs=[],
+)
 
-# 2. LeNet5 (Dein Custom Model)
-print("\n--- Analyse: LeNet5 ---")
-# Hinweis: LeNet erwartet 32x32 Input laut deiner Klasse
-lenet = LeNet5(num_input_channel=1, num_classes=10, input_size=32)
-analyzer_lenet = ModelMemoryAnalyzer(lenet, input_size=(1, 1, 32, 32))
-df_lenet = analyzer_lenet.analyze()
-df_lenet = df_lenet.fillna(0)
+# Sample-Batch holen (läuft komplett auf CPU)
+sample_x, sample_y = get_sample_batch(config)
 
-df_lenet["Calc_Activation_bytes"] = df_lenet.apply(calc_activation_memory, axis=1)
-df_display = df_lenet.copy()
-df_display = df_display.replace(0.0, "-")
+print(f"Batch Shape: {sample_x.shape}")  # z.B. (64, 1, 28, 28)
+print(f"Labels Shape: {sample_y.shape}")  # z.B. (64,)
+
+
+sample_batch = sample_x.shape
+
+model = model_helper.get_model(config=config, sample_batch= (sample_x,sample_y))
+
+analyzer = ModelMemoryAnalyzer(model, input_size=sample_batch)
+df_model = analyzer.analyze()
+df_model = df_model.fillna(0)
+
+df_model["calc_activation"] = df_model.apply(calc_activation, axis=1)
+df_model["calc_activation_bytes"] = df_model["calc_activation"] * dtype
+df_model["numel_params_bytes"] = df_model["numel_params"] * dtype
+df_model["numel_activations_bytes"] = df_model["numel_activations"] * dtype
+
+
+# --- 1. Die Summen berechnen ---
+sum_params = df_model["numel_params"].sum()
+sum_params_bytes = df_model["numel_params_bytes"].sum()
+sum_act_hook = df_model["numel_activations"].sum()
+sum_act_hook_bytes = df_model["numel_activations_bytes"].sum()
+sum_act_calc = df_model["calc_activation"].sum()
+sum_act_calc_bytes = df_model["calc_activation_bytes"].sum()
+
+# --- 2. Eine neue Zeile als DataFrame erstellen ---
+# Wir setzen nur "Layer" auf "TOTAL" und die Summen-Spalten.
+# Alle anderen Spalten (Kernel, Stride etc.) bleiben automatisch NaN (leer).
+total_row = pd.DataFrame([{
+    "Layer": "TOTAL",
+    "numel_params": sum_params,
+    "numel_params_bytes":sum_params_bytes,
+    "numel_activations": sum_act_hook,
+    "numel_activations_bytes":sum_act_hook_bytes,
+    "calc_activation": sum_act_calc,
+    "calc_activation_bytes": sum_act_calc_bytes
+}])
+
+# --- 3. Zusammenfügen ---
+# ignore_index=True sorgt dafür, dass der Index fortlaufend nummeriert wird (0, 1, ..., 11, 12)
+df_final = pd.concat([df_model, total_row], ignore_index=True)
+df_display = df_final.replace(0.0, "-")
+df_display = df_display.fillna("-")
+
+
+df_final.to_csv(
+    f"/home/muskelgurke/PycharmProjects/JupyterProject/data/training_sessions/results/{config.model_type}/_theoretisch/model_param_analysis.csv", index=False)
+print("-" * 50)
+print("Tabelle mit Summenzeile:")
+print("-" * 50)
 
 print(df_display)
 

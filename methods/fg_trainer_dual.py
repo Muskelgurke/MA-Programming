@@ -145,6 +145,7 @@ class ForwardGradientTrainer_dual(BaseTrainer):
                         param.grad = jvp * v
                     else:
                         param.grad += jvp * v  # Falls man Batch Accumulation macht
+
             mem_post_forward = torch.cuda.memory_allocated(device=self.device)
             mem_forward.append(mem_post_forward - mem_pre_forward)
             #print(f"Mem after forward: {mem_post_forward} bytes, used: {mem_post_forward - mem_pre_forward} bytes")

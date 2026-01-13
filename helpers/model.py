@@ -11,7 +11,7 @@ def get_model(config: Config, sample_batch: tuple) -> nn.Module:
     """get model based on config and automatically set input and output sizes from sample batch
     Args:
         config: Config file
-        sample_batch: tuple of (inputs, targets) from dataloader
+        sample_batch: tuple of (inputs, targets) from dataloader for inferring input size and number of classes
 
     Returns:
         nn.Module: model

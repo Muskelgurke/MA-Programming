@@ -1,5 +1,6 @@
 import torchvision.models as models
 import torch.nn as nn
+import torch
 
 def print_parameters(model: nn.Module):
 

@@ -10,6 +10,26 @@ from helpers.config_class import Config
 import scipy
 
 # torchaudio.set_audio_backend("soundfile")
+def get_sample_batch(config: Config) -> tuple[torch.Tensor, torch.Tensor]:
+    """
+    Liefert ein einzelnes Sample-Batch für Modell-Analyse ohne GPU-Transfer.
+
+    Args:
+        config: Config-Objekt mit dataset_name, batch_size, model_type
+
+    Returns:
+        tuple: (sample_x, sample_y) - Ein Batch von Daten und Labels
+    """
+    # CPU-Device erzwingen für Sample-Extraktion
+    dummy_device = torch.device("cpu")
+
+    # Hole nur den Train-Loader (Test nicht nötig für Sample)
+    train_loader, _ = get_dataloaders(config, dummy_device)
+
+    # Extrahiere ersten Batch
+    sample_x, sample_y = next(iter(train_loader))
+
+    return sample_x, sample_y
 
 def get_dataloaders(config: Config, device: torch.device) -> tuple[torch.utils.data.DataLoader, torch.utils.data.DataLoader]:
     """
