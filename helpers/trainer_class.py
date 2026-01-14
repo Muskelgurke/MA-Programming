@@ -77,7 +77,7 @@ class BaseTrainer(ABC):
 
         self._train_epoch_impl()
 
-        self.max_memory_bytes = torch.cuda.memory.max_memory_allocated()
+        self.max_memory_bytes = torch.cuda.memory.max_memory_allocated(device=self.device)
 
         epoch_duration = time.time() - epoch_start_time
         self.metrics.epoch_duration = epoch_duration

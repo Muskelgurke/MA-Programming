@@ -157,7 +157,6 @@ class ForwardGradientTrainer_dual(BaseTrainer):
 
             self.optimizer.step()
 
-
             sum_loss += loss_val.item() * inputs.size(0)
 
             # Primal Output für Accuracy nutzen
@@ -172,7 +171,6 @@ class ForwardGradientTrainer_dual(BaseTrainer):
                 'Loss': f'{loss_val.item():.4f}',
                 'ACC': f'{acc:.4f}'
             })
-
 
         self.metrics.avg_mem_forward_pass_bytes = int(np.mean(mem_forward)) if mem_forward else 0
         self.metrics.max_mem_forward_pass_bytes = int(np.max(mem_forward)) if mem_forward else 0

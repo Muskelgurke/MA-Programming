@@ -130,8 +130,12 @@ class ModelMemoryAnalyzer:
             "G": groups,
             "numel_params": sum(p.numel() for p in module.parameters()),  # Gewichte + Bias
             "numel_params_bytes": int,
-            "numel_activations": output.numel(), # Output Aktivierungen
-            "numel_activations_bytes": int
+            "bp_numel_activations": output.numel(), # Output Aktivierungen
+            "bp_numel_activations_bytes": int,
+            "bp_calc_activation": int,
+            "bp_calc_activation_bytes": int,
+            "fgd_calc_activation": int,
+            "fgd_calc_activation_bytes": int
         })
 
 
@@ -159,26 +163,12 @@ class ModelMemoryAnalyzer:
 
         return pd.DataFrame(self.layer_data)
 
-def calc_parameter_memory(row):
-    # Fall 1: Linear Layer
-    if row["Layer"] == "Linear":
-        params = int(row["N_in"]) * int(row["N_out"]) + int(row["N_out"])
-        return params
-
-    # Fall 2: Conv Layer
-    elif row["Layer"] == "Conv2d":
-        params = (int(row["K_h"]) * int(row["K_w"]) *
-         (int(row["N_in"]) // row["G"]) * int(row["N_out"]) +
-         int(row["N_out"]))
-        return params
-    return 0
-
-
 def calc_activation(row):
     # Fall 1: Linear Layer (Wir nutzen N_in wie in deiner Formel)
     BATCH_SIZE = row["BatchSize"]
     if row["Layer"] == "Linear":
         return BATCH_SIZE * int(row["N_out"])
+
 
     # Fall 2: Conv/Pool Layer (Wir nutzen H_out * W_out * C_out wie in deiner Formel)
     elif row["Layer"] == "Conv2d":
@@ -213,40 +203,22 @@ def calc_activation(row):
     return 0
 
 
-
-
-
-
-
-
-
-
-# Test für LeeNet5
 pd.set_option('display.max_columns', None)  # Alle Spalten anzeigen
 pd.set_option('display.width', 1000)    # Breite für Anzeige erhöhen
 pd.set_option('display.max_colwidth', None)  # Keine Spaltenbreitenbegrenzung
-"""
-# 1. AlexNet (Standard PyTorch)
-print("--- Analyse: AlexNet ---")
-alexnet = models.alexnet(pretrained=False)
-analyzer_alex = ModelMemoryAnalyzer(alexnet, input_size=(1, 3, 224, 224))
-df_alex = analyzer_alex.analyze()
 
-# Filtern wir mal genau die Spalten, die du in deiner Arbeit erklärt hast:
-print(df_alex[cols_interest].head(10))  # Zeige die ersten Schichten (Features)
-"""
 
 print("\n------------- Analyse -------------")
 dtype = 4 #float34
 config = Config(
     cuda_device=0,
     random_seed=42,
-    dataset_name="mnist",
+    dataset_name="flower",
     learning_rate=0.001,
     epoch_total=10,
     batch_size=64,
     dataset_path="_Dataset",
-    model_type="vgg16",
+    model_type="alexnet",
     training_method="bp",
     optimizer="Adam",
     loss_function="CrossEntropy",
@@ -261,7 +233,6 @@ sample_x, sample_y = get_sample_batch(config)
 print(f"Batch Shape: {sample_x.shape}")  # z.B. (64, 1, 28, 28)
 print(f"Labels Shape: {sample_y.shape}")  # z.B. (64,)
 
-
 sample_batch = sample_x.shape
 
 model = model_helper.get_model(config=config, sample_batch= (sample_x,sample_y))
@@ -270,20 +241,34 @@ analyzer = ModelMemoryAnalyzer(model, input_size=sample_batch)
 df_model = analyzer.analyze()
 df_model = df_model.fillna(0)
 
-df_model["calc_activation"] = df_model.apply(calc_activation, axis=1)
-df_model["calc_activation_bytes"] = df_model["calc_activation"] * dtype
+# ------------------------------------------------
+# Berechnung der Aktivierungen nach beiden Methoden BP FGD
+df_model["bp_calc_activation"] = df_model.apply(calc_activation, axis=1)
+# --------------------------------------------------
+# Forward Gradient
+df_model["fgd_calc_activation"] = 0
+max_idx = df_model["bp_calc_activation"].idxmax()
+df_model.loc[max_idx, "fgd_calc_activation"] = df_model["bp_calc_activation"].max() * 2
+df_model["fgd_calc_activation_bytes"] = df_model["fgd_calc_activation"] * dtype
+
+
+
+df_model["bp_calc_activation_bytes"] = df_model["bp_calc_activation"] * dtype
 df_model["numel_params_bytes"] = df_model["numel_params"] * dtype
-df_model["numel_activations_bytes"] = df_model["numel_activations"] * dtype
+df_model["bp_numel_activations_bytes"] = df_model["bp_numel_activations"] * dtype
 
 
 # --- 1. Die Summen berechnen ---
 sum_params = df_model["numel_params"].sum()
 sum_params_bytes = df_model["numel_params_bytes"].sum()
-sum_act_hook = df_model["numel_activations"].sum()
-sum_act_hook_bytes = df_model["numel_activations_bytes"].sum()
-sum_act_calc = df_model["calc_activation"].sum()
-sum_act_calc_bytes = df_model["calc_activation_bytes"].sum()
-
+sum_act_hook = df_model["bp_numel_activations"].sum()
+sum_act_hook_bytes = df_model["bp_numel_activations_bytes"].sum()
+sum_act_calc = df_model["bp_calc_activation"].sum()
+sum_act_calc_bytes = df_model["bp_calc_activation_bytes"].sum()
+sum_act_fgd_activation = df_model["fgd_calc_activation"].sum()  # Summe = nur der eine Wert
+sum_act_fgd_bytes = sum_act_fgd_activation * dtype
+sum_act_fgd_forward = sum_act_fgd_activation + sum_params
+sum_act_fgd_forward_bytes = sum_act_fgd_forward * dtype
 # --- 2. Eine neue Zeile als DataFrame erstellen ---
 # Wir setzen nur "Layer" auf "TOTAL" und die Summen-Spalten.
 # Alle anderen Spalten (Kernel, Stride etc.) bleiben automatisch NaN (leer).
@@ -291,10 +276,14 @@ total_row = pd.DataFrame([{
     "Layer": "TOTAL",
     "numel_params": sum_params,
     "numel_params_bytes":sum_params_bytes,
-    "numel_activations": sum_act_hook,
-    "numel_activations_bytes":sum_act_hook_bytes,
-    "calc_activation": sum_act_calc,
-    "calc_activation_bytes": sum_act_calc_bytes
+    "bp_numel_activations": sum_act_hook,
+    "bp_numel_activations_bytes":sum_act_hook_bytes,
+    "bp_calc_activation": sum_act_calc,
+    "bp_calc_activation_bytes": sum_act_calc_bytes,
+    "fgd_calc_activation": sum_act_fgd_activation,
+    "fgd_calc_activation_bytes": sum_act_fgd_bytes,
+    "fgd_calc_forward": sum_act_fgd_forward,
+    "fgd_calc_forward_bytes": sum_act_fgd_forward_bytes
 }])
 
 # --- 3. Zusammenfügen ---
@@ -304,8 +293,7 @@ df_display = df_final.replace(0.0, "-")
 df_display = df_display.fillna("-")
 
 
-df_final.to_csv(
-    f"/home/muskelgurke/PycharmProjects/JupyterProject/data/training_sessions/results/{config.model_type}/_theoretisch/model_param_analysis.csv", index=False)
+df_final.to_csv(f"/home/muskelgurke/PycharmProjects/JupyterProject/data/training_sessions/results/{config.model_type}/_theoretisch/model_param_analysis_{config.dataset_name}.csv", index=False)
 print("-" * 50)
 print("Tabelle mit Summenzeile:")
 print("-" * 50)

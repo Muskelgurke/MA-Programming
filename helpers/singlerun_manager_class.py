@@ -154,10 +154,10 @@ class SingleRunManager:
                                               time_to_convergence=time_to_convergence
                                               )
 
-            self.saver.save_model_and_config_after_epochs(config=self.config,
-                                                          model=self.trained_model,
-                                                          save_full_model=True
-                                                          )
+            #self.saver.save_model_and_config_after_epochs(config=self.config,
+             #                                             model=self.trained_model,
+              #                                            save_full_model=True
+                #                                           )
 
             self.saver.write_multi_run_results_csv(config=self.config,
                                                    total_training_time=self.total_time,
