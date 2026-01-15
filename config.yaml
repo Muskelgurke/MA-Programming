@@ -1,12 +1,12 @@
 # Base Configuration
 base_config:
-  cuda_device: 1
+  cuda_device: 2
   random_seed: 43
   learning_rate: 0.0001
   epoch_total: 100
   training_method: fgd_dual
   dataset_name: mnist
-  batch_size: 64
+  batch_size: 128
   augment_data: false
   model_type: alexnet
   optimizer: adam
@@ -26,6 +26,10 @@ multi_params:
     - resnet18
     - efficientnet
     - alexnet
+    - densenet
+    - mobilenet
+    - resnet34
+    - lenet
 
   dataset_name:
     - mnist
@@ -51,9 +55,9 @@ multi_params:
     - fgd_dual
 
   random_seed:
-    #- 26
-    #- 8
-    #- 101
+    - 26
+    - 8
+    - 101
     - 7
     - 1337
     - 2025
