@@ -128,10 +128,8 @@ class ModelMemoryAnalyzer:
             "P_h": p_h, "P_w": p_w,  # Padding
             "d": d_h,
             "G": groups,
-            "numel_params": sum(p.numel() for p in module.parameters()),  # Gewichte + Bias
-            "numel_params_bytes": int,
-            "bp_numel_activations": output.numel(), # Output Aktivierungen
-            "bp_numel_activations_bytes": int,
+            "model_params": sum(p.numel() for p in module.parameters()),  # Gewichte + Bias
+            "model_params_bytes": int,
             "bp_calc_activation": int,
             "bp_calc_activation_bytes": int,
             "fgd_calc_activation": int,
@@ -210,93 +208,104 @@ pd.set_option('display.max_colwidth', None)  # Keine Spaltenbreitenbegrenzung
 
 print("\n------------- Analyse -------------")
 dtype = 4 #float34
-config = Config(
-    cuda_device=0,
-    random_seed=42,
-    dataset_name="flower",
-    learning_rate=0.001,
-    epoch_total=10,
-    batch_size=64,
-    dataset_path="_Dataset",
-    model_type="alexnet",
-    training_method="bp",
-    optimizer="Adam",
-    loss_function="CrossEntropy",
-    momentum=0.9,
-    early_stopping_delta=0.001,
-    memory_snapshot_epochs=[],
-)
+models = ['alexnet', 'vgg16', 'resnet18', 'resnet34', 'resnet50', 'mobilenet', 'densenet', 'efficientnet', 'lenet']
+datasets = ['mnist', 'fashionmnist', 'cifar10', 'cifar100', 'flower', 'food', 'pet']
 
-# Sample-Batch holen (läuft komplett auf CPU)
-sample_x, sample_y = get_sample_batch(config)
+# Für jede Kombination durchführen
+for model_type in models:
+    for dataset_name in datasets:
+        print(f"\n{'=' * 60}")
+        print(f"Verarbeite: {model_type} mit {dataset_name}")
+        print(f"{'=' * 60}")
 
-print(f"Batch Shape: {sample_x.shape}")  # z.B. (64, 1, 28, 28)
-print(f"Labels Shape: {sample_y.shape}")  # z.B. (64,)
+        try:
+            # Config erstellen
+            config = Config(
+                cuda_device=0,
+                random_seed=42,
+                dataset_name=dataset_name,
+                learning_rate=0.001,
+                epoch_total=10,
+                batch_size=64,
+                dataset_path="_Dataset",
+                model_type=model_type,
+                training_method="bp",
+                optimizer="Adam",
+                loss_function="CrossEntropy",
+                momentum=0.9,
+                early_stopping_delta=0.001,
+                memory_snapshot_epochs=[],
+            )
 
-sample_batch = sample_x.shape
+            # Sample-Batch holen
+            sample_x, sample_y = get_sample_batch(config)
+            sample_batch = sample_x.shape
 
-model = model_helper.get_model(config=config, sample_batch= (sample_x,sample_y))
+            # Modell laden und analysieren
+            model = model_helper.get_model(config=config, sample_batch=(sample_x, sample_y))
+            analyzer = ModelMemoryAnalyzer(model, input_size=sample_batch)
+            df_model = analyzer.analyze()
+            df_model = df_model.fillna(0)
 
-analyzer = ModelMemoryAnalyzer(model, input_size=sample_batch)
-df_model = analyzer.analyze()
-df_model = df_model.fillna(0)
+            # Berechnungen durchführen
+            df_model["bp_calc_activation"] = df_model.apply(calc_activation, axis=1)
+            df_model["fgd_calc_activation"] = 0
+            max_idx = df_model["bp_calc_activation"].idxmax()
+            df_model.loc[max_idx, "fgd_calc_activation"] = df_model["bp_calc_activation"].max() * 2
+            df_model["fgd_calc_activation_bytes"] = df_model["fgd_calc_activation"] * dtype
+            df_model["bp_calc_activation_bytes"] = df_model["bp_calc_activation"] * dtype
+            df_model["model_params_bytes"] = df_model["model_params"] * dtype
 
-# ------------------------------------------------
-# Berechnung der Aktivierungen nach beiden Methoden BP FGD
-df_model["bp_calc_activation"] = df_model.apply(calc_activation, axis=1)
-# --------------------------------------------------
-# Forward Gradient
-df_model["fgd_calc_activation"] = 0
-max_idx = df_model["bp_calc_activation"].idxmax()
-df_model.loc[max_idx, "fgd_calc_activation"] = df_model["bp_calc_activation"].max() * 2
-df_model["fgd_calc_activation_bytes"] = df_model["fgd_calc_activation"] * dtype
+            # Summen berechnen
+            sum_params = df_model["model_params"].sum()
+            sum_params_bytes = df_model["model_params_bytes"].sum()
+            sum_act_calc = df_model["bp_calc_activation"].sum()
+            sum_act_calc_bytes = df_model["bp_calc_activation_bytes"].sum()
+            sum_act_fgd_activation = df_model["fgd_calc_activation"].sum()
+            sum_act_fgd_bytes = sum_act_fgd_activation * dtype
+            sum_act_fgd_forward = sum_act_fgd_activation + sum_params
+            sum_act_fgd_forward_bytes = sum_act_fgd_forward * dtype
 
+            # Total Row erstellen
+            total_row = pd.DataFrame([{
+                "Layer": "TOTAL",
+                "model_params": sum_params,
+                "model_params_bytes": sum_params_bytes,
+                "bp_calc_activation": sum_act_calc,
+                "bp_calc_activation_bytes": sum_act_calc_bytes,
+                "fgd_calc_activation": sum_act_fgd_activation,
+                "fgd_calc_activation_bytes": sum_act_fgd_bytes,
+                "fgd_calc_forward": sum_act_fgd_forward,
+                "fgd_calc_forward_bytes": sum_act_fgd_forward_bytes
+            }])
 
+            df_final = pd.concat([df_model, total_row], ignore_index=True)
+            df_save = (df_final.drop(
+                columns=["bp_calc_activation",
+                         "model_params",
+                         "fgd_calc_activation",
+                         "fgd_calc_forward",
+                         "K_h",
+                         "K_w", # Kernel Size
+                        "S_h",
+                        "S_w",
+                        "P_h",
+                        "P_w",  # Padding
+                        "d",
+                        "G"
+                         ])
+                       .replace(0.0,"-").fillna("-"))
 
-df_model["bp_calc_activation_bytes"] = df_model["bp_calc_activation"] * dtype
-df_model["numel_params_bytes"] = df_model["numel_params"] * dtype
-df_model["bp_numel_activations_bytes"] = df_model["bp_numel_activations"] * dtype
+            # Datei speichern
+            output_path = f"/home/muskelgurke/PycharmProjects/JupyterProject/data/training_sessions/results/{model_type}/_theoretisch/model_param_analysis_{dataset_name}.csv"
+            df_save.to_csv(output_path, index=False)
+            print(f"✓ Gespeichert: {output_path}")
 
+        except Exception as e:
+            print(f"✗ Fehler bei {model_type}/{dataset_name}: {e}")
+            continue
 
-# --- 1. Die Summen berechnen ---
-sum_params = df_model["numel_params"].sum()
-sum_params_bytes = df_model["numel_params_bytes"].sum()
-sum_act_hook = df_model["bp_numel_activations"].sum()
-sum_act_hook_bytes = df_model["bp_numel_activations_bytes"].sum()
-sum_act_calc = df_model["bp_calc_activation"].sum()
-sum_act_calc_bytes = df_model["bp_calc_activation_bytes"].sum()
-sum_act_fgd_activation = df_model["fgd_calc_activation"].sum()  # Summe = nur der eine Wert
-sum_act_fgd_bytes = sum_act_fgd_activation * dtype
-sum_act_fgd_forward = sum_act_fgd_activation + sum_params
-sum_act_fgd_forward_bytes = sum_act_fgd_forward * dtype
-# --- 2. Eine neue Zeile als DataFrame erstellen ---
-# Wir setzen nur "Layer" auf "TOTAL" und die Summen-Spalten.
-# Alle anderen Spalten (Kernel, Stride etc.) bleiben automatisch NaN (leer).
-total_row = pd.DataFrame([{
-    "Layer": "TOTAL",
-    "numel_params": sum_params,
-    "numel_params_bytes":sum_params_bytes,
-    "bp_numel_activations": sum_act_hook,
-    "bp_numel_activations_bytes":sum_act_hook_bytes,
-    "bp_calc_activation": sum_act_calc,
-    "bp_calc_activation_bytes": sum_act_calc_bytes,
-    "fgd_calc_activation": sum_act_fgd_activation,
-    "fgd_calc_activation_bytes": sum_act_fgd_bytes,
-    "fgd_calc_forward": sum_act_fgd_forward,
-    "fgd_calc_forward_bytes": sum_act_fgd_forward_bytes
-}])
-
-# --- 3. Zusammenfügen ---
-# ignore_index=True sorgt dafür, dass der Index fortlaufend nummeriert wird (0, 1, ..., 11, 12)
-df_final = pd.concat([df_model, total_row], ignore_index=True)
-df_display = df_final.replace(0.0, "-")
-df_display = df_display.fillna("-")
-
-
-df_final.to_csv(f"/home/muskelgurke/PycharmProjects/JupyterProject/data/training_sessions/results/{config.model_type}/_theoretisch/model_param_analysis_{config.dataset_name}.csv", index=False)
-print("-" * 50)
-print("Tabelle mit Summenzeile:")
-print("-" * 50)
-
-print(df_display)
+print(f"\n{'=' * 60}")
+print("Alle Kombinationen verarbeitet!")
+print(f"{'=' * 60}")
 
