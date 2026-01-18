@@ -44,7 +44,7 @@ def start_training(config_path: str):
     configs = config_loader.configs
 
     print(f"Starte insgesamt {len(configs)} Läufe...")
-    exit()
+
     # Check the following Paths for completed runs
     search_paths = [
         '/homes/sojagraf/25_1/MA-Programming/runs',
