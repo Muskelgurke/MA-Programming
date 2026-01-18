@@ -77,7 +77,7 @@ class ForwardGradientTrainer_dual(BaseTrainer):
         loss_func = nn.CrossEntropyLoss()
         mem_pre_forward = 0
         mem_forward = []
-
+        peak_memory = 0
         pbar = self._create_progress_bar(desc=f'FG Train: {self.epoch_num}')
 
         self.model.train()
@@ -91,6 +91,7 @@ class ForwardGradientTrainer_dual(BaseTrainer):
             targets = targets.to(self.device, non_blocking=True)
 
             self.optimizer.zero_grad()
+            torch.cuda.reset_peak_memory_stats()
 
             #print(f"Mem before forward: {mem_pre_forward} bytes")
             mem_pre_forward = torch.cuda.memory_allocated(device=self.device)
@@ -150,12 +151,13 @@ class ForwardGradientTrainer_dual(BaseTrainer):
             mem_forward.append(mem_post_forward - mem_pre_forward)
             #print(f"Mem after forward: {mem_post_forward} bytes, used: {mem_post_forward - mem_pre_forward} bytes")
 
-            # WICHTIG: Vor dem Optimizer Step müssen wir die Dual Tensors wieder
-            # durch die echten Parameter ersetzen!
+            # Echte Parameter einsetzen vor OPTIMIZER STEP -> sonst kommt fehler.
             for name, param in self.params_store.items():
                 self._set_nested_attr(self.model, name, param)
 
             self.optimizer.step()
+            torch.cuda.synchronize()
+            peak_memory = torch.cuda.max_memory_allocated()
 
             sum_loss += loss_val.item() * inputs.size(0)
 
@@ -174,6 +176,7 @@ class ForwardGradientTrainer_dual(BaseTrainer):
 
         self.metrics.avg_mem_forward_pass_bytes = int(np.mean(mem_forward)) if mem_forward else 0
         self.metrics.max_mem_forward_pass_bytes = int(np.max(mem_forward)) if mem_forward else 0
+        self.metrics.peak_mem_bytes = peak_memory
 
         self.metrics.loss_per_epoch = sum_loss / sum_size
         self.metrics.acc_per_epoch = 100. * sum_correct / sum_size

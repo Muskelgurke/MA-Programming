@@ -175,13 +175,13 @@ def calc_activation(row):
         # n_out ist die Anzahl der Filterkanäle, dieser ist ein wert der
         # Designspeizifisch ist und nicht von der Eingabe abhängt.
 
-
         return BATCH_SIZE * int(row["N_out"]) * int(h_out) * int(w_out)
 
     elif row["Layer"] in ["MaxPool2d", "AvgPool2d"]:
         h_out = (row["H_in"] + 2 * row["P_h"] - row["d"] * (int(row["K_h"]) - 1) - 1) // row["S_h"] + 1
         w_out = (row["W_in"] + 2 * row["P_w"] - row["d"] * (int(row["K_w"]) - 1) - 1) // row["S_w"] + 1
         return BATCH_SIZE * int(row["N_out"]) * int(h_out) * int(w_out)
+
 
     elif row["Layer"] == "BatchNorm2d":
         # BatchNorm behält die Input-Dimensionen bei
@@ -191,8 +191,6 @@ def calc_activation(row):
 
     elif row["Layer"] in ["ReLU", "Sigmoid", "Tanh"]:
         # Aktivierungen: B * N_out * H_out * W_out
-        # Da ich immer die Output dimensionen nehme zum Berechnen und RelU InputDimension = OutputDimension ist
-        # kann ich hier einfach die Input Dimensionen nehmen
         if row["H_out"] == 0 or row["W_out"] == 0:
             params = int(row["N_out"])
         else:
@@ -208,8 +206,9 @@ pd.set_option('display.max_colwidth', None)  # Keine Spaltenbreitenbegrenzung
 
 print("\n------------- Analyse -------------")
 dtype = 4 #float34
-models = ['alexnet', 'vgg16', 'resnet18', 'resnet34', 'resnet50', 'mobilenet', 'densenet', 'efficientnet', 'lenet']
-datasets = ['mnist', 'fashionmnist', 'cifar10', 'cifar100', 'flower', 'food', 'pet']
+models = ['alexnet', 'vgg16', 'resnet18', 'resnet34', 'mobilenet', 'densenet', 'efficientnet', 'lenet']
+#models=['alexnet']
+datasets = ['mnist', 'fashionmnist', 'cifar10', 'cifar100', 'flower', 'pet']
 
 # Für jede Kombination durchführen
 for model_type in models:
@@ -257,26 +256,41 @@ for model_type in models:
             df_model["model_params_bytes"] = df_model["model_params"] * dtype
 
             # Summen berechnen
-            sum_params = df_model["model_params"].sum()
-            sum_params_bytes = df_model["model_params_bytes"].sum()
-            sum_act_calc = df_model["bp_calc_activation"].sum()
-            sum_act_calc_bytes = df_model["bp_calc_activation_bytes"].sum()
-            sum_act_fgd_activation = df_model["fgd_calc_activation"].sum()
-            sum_act_fgd_bytes = sum_act_fgd_activation * dtype
-            sum_act_fgd_forward = sum_act_fgd_activation + sum_params
-            sum_act_fgd_forward_bytes = sum_act_fgd_forward * dtype
+            m_model = df_model["model_params"].sum()
+            m_model_bytes = df_model["model_params_bytes"].sum()
+            acti_bp = df_model["bp_calc_activation"].sum()
+            m_acti_bp_bytes = df_model["bp_calc_activation_bytes"].sum()
+            acti_fgd = df_model["fgd_calc_activation"].sum()
+            m_acti_fgd_bytes = acti_fgd * dtype
+
+
+            # ------ Analytisches Modell -----
+
+            m_total_bp = acti_bp + m_model
+
+            # 1-m-model = gradient # 2-m-model = pertubation
+            m_total_fgd = acti_fgd + m_model + m_model
+            # ---------------------------------
+
+
+            m_total_bp_bytes = m_total_bp * dtype
+            m_total_fgd_bytes = m_total_fgd * dtype
 
             # Total Row erstellen
             total_row = pd.DataFrame([{
                 "Layer": "TOTAL",
-                "model_params": sum_params,
-                "model_params_bytes": sum_params_bytes,
-                "bp_calc_activation": sum_act_calc,
-                "bp_calc_activation_bytes": sum_act_calc_bytes,
-                "fgd_calc_activation": sum_act_fgd_activation,
-                "fgd_calc_activation_bytes": sum_act_fgd_bytes,
-                "fgd_calc_forward": sum_act_fgd_forward,
-                "fgd_calc_forward_bytes": sum_act_fgd_forward_bytes
+                "m_model": m_model,
+                "m_model_bytes": m_model_bytes,
+                "acti_bp": acti_bp,
+                "m_acti_bp_bytes": m_acti_bp_bytes,
+                "m_forward_bp_bytes": m_acti_bp_bytes,
+                "m_total_bp": m_total_bp,
+                "m_total_bp_bytes": m_total_bp_bytes,
+                "acti_fgd": acti_fgd,
+                "m_acti_fgd_bytes": m_acti_fgd_bytes,
+                "m_forward_fgd_bytes": m_total_fgd_bytes,
+                "m_total_fgd": m_total_fgd,
+                "m_total_fgd_bytes": m_total_fgd_bytes
             }])
 
             df_final = pd.concat([df_model, total_row], ignore_index=True)
@@ -284,7 +298,7 @@ for model_type in models:
                 columns=["bp_calc_activation",
                          "model_params",
                          "fgd_calc_activation",
-                         "fgd_calc_forward",
+                         "m_total_fgd",
                          "K_h",
                          "K_w", # Kernel Size
                         "S_h",

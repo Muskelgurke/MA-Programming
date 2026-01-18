@@ -15,7 +15,7 @@ class TrainMetrics:
     avg_mem_forward_pass_bytes: int = 0
     max_mem_forward_pass_bytes: int = 0
     max_mem_bytes: int = 0
-
+    peak_mem_bytes: int = 0
     def to_dict(self) -> dict:
         return asdict(self)
 

@@ -16,6 +16,7 @@ class BackpropTrainer(BaseTrainer):
         mem_post_forward = 0
         mem_forward = []
         mem_backward = []
+        peak_memory = 0
         """
         prof_schedule = schedule(wait=1, warmup=1, active=3, repeat=1)
         with profile(
@@ -37,16 +38,10 @@ class BackpropTrainer(BaseTrainer):
             targets = targets.to(self.device, non_blocking=True)
 
             self.optimizer.zero_grad(set_to_none=True)
-
+            torch.cuda.reset_peak_memory_stats()
             mem_pre_forward = torch.cuda.memory_allocated(device=self.device)
 
-
-
             outputs = self.model(inputs)
-
-            if self.should_track_memory_this_epoch:
-                mem_post_forward = torch.cuda.memory_allocated(device=self.device)
-                mem_forward.append(mem_post_forward - mem_pre_forward)
 
             mem_post_forward = torch.cuda.memory_allocated(device=self.device)
             mem_forward.append(mem_post_forward - mem_pre_forward)
@@ -57,12 +52,13 @@ class BackpropTrainer(BaseTrainer):
             loss.backward()
 
             if self.should_track_memory_this_epoch:
-
                 if batch_idx < self.NUM_MEMORY_SNAPSHOTS_IN_EPOCH:
                     self.export_memory_snapshot(batch_idx=batch_idx)
                     self.stop_record_memory_history()
 
             self.optimizer.step()
+            torch.cuda.synchronize()
+            peak_memory = torch.cuda.max_memory_allocated()
 
             # Metriken aktualisieren
             _, predicted = torch.max(outputs.data, 1)
@@ -81,6 +77,7 @@ class BackpropTrainer(BaseTrainer):
 
         self.metrics.avg_mem_forward_pass_bytes = int(np.mean(mem_forward)) if mem_forward else 0
         self.metrics.max_mem_forward_pass_bytes = int(np.max(mem_forward)) if mem_forward else 0
+        self.metrics.peak_mem_bytes = peak_memory
         # Epoche-Metriken aktualisieren
         self.metrics.loss_per_epoch = sum_loss / sum_size
         self.metrics.acc_per_epoch = 100. * sum_correct / sum_size

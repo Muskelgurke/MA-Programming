@@ -79,7 +79,8 @@ class TorchModelSaver:
                 'mem_parameter_bytes',
                 'avg_mem_forward_pass_bytes',
                 'max_mem_forward_pass_bytes',
-                'max_mem_bytes'
+                'max_mem_bytes',
+                'peak_mem_bytes'
             ]
 
             with open(self.epoch_metrics_file, 'w', newline='') as csvfile:
@@ -125,7 +126,8 @@ class TorchModelSaver:
             'mem_parameter_bytes',
             'avg_mem_forward_pass_bytes',
             'max_mem_forward_pass_bytes',
-            'max_mem_bytes'
+            'max_mem_bytes',
+            'peak_mem_bytes'
         ]
 
         # Write one row per epoch with all relevant metrics
@@ -144,6 +146,7 @@ class TorchModelSaver:
             'avg_mem_forward_pass_bytes': train_metrics.avg_mem_forward_pass_bytes,
             'max_mem_forward_pass_bytes': train_metrics.max_mem_forward_pass_bytes,
             'max_mem_bytes': train_metrics.max_mem_bytes,
+            'peak_mem_bytes': train_metrics.peak_mem_bytes
         }
 
         with open(self.epoch_metrics_file, 'a', newline='') as csvfile:
