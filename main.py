@@ -64,10 +64,10 @@ def start_training(config_path: str):
         run_number = i + 1
 
         is_done = False
-        for done_config in completed_configs_list:
-            if is_same_experiment(config, done_config):
-                is_done = True
-                break
+        #for done_config in completed_configs_list:
+        #    if is_same_experiment(config, done_config):
+        #        is_done = True
+        #        break
         print(f"\n{'=' * 40}")
         print(f"Prüfe Lauf {run_number}/{len(configs)}: {config.model_type} | {config.dataset_name} | {config.optimizer} | LR: {config.learning_rate}")
         if is_done:
