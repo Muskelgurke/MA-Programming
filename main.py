@@ -54,7 +54,7 @@ def start_training(config_path: str):
         'runs'
     ]
 
-    completed_configs_list = load_completed_configs(search_paths)
+    #completed_configs_list = load_completed_configs(search_paths)
 
     timestamp = datetime.datetime.now().strftime("%m%d_%H%M%S")
     base_path = f'runs/duc_{timestamp}'
