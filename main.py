@@ -76,7 +76,8 @@ def start_training(config_path: str):
                 continue
 
         print(f"\n{'=' * 40}")
-        device = torch.device(f"cuda:{config.cuda_device}")
+        #device = torch.device(f"cuda:{config.cuda_device}")
+        device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         print(f"Lauf {run_number}/{len(configs)}: ")
         print(f"Data: {config.dataset_name}, Model: {config.model_type}, Method:{config.training_method}")
         print(f"Config: LR={config.learning_rate}, Opt={config.optimizer}, Batch={config.batch_size}")

@@ -46,22 +46,22 @@ class ForwardGradientTrainer_dual(BaseTrainer):
         nn.Parameter und regulären Tensors/DualTensors zu vermeiden.
         """
         parts = name.split('.')
-        # Zum richtigen Submodul navigieren (z.B. layer1.conv1)
+        # Erst SubModul finden
         for part in parts[:-1]:
             obj = getattr(obj, part)
 
         attr_name = parts[-1]
 
-        # WICHTIG: Erst löschen! Das entfernt 'weight' aus self._parameters
+        # Löschen WICHTIG!!!!!! Sonst Fehler
         if hasattr(obj, attr_name):
             delattr(obj, attr_name)
 
-        # Jetzt neu setzen (als Tensor, DualTensor oder Parameter)
+        # hinzufügen des DualTensors!
         setattr(obj, attr_name, value)
 
     @contextmanager
     def disable_running_stats(self, model):
-        # BN Fix wie gehabt
+        # BatchNorm Tracking temporär deaktivieren
         bns = [m for m in model.modules() if isinstance(m, (nn.BatchNorm1d, nn.BatchNorm2d, nn.BatchNorm3d))]
         saved_states = [m.track_running_stats for m in bns]
         try:
@@ -89,47 +89,39 @@ class ForwardGradientTrainer_dual(BaseTrainer):
 
             inputs = inputs.to(self.device, non_blocking=True)
             targets = targets.to(self.device, non_blocking=True)
-
             self.optimizer.zero_grad()
             torch.cuda.reset_peak_memory_stats()
 
             #print(f"Mem before forward: {mem_pre_forward} bytes")
             mem_pre_forward = torch.cuda.memory_allocated(device=self.device)
-            # temporär die echten Tensors (keine Duals) ein,
-            # damit BatchNorm Statistiken sammeln kann.
+            # BN Statistiken updaten - Original Parameter einsetzten
             for name, param in self.params_store.items():
                 self._set_nested_attr(self.model, name, param)
 
-            # Warmup Forward Pass (ohne Gradienten, rein für BatchNorm Statistiken)
+            # Upadtes der Batchnormalization BUFFERS, sonst kein update mit Dual Tensoren.
             with torch.no_grad():
                 self.model(inputs)
 
-
             with fwAD.dual_level():
-
-                # 1. Perturbation generieren & Dual Tensors setzen
+                # Pertubation Vektor generieren für alle Parameter
+                # und Dual Tensoren erstellen und ims Modell einsetztzen.
                 v_dict = {}
                 for name, param in self.params_store.items():
-
                     v = torch.randn_like(param)
                     v_dict[name] = v
-
                     dual_val = fwAD.make_dual(param, v)
-
                     self._set_nested_attr(self.model, name, dual_val)
-
                 # Forward Pass
-                # Wir deaktivieren BN-Tracking, da wir nicht in die Buffer schreiben wollen (Dual Tensor Crash Gefahr)
+                # Dual Tensor CRASHES Gefahr. BatchNorm Running Stats deaktivieren
                 with self.disable_running_stats(self.model):
                     with torch.no_grad():
                         outputs = self.model(inputs)
                         loss = loss_func(outputs, targets)
 
-                # Unpack dual Tensors
+                # Die Dual Tensoren auswerten in dem ich sie "UNPACKE" -> heraushole aus dem modell.
                 dual_loss = fwAD.unpack_dual(loss)
                 loss_val = dual_loss.primal
                 jvp = dual_loss.tangent  # Gradient Richtung
-
 
                 if jvp is None or torch.isnan(jvp):
                     # wiederherstellung der originalen Parameter
@@ -137,7 +129,7 @@ class ForwardGradientTrainer_dual(BaseTrainer):
                         self._set_nested_attr(self.model, name, param)
                     continue
 
-            #Gradient setzen
+            #Gradienten werden berechnet über den wFGD TRICK und dann in das Modell gesetzt
             with torch.no_grad():
                 for name, param in self.params_store.items():
                     v = v_dict[name]
@@ -145,13 +137,16 @@ class ForwardGradientTrainer_dual(BaseTrainer):
                     if param.grad is None:
                         param.grad = jvp * v
                     else:
-                        param.grad += jvp * v  # Falls man Batch Accumulation macht
+                        param.grad += jvp * v
 
+            # Forward Pass Memory messen.
             mem_post_forward = torch.cuda.memory_allocated(device=self.device)
             mem_forward.append(mem_post_forward - mem_pre_forward)
             #print(f"Mem after forward: {mem_post_forward} bytes, used: {mem_post_forward - mem_pre_forward} bytes")
 
-            # Echte Parameter einsetzen vor OPTIMIZER STEP -> sonst kommt fehler.
+            # Da immernoch dual tensoren drin sind im Modell
+            # müssen diese wieder rausgenommen werden und mit den originalen Parametern ersetzt werden.
+
             for name, param in self.params_store.items():
                 self._set_nested_attr(self.model, name, param)
 
@@ -161,7 +156,6 @@ class ForwardGradientTrainer_dual(BaseTrainer):
 
             sum_loss += loss_val.item() * inputs.size(0)
 
-            # Primal Output für Accuracy nutzen
             primal_output = fwAD.unpack_dual(outputs).primal
             _, predicted = torch.max(primal_output, 1)
             sum_correct += (predicted == targets).sum().item()

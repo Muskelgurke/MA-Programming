@@ -6,7 +6,6 @@ import helpers.model as model_helper
 from helpers.datasets import get_sample_batch
 from helpers.config_class import Config
 
-
 class LeNet5(nn.Module):
     def __init__(self, num_input_channel, num_classes, input_size):
         super(LeNet5, self).__init__()
@@ -95,8 +94,6 @@ class ModelMemoryAnalyzer:
         groups = 1
         layer_type = module.__class__.__name__
 
-
-        # Spezifische Attribute extrahieren (Genau das, was im print() steht)
         if isinstance(module, (nn.Conv2d, nn.MaxPool2d, nn.AvgPool2d)):
             k = self._to_pair(module.kernel_size)
             s = self._to_pair(module.stride)
@@ -106,7 +103,6 @@ class ModelMemoryAnalyzer:
             s_h, s_w = s
             p_h, p_w = p
 
-            # Dilation (nur bei Conv üblich, manchmal bei Pool)
             if hasattr(module, 'dilation'):
                 d = self._to_pair(module.dilation)
                 d_h, d_w = d
@@ -116,7 +112,6 @@ class ModelMemoryAnalyzer:
             if isinstance(module, nn.Conv2d):
                 groups = module.groups
 
-        # Datenstruktur für deine Formeln
         self.layer_data.append({
             "Layer": layer_type,
             "BatchSize": b,
@@ -139,15 +134,14 @@ class ModelMemoryAnalyzer:
 
     def analyze(self):
         # 1. Hooks an alle relevanten Layer hängen
-        # Wir gehen rekursiv durch alle Module, nehmen aber nur die "Blätter" (Leaf Modules)
+        # rekursiv durch alle Module
         for name, module in self.model.named_modules():
-            # Filter: Wir wollen nur echte Rechenschichten, keine Container wie Sequential
+            # Filter: Nur relevante Layer
             if isinstance(module, (nn.Conv2d, nn.Linear, nn.BatchNorm2d,
                                    nn.MaxPool2d, nn.AvgPool2d, nn.ReLU,
                                    nn.Sigmoid, nn.Tanh)):
                 self.hooks.append(module.register_forward_hook(self._hook_fn))
 
-        # 2. Dummy Pass durchführen (löst die Hooks aus)
         dummy_input = torch.zeros(self.input_size)
         try:
             with torch.no_grad():
@@ -155,25 +149,20 @@ class ModelMemoryAnalyzer:
         except Exception as e:
             print(f"Fehler beim Forward Pass: {e}")
         finally:
-            # 3. Aufräumen: Hooks entfernen
             for h in self.hooks:
                 h.remove()
 
         return pd.DataFrame(self.layer_data)
 
 def calc_activation(row):
-    # Fall 1: Linear Layer (Wir nutzen N_in wie in deiner Formel)
     BATCH_SIZE = row["BatchSize"]
     if row["Layer"] == "Linear":
         return BATCH_SIZE * int(row["N_out"])
 
-
-    # Fall 2: Conv/Pool Layer (Wir nutzen H_out * W_out * C_out wie in deiner Formel)
     elif row["Layer"] == "Conv2d":
         h_out = (row["H_in"] + 2 * row["P_h"] - row["d"] * (int(row["K_h"]) - 1) - 1) // row["S_h"] + 1
         w_out = (row["W_in"] + 2 * row["P_w"] - row["d"] * (int(row["K_w"]) - 1) - 1) // row["S_w"] + 1
-        # n_out ist die Anzahl der Filterkanäle, dieser ist ein wert der
-        # Designspeizifisch ist und nicht von der Eingabe abhängt.
+
 
         return BATCH_SIZE * int(row["N_out"]) * int(h_out) * int(w_out)
 
@@ -184,7 +173,7 @@ def calc_activation(row):
 
 
     elif row["Layer"] == "BatchNorm2d":
-        # BatchNorm behält die Input-Dimensionen bei
+
         feature_maps = BATCH_SIZE * int(row["N_out"]) * int(row["H_out"]) * int(row["W_out"])
         additional_params = 2 * int(row["N_out"])  # gamma und beta
         return feature_maps
@@ -199,127 +188,159 @@ def calc_activation(row):
     return 0
 
 
-pd.set_option('display.max_columns', None)  # Alle Spalten anzeigen
-pd.set_option('display.width', 1000)    # Breite für Anzeige erhöhen
-pd.set_option('display.max_colwidth', None)  # Keine Spaltenbreitenbegrenzung
+pd.set_option('display.max_columns', None)
+pd.set_option('display.width', 1000)
+pd.set_option('display.max_colwidth', None)
 
+import pandas as pd
 
 print("\n------------- Analyse -------------")
-dtype = 4 #float34
+dtype = 4  # float32 (4 Bytes)
 models = ['alexnet', 'vgg16', 'resnet18', 'resnet34', 'mobilenet', 'densenet', 'efficientnet', 'lenet']
-#models=['alexnet']
 datasets = ['mnist', 'fashionmnist', 'cifar10', 'cifar100', 'flower', 'pet']
+optimizers = ['adam', 'sgd']
 
 # Für jede Kombination durchführen
 for model_type in models:
     for dataset_name in datasets:
-        print(f"\n{'=' * 60}")
-        print(f"Verarbeite: {model_type} mit {dataset_name}")
-        print(f"{'=' * 60}")
+        for optimizer_name in optimizers:
+            print(f"\n{'=' * 60}")
+            print(f"Verarbeite: {model_type} | {dataset_name} | {optimizer_name}")
+            print(f"{'=' * 60}")
 
-        try:
-            # Config erstellen
-            config = Config(
-                cuda_device=0,
-                random_seed=42,
-                dataset_name=dataset_name,
-                learning_rate=0.001,
-                epoch_total=10,
-                batch_size=64,
-                dataset_path="_Dataset",
-                model_type=model_type,
-                training_method="bp",
-                optimizer="Adam",
-                loss_function="CrossEntropy",
-                momentum=0.9,
-                early_stopping_delta=0.001,
-                memory_snapshot_epochs=[],
-            )
+            try:
+                # Config erstellen (Optimizer dynamisch setzen)
+                config = Config(
+                    cuda_device=0,
+                    random_seed=42,
+                    dataset_name=dataset_name,
+                    learning_rate=0.001,
+                    epoch_total=10,
+                    batch_size=64,
+                    dataset_path="_Dataset",
+                    model_type=model_type,
+                    training_method="bp",
+                    optimizer=optimizer_name,  # z.B. "Adam" oder "Sgd"
+                    loss_function="CrossEntropy",
+                    momentum=0.9,  # Relevant für SGD Speicherberechnung
+                    early_stopping_delta=0.001,
+                    memory_snapshot_epochs=[],
+                )
 
-            # Sample-Batch holen
-            sample_x, sample_y = get_sample_batch(config)
-            sample_batch = sample_x.shape
+                # Sample-Batch holen
+                sample_x, sample_y = get_sample_batch(config)
+                sample_batch = sample_x.shape
 
-            # Modell laden und analysieren
-            model = model_helper.get_model(config=config, sample_batch=(sample_x, sample_y))
-            analyzer = ModelMemoryAnalyzer(model, input_size=sample_batch)
-            df_model = analyzer.analyze()
-            df_model = df_model.fillna(0)
+                # Modell laden und analysieren
+                model = model_helper.get_model(config=config, sample_batch=(sample_x, sample_y))
+                analyzer = ModelMemoryAnalyzer(model, input_size=sample_batch)
+                df_model = analyzer.analyze()
+                df_model = df_model.fillna(0)
 
-            # Berechnungen durchführen
-            df_model["bp_calc_activation"] = df_model.apply(calc_activation, axis=1)
-            df_model["fgd_calc_activation"] = 0
-            max_idx = df_model["bp_calc_activation"].idxmax()
-            df_model.loc[max_idx, "fgd_calc_activation"] = df_model["bp_calc_activation"].max() * 2
-            df_model["fgd_calc_activation_bytes"] = df_model["fgd_calc_activation"] * dtype
-            df_model["bp_calc_activation_bytes"] = df_model["bp_calc_activation"] * dtype
-            df_model["model_params_bytes"] = df_model["model_params"] * dtype
+                # ---------------------------------------------------------
+                # BERECHNUNGEN
+                # ---------------------------------------------------------
 
-            # Summen berechnen
-            m_model = df_model["model_params"].sum()
-            m_model_bytes = df_model["model_params_bytes"].sum()
-            acti_bp = df_model["bp_calc_activation"].sum()
-            m_acti_bp_bytes = df_model["bp_calc_activation_bytes"].sum()
-            acti_fgd = df_model["fgd_calc_activation"].sum()
-            m_acti_fgd_bytes = acti_fgd * dtype
+                # 1. Aktivierungen
+                df_model["bp_calc_activation"] = df_model.apply(calc_activation, axis=1)
 
+                # FGD Aktivierung (Heuristik: Max Layer * 2 für Buffer)
+                df_model["fgd_calc_activation"] = 0
+                max_idx = df_model["bp_calc_activation"].idxmax()
+                df_model.loc[max_idx, "fgd_calc_activation"] = df_model["bp_calc_activation"].max() * 2
 
-            # ------ Analytisches Modell -----
+                # Byte-Konvertierung
+                df_model["fgd_calc_activation_bytes"] = df_model["fgd_calc_activation"] * dtype
+                df_model["bp_calc_activation_bytes"] = df_model["bp_calc_activation"] * dtype
+                df_model["model_params_bytes"] = df_model["model_params"] * dtype
 
-            m_total_bp = acti_bp + m_model
+                # Summen berechnen
+                m_model = df_model["model_params"].sum()
+                m_model_bytes = df_model["model_params_bytes"].sum()
 
-            # 1-m-model = gradient # 2-m-model = pertubation
-            m_total_fgd = acti_fgd + m_model + m_model
-            # ---------------------------------
+                acti_bp = df_model["bp_calc_activation"].sum()
+                m_acti_bp_bytes = df_model["bp_calc_activation_bytes"].sum()
 
+                acti_fgd = df_model["fgd_calc_activation"].sum()
+                m_acti_fgd_bytes = acti_fgd * dtype
 
-            m_total_bp_bytes = m_total_bp * dtype
-            m_total_fgd_bytes = m_total_fgd * dtype
+                # ---------------------------------------------------------
+                # ANALYTISCHES MODELL (OPTIMIZER ABHÄNGIG)
+                # ---------------------------------------------------------
 
-            # Total Row erstellen
-            total_row = pd.DataFrame([{
-                "Layer": "TOTAL",
-                "m_model": m_model,
-                "m_model_bytes": m_model_bytes,
-                "acti_bp": acti_bp,
-                "m_acti_bp_bytes": m_acti_bp_bytes,
-                "m_forward_bp_bytes": m_acti_bp_bytes,
-                "m_total_bp": m_total_bp,
-                "m_total_bp_bytes": m_total_bp_bytes,
-                "acti_fgd": acti_fgd,
-                "m_acti_fgd_bytes": m_acti_fgd_bytes,
-                "m_forward_fgd_bytes": m_total_fgd_bytes,
-                "m_total_fgd": m_total_fgd,
-                "m_total_fgd_bytes": m_total_fgd_bytes
-            }])
+                m_grads = m_model
 
-            df_final = pd.concat([df_model, total_row], ignore_index=True)
-            df_save = (df_final.drop(
-                columns=["bp_calc_activation",
-                         "model_params",
-                         "fgd_calc_activation",
-                         "m_total_fgd",
-                         "K_h",
-                         "K_w", # Kernel Size
-                        "S_h",
-                        "S_w",
-                        "P_h",
-                        "P_w",  # Padding
-                        "d",
-                        "G"
-                         ])
-                       .replace(0.0,"-").fillna("-"))
+                # Optimizer States (Momentum Buffer etc.)
+                if optimizer_name.lower() == 'adam':
+                    m_opt_state = 2 * m_model
+                else:  # sgd
 
-            # Datei speichern
-            output_path = f"/home/muskelgurke/PycharmProjects/JupyterProject/data/training_sessions/results/{model_type}/_theoretisch/model_param_analysis_{dataset_name}.csv"
-            df_save.to_csv(output_path, index=False)
-            print(f"✓ Gespeichert: {output_path}")
+                    m_opt_state = 1 * m_model
 
-        except Exception as e:
-            print(f"✗ Fehler bei {model_type}/{dataset_name}: {e}")
-            continue
+                m_total_bp = acti_bp + m_model
+
+                # acti + pertubation
+
+                # (FALSCH) 1.THEORIE: 1x m_model 2x acti_fgd ,weil Forward layer braucht immer die aktivierungen des vorherigen layers. Dannkann erst weggeworfen werden.
+                # 2.THEORIE: 1x acti_fgd 2x m_model, activierungen 1x Pertubation 1x BufferStates
+                m_total_fgd = acti_fgd + m_model + m_model
+
+                # ---------------------------------------------------------
+
+                # Bytes berechnen
+                m_total_bp_bytes = m_total_bp * dtype
+                m_total_fgd_bytes = m_total_fgd * dtype
+
+                # Total Row erstellen
+                total_row = pd.DataFrame([{
+                    "Layer": "TOTAL",
+                    "m_model": m_model,
+                    "m_model_bytes": m_model_bytes,
+                    "acti_bp": acti_bp,
+                    "m_acti_bp_bytes": m_acti_bp_bytes,
+                    "m_forward_bp_bytes": m_acti_bp_bytes,  # Legacy Name checken?
+                    "m_total_bp": m_total_bp,
+                    "m_total_bp_bytes": m_total_bp_bytes,
+                    "acti_fgd": acti_fgd,
+                    "m_acti_fgd_bytes": m_acti_fgd_bytes,
+                    "m_forward_fgd_bytes": m_total_fgd_bytes,  # Legacy Name checken?
+                    "m_total_fgd": m_total_fgd,
+                    "m_total_fgd_bytes": m_total_fgd_bytes
+                }])
+
+                df_final = pd.concat([df_model, total_row], ignore_index=True)
+
+                # Bereinigen
+                df_save = (df_final.drop(
+                    columns=["bp_calc_activation",
+                             "model_params",
+                             "fgd_calc_activation",
+                             "m_total_fgd",
+                             "K_h", "K_w",
+                             "S_h", "S_w",
+                             "P_h", "P_w",
+                             "d", "G"
+                             ], errors='ignore')  # errors='ignore' falls Spalte nicht existiert
+                           .replace(0.0, "-").fillna("-"))
+
+                # Datei speichern - Jetzt mit Optimizer im Namen
+                output_filename = f"model_param_analysis_{dataset_name}_{optimizer_name}.csv"
+                output_dir = f"/home/muskelgurke/PycharmProjects/JupyterProject/data/training_sessions/results/{model_type}/_theoretisch/"
+
+                # Sicherstellen, dass Verzeichnis existiert (optional, aber gut)
+                import os
+
+                os.makedirs(output_dir, exist_ok=True)
+
+                output_path = os.path.join(output_dir, output_filename)
+
+                df_save.to_csv(output_path, index=False)
+                print(f"✓ Gespeichert: {output_filename}")
+
+            except Exception as e:
+                print(f"✗ Fehler bei {model_type}/{dataset_name}/{optimizer_name}: {e}")
+                continue
 
 print(f"\n{'=' * 60}")
 print("Alle Kombinationen verarbeitet!")
 print(f"{'=' * 60}")
-
