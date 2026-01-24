@@ -14,8 +14,6 @@ class ForwardGradientTrainer_dual(BaseTrainer):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-
-
         self.params_store = {}
         self.param_names = []
 
@@ -112,13 +110,12 @@ class ForwardGradientTrainer_dual(BaseTrainer):
                     dual_val = fwAD.make_dual(param, v)
                     self._set_nested_attr(self.model, name, dual_val)
                 # Forward Pass
-                # Dual Tensor CRASHES Gefahr. BatchNorm Running Stats deaktivieren
                 with self.disable_running_stats(self.model):
                     with torch.no_grad():
                         outputs = self.model(inputs)
                         loss = loss_func(outputs, targets)
 
-                # Die Dual Tensoren auswerten in dem ich sie "UNPACKE" -> heraushole aus dem modell.
+                # Die Dual Tensoren auswerten
                 dual_loss = fwAD.unpack_dual(loss)
                 loss_val = dual_loss.primal
                 jvp = dual_loss.tangent  # Gradient Richtung

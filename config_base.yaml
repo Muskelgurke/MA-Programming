@@ -41,3 +41,13 @@ multi_params:
     - flower
     - food
     - pet
+  learning_rate:
+    - 0.01 # Standard SGD
+    - 0.001 # Standard ADAM
+    - 0.0005
+    - 0.0001 # die beste von FGD bei ADAM
+    - 0.00005
+  optimizer:
+    - sgd
+    - adam
+

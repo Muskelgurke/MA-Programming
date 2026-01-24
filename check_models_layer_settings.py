@@ -209,11 +209,10 @@ for model_type in models:
             print(f"{'=' * 60}")
 
             try:
-                # Config erstellen (Optimizer dynamisch setzen)
                 config = Config(
                     cuda_device=0,
                     random_seed=42,
-                    dataset_name=dataset_name,
+                    dataset_name=dataset_name, # z.B. "mnist", "cifar10"
                     learning_rate=0.001,
                     epoch_total=10,
                     batch_size=64,
@@ -222,7 +221,7 @@ for model_type in models:
                     training_method="bp",
                     optimizer=optimizer_name,  # z.B. "Adam" oder "Sgd"
                     loss_function="CrossEntropy",
-                    momentum=0.9,  # Relevant für SGD Speicherberechnung
+                    momentum=0.9,
                     early_stopping_delta=0.001,
                     memory_snapshot_epochs=[],
                 )
@@ -273,23 +272,23 @@ for model_type in models:
                 # Optimizer States (Momentum Buffer etc.)
                 if optimizer_name.lower() == 'adam':
                     m_opt_state = 2 * m_model
-                else:  # sgd
+                else: # SGD oder andere
+                    m_opt_state = 2 * m_model
 
-                    m_opt_state = 1 * m_model
 
-                m_total_bp = acti_bp + m_model
+                # 1.Theorie: 1x activierungen + 1x Gradienten
+                m_dynamic_bp = acti_bp + m_model
 
                 # acti + pertubation
-
                 # (FALSCH) 1.THEORIE: 1x m_model 2x acti_fgd ,weil Forward layer braucht immer die aktivierungen des vorherigen layers. Dannkann erst weggeworfen werden.
                 # 2.THEORIE: 1x acti_fgd 2x m_model, activierungen 1x Pertubation 1x BufferStates
-                m_total_fgd = acti_fgd + m_model + m_model
+                m_dynamic_fgd = acti_fgd + m_model + m_model
 
                 # ---------------------------------------------------------
 
                 # Bytes berechnen
-                m_total_bp_bytes = m_total_bp * dtype
-                m_total_fgd_bytes = m_total_fgd * dtype
+                m_dynamic_bp_bytes = m_dynamic_bp * dtype
+                m_dynamic_fgd_bytes = m_dynamic_fgd * dtype
 
                 # Total Row erstellen
                 total_row = pd.DataFrame([{
@@ -298,14 +297,14 @@ for model_type in models:
                     "m_model_bytes": m_model_bytes,
                     "acti_bp": acti_bp,
                     "m_acti_bp_bytes": m_acti_bp_bytes,
-                    "m_forward_bp_bytes": m_acti_bp_bytes,  # Legacy Name checken?
-                    "m_total_bp": m_total_bp,
-                    "m_total_bp_bytes": m_total_bp_bytes,
+                    #"m_forward_bp_bytes": m_acti_bp_bytes,  # Legacy Name checken?
+                    "m_dynamic_bp": m_dynamic_bp,
+                    "m_dynamic_bp_bytes": m_dynamic_bp_bytes,
                     "acti_fgd": acti_fgd,
                     "m_acti_fgd_bytes": m_acti_fgd_bytes,
-                    "m_forward_fgd_bytes": m_total_fgd_bytes,  # Legacy Name checken?
-                    "m_total_fgd": m_total_fgd,
-                    "m_total_fgd_bytes": m_total_fgd_bytes
+                    #"m_forward_fgd_bytes": m_dynamic_fgd_bytes,  # Legacy Name checken?
+                    "m_dynamic": m_dynamic_fgd,
+                    "m_dynamic_bytes": m_dynamic_fgd_bytes
                 }])
 
                 df_final = pd.concat([df_model, total_row], ignore_index=True)
