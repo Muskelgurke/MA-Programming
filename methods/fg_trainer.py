@@ -24,7 +24,7 @@ class ForwardGradientTrainer(BaseTrainer):
                 inputs, targets = inputs.to(self.device), targets.to(self.device)
                 self.optimizer.zero_grad()
                 self.model.train()
-                # Warmup forward pass to ensure buffers are initialized
+                # Warmup forward pass für buffer dummyy
                 self.model(inputs)
 
                 if self.should_track_memory_this_epoch:

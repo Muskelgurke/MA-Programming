@@ -134,7 +134,7 @@ def load_completed_configs(scan_directories: list[str]) -> list[Config]:
             print(f"Warnung: Verzeichnis existiert nicht: {directory}")
             continue
 
-        # os.walk durchsucht rekursiv alle Unterordner
+        # os.walk durchsuchte rekursif alle Unterordner
         for root, dirs, files in os.walk(path):
             # Kriterium: Ein Run ist fertig, wenn run_summary.yaml existiert
             if "run_summary.yaml" in files and "config.yaml" in files:

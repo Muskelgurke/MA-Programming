@@ -124,11 +124,15 @@ class ModelMemoryAnalyzer:
             "d": d_h,
             "G": groups,
             "model_params": sum(p.numel() for p in module.parameters()),  # Gewichte + Bias
-            "model_params_bytes": int,
-            "bp_calc_activation": int,
-            "bp_calc_activation_bytes": int,
-            "fgd_calc_activation": int,
-            "fgd_calc_activation_bytes": int
+            "m_model_params_bytes": int,
+            "acti_bp": int,
+            "m_acti_bp_bytes": int,
+            "dynamic_bp": int,
+            "m_dynamic_bp_bytes": int,
+            "acti_fgd": int,
+            "m_acti_fgd_bytes": int,
+            "dynamic_fgd": int,
+            "m_dynamic_fgd_bytes": int
         })
 
 
@@ -246,7 +250,9 @@ for model_type in models:
                 # FGD Aktivierung (Heuristik: Max Layer * 2 für Buffer)
                 df_model["fgd_calc_activation"] = 0
                 max_idx = df_model["bp_calc_activation"].idxmax()
-                df_model.loc[max_idx, "fgd_calc_activation"] = df_model["bp_calc_activation"].max() * 2
+                # 1.Theorie: 2x speicher Tangent + Primal
+
+                df_model.loc[max_idx, "fgd_calc_activation"] = df_model["bp_calc_activation"].max() * 2# 2x wegen Tangent und Primal
 
                 # Byte-Konvertierung
                 df_model["fgd_calc_activation_bytes"] = df_model["fgd_calc_activation"] * dtype
@@ -261,13 +267,11 @@ for model_type in models:
                 m_acti_bp_bytes = df_model["bp_calc_activation_bytes"].sum()
 
                 acti_fgd = df_model["fgd_calc_activation"].sum()
-                m_acti_fgd_bytes = acti_fgd * dtype
+                m_acti_fgd_bytes = df_model["fgd_calc_activation_bytes"].sum()
 
                 # ---------------------------------------------------------
                 # ANALYTISCHES MODELL (OPTIMIZER ABHÄNGIG)
                 # ---------------------------------------------------------
-
-                m_grads = m_model
 
                 # Optimizer States (Momentum Buffer etc.)
                 if optimizer_name.lower() == 'adam':
@@ -276,13 +280,15 @@ for model_type in models:
                     m_opt_state = 2 * m_model
 
 
-                # 1.Theorie: 1x activierungen + 1x Gradienten
-                m_dynamic_bp = acti_bp + m_model
+                # 1.Theorie: 1x activierungen + 1x Gradienten -> ist okay
+                # 2.Theorie: 1x activierungen
+                m_dynamic_bp = acti_bp
 
                 # acti + pertubation
                 # (FALSCH) 1.THEORIE: 1x m_model 2x acti_fgd ,weil Forward layer braucht immer die aktivierungen des vorherigen layers. Dannkann erst weggeworfen werden.
-                # 2.THEORIE: 1x acti_fgd 2x m_model, activierungen 1x Pertubation 1x BufferStates
-                m_dynamic_fgd = acti_fgd + m_model + m_model
+                # (ist OK) 2.THEORIE: 1x acti_fgd 2x m_model, activierungen 1x Pertubation 1x BufferStates
+                # 3.THEORIE: 1x dual + 1x m_model Pertubation vektor da ACtivierungen nicht gemessen werden
+                m_dynamic_fgd = m_model + m_model
 
                 # ---------------------------------------------------------
 
@@ -293,18 +299,16 @@ for model_type in models:
                 # Total Row erstellen
                 total_row = pd.DataFrame([{
                     "Layer": "TOTAL",
-                    "m_model": m_model,
-                    "m_model_bytes": m_model_bytes,
+                    "model_params": m_model,
+                    "m_model_params_bytes": m_model_bytes,
                     "acti_bp": acti_bp,
                     "m_acti_bp_bytes": m_acti_bp_bytes,
-                    #"m_forward_bp_bytes": m_acti_bp_bytes,  # Legacy Name checken?
-                    "m_dynamic_bp": m_dynamic_bp,
+                    "dynamic_bp": m_dynamic_bp,
                     "m_dynamic_bp_bytes": m_dynamic_bp_bytes,
-                    "acti_fgd": acti_fgd,
+                    "acti_fgd": acti_fgd ,
                     "m_acti_fgd_bytes": m_acti_fgd_bytes,
-                    #"m_forward_fgd_bytes": m_dynamic_fgd_bytes,  # Legacy Name checken?
-                    "m_dynamic": m_dynamic_fgd,
-                    "m_dynamic_bytes": m_dynamic_fgd_bytes
+                    "dynamic_fgd": m_dynamic_fgd,
+                    "m_dynamic_fgd_bytes": m_dynamic_fgd_bytes
                 }])
 
                 df_final = pd.concat([df_model, total_row], ignore_index=True)
@@ -313,8 +317,8 @@ for model_type in models:
                 df_save = (df_final.drop(
                     columns=["bp_calc_activation",
                              "model_params",
-                             "fgd_calc_activation",
-                             "m_total_fgd",
+                             "acti_bp",
+                             "acti_fgd",
                              "K_h", "K_w",
                              "S_h", "S_w",
                              "P_h", "P_w",
